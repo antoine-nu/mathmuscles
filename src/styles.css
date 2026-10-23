@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --ink: #2a1a0c;
   --parchment: #f1e2bd;
   --parchment-dark: #d9c294;
@@ -37,7 +38,7 @@ button { font-family: inherit; cursor: pointer; }
 .game {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 }
 
