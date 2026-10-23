@@ -1,1 +1,52 @@
-# mathmuscles
+# MathMuscles
+
+Muscle-toi en maths en bâtissant une armée façon *Age of Empires* : chaque chapitre du programme est un corps d'armée qui grossit à chaque exercice réussi.
+
+## Démarrer
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+```
+
+Autres commandes :
+
+| Commande | Rôle |
+| --- | --- |
+| `npm run build` | build de production dans `dist/` (vérifie aussi les types) |
+| `npm run preview` | sert le build localement |
+| `npm run typecheck` | vérification TypeScript seule |
+
+La galerie de toutes les unités est visible sur <http://localhost:5173/?galerie>.
+
+## Déployer sur Vercel
+
+Importer le dépôt dans Vercel : le framework **Vite** est détecté automatiquement (build `npm run build`, sortie `dist`). Aucune configuration supplémentaire.
+
+## Règles du jeu (maquette)
+
+- Une **série** = 5 exercices, générés aléatoirement pour le chapitre.
+- Chaque bonne réponse = 1 point. **10 points = 1 cran de jauge**, 5 crans → 50 bonnes réponses pour un corps d'armée complet.
+- Taille de l'armée par cran : 1 villageois → 3 → 5 → 8 → 11 → 15 soldats.
+- Rang des soldats : villageois (cran 0), recrue (crans 1-2), vétéran (crans 3-4), élite (cran 5).
+- La difficulté des exercices suit la jauge (3 niveaux).
+- Jauge pleine → 3 **améliorations** par corps (armure, arme, étendard…), chacune obtenue par une *série d'élite* réussie à 4/5 au moins.
+- La progression est sauvegardée dans le navigateur (`localStorage`).
+- Le **mode démo** (case en haut à droite) permet de simuler la progression pour voir l'évolution des armées.
+
+## Organisation du code
+
+```
+src/
+  data/curriculum.ts      niveaux, chapitres, corps d'armée, améliorations, règles de progression
+  exercises/              générateurs d'exercices (5e, 2nde) + utilitaires de correction
+  game/                   progression (localStorage), projection isométrique, couleurs
+  components/
+    WorldMap.tsx          carte isométrique SVG (terrain, camps, formations, pan/zoom)
+    UnitSprite.tsx        sprites vectoriels des unités (rangs + améliorations)
+    Buildings.tsx         bâtiments isométriques, bannières, hôtel de ville
+    Scenery.tsx           arbres, rochers, buissons, gibier
+    CommandPanel.tsx      panneau du bas : portrait, jauge, rangs, entraînement, améliorations
+    ExerciseModal.tsx     parchemin de série d'exercices + mini-rendu mathématique
+    LevelSelect.tsx       choix de la classe
+```
