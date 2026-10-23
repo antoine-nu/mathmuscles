@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import {
-  MAX_POINTS, UNITS_PER_LEVEL, UPGRADE_THRESHOLD, eraFromRatio, levelFromPoints,
+  MAX_POINTS, UPGRADE_THRESHOLD, armySize, eraFromRatio, levelFromPoints,
   type Level, type Upgrade,
 } from './data/curriculum'
 import { useProgress } from './game/progress'
 import { CommandPanel } from './components/CommandPanel'
 import { ExerciseModal } from './components/ExerciseModal'
 import { LevelSelect } from './components/LevelSelect'
-import { WorldMap, displayedUnits } from './components/WorldMap'
+import { WorldMap } from './components/WorldMap'
 import { ResIcon } from './components/ResIcon'
 
 interface Session {
@@ -34,8 +34,8 @@ export default function App() {
   const totalPoints = chapters.reduce((s, c) => s + get(level.id, c.id).points, 0)
   const totalSeries = chapters.reduce((s, c) => s + get(level.id, c.id).series, 0)
   const totalUpgrades = chapters.reduce((s, c) => s + get(level.id, c.id).upgrades.length, 0)
-  const population = chapters.reduce((s, c) => s + displayedUnits(c, levelFromPoints(get(level.id, c.id).points)), 0)
-  const maxPopulation = chapters.reduce((s, c) => s + displayedUnits(c, 5), 0)
+  const population = chapters.reduce((s, c) => s + armySize(get(level.id, c.id).points), 0)
+  const maxPopulation = chapters.length * armySize(MAX_POINTS)
   const era = eraFromRatio(totalPoints / (MAX_POINTS * chapters.length))
 
   const flash = (msg: string) => {
@@ -43,24 +43,25 @@ export default function App() {
     window.setTimeout(() => setToast(null), 3200)
   }
 
-  const finishSeries = (correct: number) => {
-    if (!session) return
-    const ch = chapters.find((c) => c.id === session.chapterId)!
-    const before = levelFromPoints(get(level.id, ch.id).points)
-    if (session.upgrade) {
-      const up = session.upgrade
-      if (correct >= UPGRADE_THRESHOLD) {
-        update(level.id, ch.id, (p) => ({ ...p, series: p.series + 1, upgrades: [...new Set([...p.upgrades, up.id])] }))
-        flash(`Amélioration « ${up.name} » acquise pour ${ch.corpsName} !`)
-      } else {
-        update(level.id, ch.id, (p) => ({ ...p, series: p.series + 1 }))
-      }
+  /** Résultat appliqué à la fermeture du parchemin, pour que les recrues arrivent sous les yeux de l'élève. */
+  const applyResult = (ses: Session, correct: number) => {
+    const ch = chapters.find((c) => c.id === ses.chapterId)!
+    const pointsBefore = get(level.id, ch.id).points
+    if (ses.upgrade) {
+      const up = ses.upgrade
+      const won = correct >= UPGRADE_THRESHOLD
+      update(level.id, ch.id, (p) => ({ ...p, series: p.series + 1, upgrades: won ? [...new Set([...p.upgrades, up.id])] : p.upgrades }))
+      if (won) flash(`Amélioration « ${up.name} » acquise pour ${ch.corpsName} !`)
       return
     }
     update(level.id, ch.id, (p) => ({ ...p, points: p.points + correct, series: p.series + 1 }))
-    const after = levelFromPoints(get(level.id, ch.id).points + correct)
-    if (after > before) {
-      flash(`${ch.corpsName} : cran ${after} atteint ! ${UNITS_PER_LEVEL[after]} soldats sous ta bannière.`)
+    const pointsAfter = Math.min(MAX_POINTS, pointsBefore + correct)
+    const recruits = armySize(pointsAfter) - armySize(pointsBefore)
+    const levelAfter = levelFromPoints(pointsAfter)
+    if (levelAfter > levelFromPoints(pointsBefore)) {
+      flash(`${ch.corpsName} : cran ${levelAfter} atteint ! ${armySize(pointsAfter)} soldats sous ta bannière.`)
+    } else if (recruits > 0) {
+      flash(`${ch.corpsName} : +${recruits} recrue${recruits > 1 ? 's' : ''} !`)
     }
   }
 
@@ -124,8 +125,12 @@ export default function App() {
           chapter={chapters.find((c) => c.id === session.chapterId)!}
           level={session.level}
           upgrade={session.upgrade}
-          onClose={() => setSession(null)}
-          onFinish={finishSeries}
+          points={get(level.id, session.chapterId).points}
+          onClose={(correct) => {
+            if (correct !== null) applyResult(session, correct)
+            setSelected(session.chapterId)
+            setSession(null)
+          }}
         />
       )}
     </div>

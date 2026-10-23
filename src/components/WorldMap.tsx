@@ -1,6 +1,6 @@
-import { memo, useMemo, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  MAX_LEVEL, TIER_PER_LEVEL, UNITS_PER_LEVEL, levelFromPoints, unitName,
+  MAX_LEVEL, POINTS_PER_LEVEL, ROMAN, TIER_PER_LEVEL, armySize, levelFromPoints, unitName,
   type Chapter,
 } from '../data/curriculum'
 import type { ChapterProgress } from '../game/progress'
@@ -32,9 +32,10 @@ function campTiles(n: number): Pt[] {
   })
 }
 
-export function displayedUnits(chapter: Chapter, level: number) {
-  const n = UNITS_PER_LEVEL[level]
-  return chapter.unit === 'siege' && level > 0 ? Math.max(1, Math.round(n / 3)) : n
+/** Nombre de figurines affichées (les engins de siège comptent pour 3 soldats). */
+export function displayedUnits(chapter: Chapter, points: number) {
+  const n = armySize(points)
+  return chapter.unit === 'siege' && levelFromPoints(points) > 0 ? Math.max(1, Math.round(n / 3)) : n
 }
 
 export function lookFor(chapter: Chapter, progress: ChapterProgress): UnitLook {
@@ -52,9 +53,8 @@ export function lookFor(chapter: Chapter, progress: ChapterProgress): UnitLook {
 
 function formation(camp: Camp): { pos: Pt; look: UnitLook; key: string }[] {
   const { chapter, tile, progress } = camp
-  const level = levelFromPoints(progress.points)
   const look = lookFor(chapter, progress)
-  const count = displayedUnits(chapter, level)
+  const count = displayedUnits(chapter, progress.points)
   const cav = look.tier > 0 && (chapter.unit === 'knight' || chapter.unit === 'scout')
   const siege = look.tier > 0 && chapter.unit === 'siege'
   const sp = siege ? 1.05 : cav ? 0.72 : 0.5
@@ -192,6 +192,11 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
     return items
   }, [tiles])
 
+  // recrues apparues depuis le rendu précédent → animation d'arrivée
+  const seenUnits = useRef<Set<string> | null>(null)
+  const allKeys: string[] = []
+  let freshCount = 0
+
   // objets triés par profondeur (peintre)
   const objects: { depth: number; node: ReactNode }[] = [...scenery]
   const [tcx, tcy] = iso(CENTER, CENTER)
@@ -205,12 +210,18 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
     objects.push({ depth: fy, node: <Banner key={`f-${chapter.id}`} x={fx} y={fy} color={chapter.color} emblem={chapter.emblem} /> })
     formation(camp).forEach(({ pos, look, key }, i) => {
       const [sx, sy] = iso(pos[0], pos[1])
+      allKeys.push(key)
+      const fresh = seenUnits.current !== null && !seenUnits.current.has(key)
+      const delay = fresh ? `${0.3 + 0.35 * freshCount++}s` : undefined
       objects.push({
         depth: sy,
         node: (
           <g key={key} transform={`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`}>
-            <g className="bob" style={{ animationDelay: `${(i * 0.37) % 2.4}s` }}>
-              <g transform={`scale(${UNIT_SCALE})`}><UnitSprite look={look} /></g>
+            {fresh && <ellipse className="recruit-ring" style={{ animationDelay: delay }} cx={0} cy={0} rx={20} ry={8} fill="none" stroke="#ffe08a" strokeWidth={3} />}
+            <g className={fresh ? 'recruit' : undefined} style={{ animationDelay: delay }}>
+              <g className="bob" style={{ animationDelay: `${(i * 0.37) % 2.4}s` }}>
+                <g transform={`scale(${UNIT_SCALE})`}><UnitSprite look={look} /></g>
+              </g>
             </g>
           </g>
         ),
@@ -218,6 +229,9 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
     })
   }
   objects.sort((a, b) => a.depth - b.depth)
+  useEffect(() => {
+    seenUnits.current = new Set(allKeys)
+  })
 
   // ── pan & zoom ──
   const L = iso(0, MAP_SIZE)
@@ -295,14 +309,20 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
             onPointerEnter={() => setHover(chapter.id)} onPointerLeave={() => setHover(null)}
             onClick={() => { if (!drag.current?.moved) onSelect(chapter.id) }}>
             <ellipse cx={hx} cy={hy - 20} rx={TILE_W * 1.6} ry={TILE_H * 2.2} fill="transparent" />
+            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} color={chapter.color} soldiers={armySize(progress.points)} />
             <g transform={`translate(${lx} ${ly - 112})`} filter="url(#labelShadow)">
               <rect x={-112} y={-36} width={224} height={58} rx={4} fill={isSel ? '#3a2410' : '#2a1a0c'} stroke={isSel ? '#f2d27a' : '#b8913a'} strokeWidth={isSel ? 2.4 : 1.4} opacity={0.94} />
               <text x={0} y={-16} textAnchor="middle" className="lbl-title">{chapter.corpsName}</text>
               <text x={0} y={1} textAnchor="middle" className="lbl-sub">{chapter.title}</text>
-              {Array.from({ length: MAX_LEVEL }, (_, i) => (
-                <rect key={i} x={-75 + i * 30.4} y={8} width={26} height={8} rx={2}
-                  fill={i < level ? chapter.color : '#4a3a28'} stroke={i < level ? '#f2d27a' : '#6b5638'} strokeWidth={0.8} />
-              ))}
+              {Array.from({ length: MAX_LEVEL }, (_, i) => {
+                const fill = i < level ? 1 : i === level ? (progress.points % POINTS_PER_LEVEL) / POINTS_PER_LEVEL : 0
+                return (
+                  <g key={i}>
+                    <rect x={-75 + i * 30.4} y={8} width={26} height={8} rx={2} fill="#4a3a28" stroke={i < level ? '#f2d27a' : '#6b5638'} strokeWidth={0.8} />
+                    {fill > 0 && <rect x={-75 + i * 30.4} y={8} width={26 * fill} height={8} rx={2} fill={chapter.color} opacity={i < level ? 1 : 0.7} />}
+                  </g>
+                )
+              })}
               {progress.upgrades.length > 0 && (
                 <text x={92} y={-14} textAnchor="middle" className="lbl-star">{'★'.repeat(progress.upgrades.length)}</text>
               )}
@@ -311,5 +331,27 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
         )
       })}
     </svg>
+  )
+}
+
+/** Écusson posé sur le bâtiment : cran (chiffres romains), anneau de progression vers le cran suivant, effectif. */
+function CampBadge({ x, y, level, points, color, soldiers }: { x: number; y: number; level: number; points: number; color: string; soldiers: number }) {
+  const maxed = level >= MAX_LEVEL
+  const within = maxed ? 1 : (points % POINTS_PER_LEVEL) / POINTS_PER_LEVEL
+  const r = 15
+  const C = 2 * Math.PI * r
+  return (
+    <g transform={`translate(${x} ${y}) scale(1.4)`} pointerEvents="none">
+      <g key={`lvl-${level}`} className="badge-pop">
+        <circle r={20} fill="#24150a" stroke={maxed ? '#ffe08a' : '#b8913a'} strokeWidth={2} />
+        <circle r={r} fill="none" stroke="#4a3a28" strokeWidth={4} />
+        <circle r={r} fill="none" stroke={maxed ? '#e2b43c' : color} strokeWidth={4} strokeDasharray={`${within * C} ${C}`} transform="rotate(-90)" strokeLinecap="butt" />
+        <text y={5} textAnchor="middle" className="badge-lvl">{ROMAN[level]}</text>
+        <g transform="translate(0 24)">
+          <rect x={-24} y={-8} width={48} height={16} rx={8} fill="#24150a" stroke="#b8913a" strokeWidth={1} />
+          <text y={4.5} textAnchor="middle" className="badge-count">⚔ {soldiers}</text>
+        </g>
+      </g>
+    </g>
   )
 }

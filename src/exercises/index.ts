@@ -1,25 +1,25 @@
 import { CINQUIEME } from './cinquieme'
 import { SECONDE } from './seconde'
-import { SERIES_SIZE } from '../data/curriculum'
-import type { Difficulty, Exercise, Generator } from './utils'
+import { MAX_LEVEL, SERIES_SIZE } from '../data/curriculum'
+import { shuffle, type Difficulty, type Exercise, type Tiers } from './utils'
 
-const GENERATORS: Record<string, Generator> = { ...CINQUIEME, ...SECONDE }
+export const TIERS: Record<string, Tiers> = { ...CINQUIEME, ...SECONDE }
 
-/** Difficulté qui suit la jauge : crans 0-1 → 1, 2-3 → 2, 4-5 → 3. Les séries d'élite sont toujours en 3. */
-export function difficultyForLevel(level: number): Difficulty {
-  return level >= 4 ? 3 : level >= 2 ? 2 : 1
+/** Le palier suit la jauge : cran 0 → palier 1, …, cran 4 et plus → palier 5. Les séries d'élite sont au palier 5. */
+export function difficultyForLevel(level: number, elite = false): Difficulty {
+  return (elite ? MAX_LEVEL : Math.min(MAX_LEVEL, level + 1)) as Difficulty
 }
 
-/** Une série mélange la difficulté courante et un cran en dessous pour garder du rythme. */
+/** Série de 5 exercices du palier courant, en variant les modèles d'exercices. */
 export function makeSeries(chapterId: string, level: number, elite = false): Exercise[] {
-  const gen = GENERATORS[chapterId]
-  const top = elite ? 3 : difficultyForLevel(level)
+  const pool = TIERS[chapterId][difficultyForLevel(level, elite) - 1]
   const series: Exercise[] = []
   const seen = new Set<string>()
+  let order = shuffle(pool)
   let guard = 0
-  while (series.length < SERIES_SIZE && guard++ < 50) {
-    const d = (elite || series.length >= 2 || top === 1 ? top : Math.max(1, top - 1)) as Difficulty
-    const ex = gen(d)
+  while (series.length < SERIES_SIZE && guard++ < 100) {
+    if (order.length === 0) order = shuffle(pool)
+    const ex = order.shift()!()
     if (seen.has(ex.prompt)) continue
     seen.add(ex.prompt)
     series.push(ex)

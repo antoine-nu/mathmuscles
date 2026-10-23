@@ -1,9 +1,10 @@
 import {
-  MAX_LEVEL, MAX_POINTS, POINTS_PER_LEVEL, TIER_PER_LEVEL, UNITS_PER_LEVEL, levelFromPoints, unitName,
+  MAX_LEVEL, MAX_POINTS, POINTS_PER_LEVEL, TIER_PER_LEVEL, UNITS_PER_LEVEL, armySize, levelFromPoints, pointsToNextRecruit, unitName,
   type Chapter, type Upgrade,
 } from '../data/curriculum'
 import type { ChapterProgress } from '../game/progress'
 import { Portrait } from './Portrait'
+import { difficultyForLevel } from '../exercises'
 import { displayedUnits, lookFor } from './WorldMap'
 
 interface Props {
@@ -32,7 +33,7 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
           <Portrait look={look} size={112} />
         </div>
         <div className="portrait-name">{look.name}</div>
-        <div className="portrait-count">× {displayedUnits(chapter, level)}</div>
+        <div className="portrait-count">{armySize(progress.points)} soldat{armySize(progress.points) > 1 ? 's' : ''}{chapter.unit === 'siege' && level > 0 ? ` · ${displayedUnits(chapter, progress.points)} engins` : ''}</div>
       </div>
 
       <div className="cmd-info">
@@ -54,7 +55,7 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
         <div className="gauge-caption">
           {maxed
             ? 'Corps d’armée au complet ! Débloque les améliorations →'
-            : `${progress.points}/${MAX_POINTS} bonnes réponses · encore ${POINTS_PER_LEVEL - inLevel} pour le cran ${level + 1}`}
+            : `${progress.points}/${MAX_POINTS} bonnes réponses · prochaine recrue dans ${pointsToNextRecruit(progress.points)} · cran ${level + 1} dans ${POINTS_PER_LEVEL - inLevel}`}
         </div>
 
         <div className="ranks">
@@ -76,7 +77,7 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
           <span className="train-icon">⚔</span>
           <span>
             <b>Entraîner</b>
-            <small>Série de 5 exercices</small>
+            <small>Série de 5 · palier {difficultyForLevel(level)}/5 {'★'.repeat(difficultyForLevel(level))}</small>
           </span>
         </button>
         <div className="upgrades">

@@ -282,6 +282,25 @@ export function levelFromPoints(points: number): number {
   return Math.min(MAX_LEVEL, Math.floor(points / POINTS_PER_LEVEL))
 }
 
+/** Effectif du corps : grandit à chaque bonne réponse, entre deux crans. */
+export function armySize(points: number): number {
+  const level = levelFromPoints(points)
+  if (level >= MAX_LEVEL) return UNITS_PER_LEVEL[MAX_LEVEL]
+  const within = (points - level * POINTS_PER_LEVEL) / POINTS_PER_LEVEL
+  return UNITS_PER_LEVEL[level] + Math.floor((UNITS_PER_LEVEL[level + 1] - UNITS_PER_LEVEL[level]) * within)
+}
+
+/** Nombre de bonnes réponses avant la prochaine recrue (0 si l'armée est complète). */
+export function pointsToNextRecruit(points: number): number {
+  if (points >= MAX_POINTS) return 0
+  const size = armySize(points)
+  let p = points
+  while (p < MAX_POINTS && armySize(p) === size) p++
+  return p - points
+}
+
+export const ROMAN = ['0', 'I', 'II', 'III', 'IV', 'V']
+
 export function unitName(chapter: Chapter, tier: number): string {
   return tier === 0 ? 'Villageois' : chapter.tierNames[tier - 1]
 }

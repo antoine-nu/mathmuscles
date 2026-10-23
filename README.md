@@ -27,10 +27,12 @@ Importer le dépôt dans Vercel : le framework **Vite** est détecté automatiqu
 
 - Une **série** = 5 exercices, générés aléatoirement pour le chapitre.
 - Chaque bonne réponse = 1 point. **10 points = 1 cran de jauge**, 5 crans → 50 bonnes réponses pour un corps d'armée complet.
-- Taille de l'armée par cran : 1 villageois → 3 → 5 → 8 → 11 → 15 soldats.
+- L'armée grossit **à chaque série** : de 1 villageois à 3, 5, 8, 11 puis 15 soldats aux crans 1 à 5, avec des recrues intermédiaires entre deux crans.
 - Rang des soldats : villageois (cran 0), recrue (crans 1-2), vétéran (crans 3-4), élite (cran 5).
-- La difficulté des exercices suit la jauge (3 niveaux).
-- Jauge pleine → 3 **améliorations** par corps (armure, arme, étendard…), chacune obtenue par une *série d'élite* réussie à 4/5 au moins.
+- **5 paliers de difficulté par chapitre** : le palier n correspond au cran n − 1 (cran 0 → palier 1, … cran 4 et plus → palier 5). Les paliers élevés contiennent des problèmes rédigés.
+- Réponses **ouvertes** autant que possible : nombres, fractions (irréductibles si demandé), expressions en x (contrôle « développé et réduit » ou « factorisé »), a√b, couples (x ; y), intervalles, ensembles de solutions. Un clavier de symboles accompagne la saisie ; une réponse illisible est signalée sans être comptée fausse.
+- Sur la carte, chaque bâtiment porte un **écusson** : cran en chiffres romains, anneau de progression vers le cran suivant, effectif du corps. Les nouvelles recrues arrivent avec une animation.
+- Jauge pleine → 3 **améliorations** par corps (armure, arme, étendard…), chacune obtenue par une *série d'élite* (palier 5) réussie à 4/5 au moins.
 - La progression est sauvegardée dans le navigateur (`localStorage`).
 - Le **mode démo** (case en haut à droite) permet de simuler la progression pour voir l'évolution des armées.
 
@@ -39,7 +41,7 @@ Importer le dépôt dans Vercel : le framework **Vite** est détecté automatiqu
 ```
 src/
   data/curriculum.ts      niveaux, chapitres, corps d'armée, améliorations, règles de progression
-  exercises/              générateurs d'exercices (5e, 2nde) + utilitaires de correction
+  exercises/              exercices par chapitre et par palier (5e, 2nde) + moteur de correction (expressions, intervalles…)
   game/                   progression (localStorage), projection isométrique, couleurs
   components/
     WorldMap.tsx          carte isométrique SVG (terrain, camps, formations, pan/zoom)

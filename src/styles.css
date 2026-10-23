@@ -370,3 +370,37 @@ button { font-family: inherit; cursor: pointer; }
 .gallery-title span { font-size: 13px; color: var(--muted); }
 .gallery figure { margin: 0; text-align: center; background: radial-gradient(ellipse at 50% 85%, #6f9a3c 0 35%, #2c4418 80%); border: 1px solid #5a4024; padding: 4px; }
 .gallery figcaption { font-size: 12px; }
+
+/* ── Saisie ouverte ─────────────────────────────── */
+.q-num { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.q-tier { font-family: var(--font-body); font-size: 13px; color: #7a5a2c; }
+.q-tier span { color: #b8862a; letter-spacing: 1px; }
+.keypad { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.keypad button {
+  min-width: 42px; padding: 6px 10px;
+  font: 600 18px var(--font-body);
+  background: rgba(255, 252, 240, 0.55); color: var(--ink);
+  border: 1px solid #8a6a3c; border-radius: 4px;
+  box-shadow: 0 2px 0 rgba(90, 60, 30, 0.35);
+}
+.keypad button:hover { background: #fffdf3; }
+.keypad button:active { transform: translateY(1px); box-shadow: none; }
+.warning { margin-top: 10px; padding: 8px 12px; border-radius: 4px; background: rgba(217, 134, 43, 0.15); border-left: 4px solid #d9862b; font-size: 16px; }
+.feedback .diag { flex-basis: 100%; font-weight: 600; color: #8a2a20; }
+.recruits p { margin: 6px 0; }
+.levelup { padding: 8px 12px; border-radius: 4px; background: rgba(217, 180, 90, 0.3); border: 1px solid #b8862a; font-weight: 600; }
+
+/* ── Écussons et recrues sur la carte ───────────── */
+.badge-lvl { font-family: var(--font-title); font-weight: 900; font-size: 15px; fill: var(--gold-bright); }
+.badge-count { font-family: var(--font-body); font-weight: 700; font-size: 12px; fill: var(--text-light); }
+.badge-pop { animation: badge-pop 0.7s cubic-bezier(.3, 1.6, .5, 1); transform-box: fill-box; transform-origin: center; }
+@keyframes badge-pop { from { transform: scale(0.3); opacity: 0; } }
+.recruit { animation: recruit 0.9s cubic-bezier(.3, 1.4, .5, 1) both; }
+@keyframes recruit {
+  0% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+  60% { opacity: 1; transform: translateY(3px) scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+.recruit-ring { animation: recruit-ring 1.4s ease-out both; transform-box: fill-box; transform-origin: center; }
+@keyframes recruit-ring { 0% { opacity: 0; transform: scale(0.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.8); } }
+@media (prefers-reduced-motion: reduce) { .recruit, .recruit-ring, .badge-pop { animation: none; } .recruit-ring { display: none; } }
