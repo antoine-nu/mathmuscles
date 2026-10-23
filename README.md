@@ -19,6 +19,14 @@ Autres commandes :
 
 La galerie de toutes les unités est visible sur <http://localhost:5173/?galerie>.
 
+## Version clé USB (sans rien installer)
+
+```bash
+npm run build:usb   # → dist-usb/MathMuscles.html
+```
+
+Ce fichier unique contient tout le jeu : on le copie sur une clé USB et on l'ouvre d'un double-clic dans Chrome, Edge ou Firefox, sur n'importe quel ordinateur, sans Node ni connexion. Sans Internet, les polices médiévales sont remplacées par une police serif standard. La progression est enregistrée dans le navigateur de l'ordinateur utilisé : elle ne voyage pas avec la clé.
+
 ## Déployer sur Vercel
 
 Importer le dépôt dans Vercel : le framework **Vite** est détecté automatiquement (build `npm run build`, sortie `dist`). Aucune configuration supplémentaire.

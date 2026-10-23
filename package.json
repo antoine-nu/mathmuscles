@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "build:usb": "npm run build && node scripts/build-usb.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",
