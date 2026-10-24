@@ -146,7 +146,7 @@ export class Battle {
     }
     block(g.front, 17, FIELD_H / 2, 16, 1.35)
     block(g.mid, 12, FIELD_H / 2, 16, 1.25)
-    block(g.back, 7, FIELD_H / 2, 10, 1.9)
+    block(g.back, 9, FIELD_H / 2, 10, 1.9)
     const top = g.flank.filter((_, i) => i % 2 === 0)
     const bottom = g.flank.filter((_, i) => i % 2 === 1)
     block(top, 14, 7, 4, 1.7)
@@ -297,7 +297,8 @@ export class Battle {
     // Les tireurs tiennent leur position face à une troupe de mêlée qui charge : ils la laissent venir.
     const ranged = s.range > 2
     const charging = target.state === 0 && target.s.range <= 2 && target.target > 0 && this.byId(target.target)?.side === u.side
-    const hold = ranged && charging && dist < s.range + 14
+    // l'artillerie avance jusqu'à portée de tir, puis reste en batterie
+    const hold = u.kind === 'siege' ? dist < s.range + 1 : ranged && charging && dist < s.range + 14
     this.move(u, dx / dist, dy / dist, tooClose ? -0.7 : hold ? 0 : 1)
   }
 

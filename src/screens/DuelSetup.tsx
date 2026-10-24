@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 
 export const DURATIONS: { min: number; label: string; hint: string }[] = [
-  { min: 5, label: '5 min', hint: 'Partie éclair' },
-  { min: 10, label: '10 min', hint: 'Courte' },
-  { min: 15, label: '15 min', hint: 'Classique' },
-  { min: 20, label: '20 min', hint: 'Longue' },
+  { min: 15, label: '15 min', hint: 'Escarmouche' },
+  { min: 30, label: '30 min', hint: 'Campagne' },
+  { min: 45, label: '45 min', hint: 'Grande guerre' },
+  { min: 60, label: '1 heure', hint: 'Épopée' },
 ]
 
 /** Cadre commun des écrans de préparation de partie. */

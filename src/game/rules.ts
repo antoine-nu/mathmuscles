@@ -21,16 +21,17 @@ export const SOLO_RULES: Rules = {
   upgradeCooldown: 30_000,
 }
 
-export const DUEL_DURATIONS = [10, 15, 20] as const
+export const DUEL_DURATIONS = [15, 30, 45, 60] as const
 
 /**
- * Règles d'un duel : tout est proportionné à la durée. En 15 min, un élève appliqué atteint le cran 3
- * dans 3 ou 4 maisons et l'Âge des châteaux ; l'Âge impérial est réservé aux très bons.
+ * Règles d'un duel, proportionnées à la durée : un cran coûte plus cher dans une longue partie, et les âges
+ * demandent davantage de points. En 15 min, un très bon élève atteint l'Âge féodal ou des châteaux ;
+ * l'Âge impérial reste un exploit, même en une heure.
  */
 export function duelRules(durationMin: number): Rules {
-  const k = durationMin / 15
+  const k = Math.pow(durationMin / 15, 0.75)
   return {
-    ppc: durationMin >= 20 ? 3 : 2,
+    ppc: Math.max(2, Math.round(durationMin / 12)),
     ageThresholds: [1, Math.max(2, Math.round(3 * k)), Math.max(4, Math.round(6 * k))],
     problemCooldown: 45_000,
     upgradeCooldown: 25_000,

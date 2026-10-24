@@ -3,6 +3,7 @@ import { LEVELS, unitName, type Chapter } from '../data/curriculum'
 import type { UnitLook } from '../components/UnitSprite'
 import { seeded } from '../game/color'
 import type { Feed, UnitMeta } from './feed'
+import type { BattleEvent } from './sim'
 import { FIELD_H, FIELD_W, HORN_DURATION, type Side } from './sim'
 import { SPRITE_BOX, preloadSprites, spriteImage } from './sprites'
 
@@ -36,6 +37,8 @@ interface Props {
   colors: [string, string]
   /** Appelé à chaque image (pour faire avancer une simulation locale). */
   onTick?: (dt: number) => void
+  /** Événements de la bataille (pour les sons). */
+  onEvents?: (events: BattleEvent[]) => void
 }
 
 /** Terrain vague : herbe, plaques de terre, un peu de marais, cailloux et fleurs. */
@@ -93,10 +96,12 @@ function paintGround(ctx: CanvasRenderingContext2D, w: number, h: number, field:
   }
 }
 
-export function BattleCanvas({ feed, colors, onTick }: Props) {
+export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tickRef = useRef(onTick)
   tickRef.current = onTick
+  const eventsRef = useRef(onEvents)
+  eventsRef.current = onEvents
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -136,12 +141,15 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
 
     let raf = 0
     let last = performance.now()
+    let shake = 0
     const draw = (now: number) => {
       const dt = (now - last) / 1000
       last = now
       tickRef.current?.(dt)
       const f = feed.frame()
-      for (const ev of feed.drain()) {
+      const drained = feed.drain()
+      if (drained.length) eventsRef.current?.(drained)
+      for (const ev of drained) {
         if (ev.type === 'death') {
           const u = f.units.find((x) => x.id === ev.id)
           if (u) effects.push({ kind: 'dust', x: u.x, y: u.y, t0: f.t })
@@ -150,6 +158,7 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
           if (u) effects.push({ kind: 'convert', x: u.x, y: u.y, t0: f.t, side: ev.side })
         } else if (ev.type === 'impact') {
           effects.push({ kind: 'impact', x: ev.x, y: ev.y, t0: f.t })
+          shake = Math.max(shake, 0.35)
         }
       }
 
@@ -165,7 +174,9 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
         cam.x += ((x0 + x1) / 2 - cam.x) * ease
         cam.y += (((y0 + y1) / 2) * TILT - 1 - cam.y) * ease
       }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      shake = Math.max(0, shake - dt)
+      const sh = shake > 0 ? shake * 9 : 0
+      ctx.setTransform(dpr, 0, 0, dpr, (Math.random() - 0.5) * sh * dpr, (Math.random() - 0.5) * sh * dpr)
       ctx.fillStyle = '#4f7a2e'
       ctx.fillRect(0, 0, W, H)
       if (ground) {
@@ -212,10 +223,12 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
         const bob = moving > 0.5 ? Math.abs(Math.sin(f.t * 10 + u.id)) * 2.2 : 0
         const tilt = moving > 0.5 ? Math.sin(f.t * 10 + u.id) * 0.06 : 0
         const lunge = u.state === 1 && u.swing < 0.25 && m.kind !== 'archer' && m.kind !== 'siege' ? (0.25 - u.swing) * 14 * u.facing : 0
+        // recul de l'engin de siège au moment du tir
+        const recoil = m.kind === 'siege' && u.swing < 0.4 ? -Math.sin((u.swing / 0.4) * Math.PI) * 0.12 * u.facing : 0
         if (img.complete) {
           ctx.save()
           ctx.translate(x + lunge, y - bob)
-          ctx.rotate(tilt)
+          ctx.rotate(tilt + recoil)
           ctx.scale(scale * u.facing, scale)
           ctx.drawImage(img, SPRITE_BOX.x, SPRITE_BOX.y, SPRITE_BOX.w, SPRITE_BOX.h)
           ctx.restore()
@@ -247,7 +260,7 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
       for (const p of f.projectiles) {
         const r = Math.min(1, Math.max(0, (f.t - p.t0) / p.dur))
         const px = p.x0 + (p.x1 - p.x0) * r, py = p.y0 + (p.y1 - p.y0) * r
-        const arc = Math.sin(r * Math.PI) * (p.kind === 'stone' ? 5 : 1.6) * k
+        const arc = Math.sin(r * Math.PI) * (p.kind === 'stone' ? 7 : 1.6) * k
         const X = sx(px), Y = sy(py) - k * 1.2 - arc
         if (p.kind === 'arrow') {
           const r2 = Math.min(1, r + 0.04)
@@ -256,12 +269,22 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
           ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.4
           ctx.beginPath(); ctx.moveTo(X - Math.cos(ang) * 7, Y - Math.sin(ang) * 7); ctx.lineTo(X, Y); ctx.stroke()
         } else {
-          ctx.fillStyle = 'rgba(0,0,0,0.25)'
-          ctx.beginPath(); ctx.ellipse(sx(px), sy(py), 4, 2, 0, 0, Math.PI * 2); ctx.fill()
-          ctx.fillStyle = '#6f6a62'
-          ctx.beginPath(); ctx.arc(X, Y, 3.6, 0, Math.PI * 2); ctx.fill()
-          ctx.fillStyle = 'rgba(255, 140, 40, 0.55)'
-          ctx.beginPath(); ctx.arc(X, Y, 1.8, 0, Math.PI * 2); ctx.fill()
+          // boulet : ombre au sol, traînée de fumée, pierre enflammée
+          const R = Math.max(4, k * 0.34)
+          ctx.fillStyle = `rgba(0,0,0,${0.18 + 0.2 * r})`
+          ctx.beginPath(); ctx.ellipse(sx(px), sy(py), R * 1.3, R * 0.55, 0, 0, Math.PI * 2); ctx.fill()
+          for (let j = 1; j <= 4; j++) {
+            const rj = Math.max(0, r - j * 0.035)
+            const tx = sx(p.x0 + (p.x1 - p.x0) * rj), ty = sy(p.y0 + (p.y1 - p.y0) * rj) - k * 1.2 - Math.sin(rj * Math.PI) * 7 * k
+            ctx.fillStyle = `rgba(210, 200, 185, ${0.35 - j * 0.07})`
+            ctx.beginPath(); ctx.arc(tx, ty, R * (1 - j * 0.12), 0, Math.PI * 2); ctx.fill()
+          }
+          ctx.fillStyle = '#4a4540'
+          ctx.strokeStyle = '#1c130c'
+          ctx.lineWidth = 1
+          ctx.beginPath(); ctx.arc(X, Y, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+          ctx.fillStyle = 'rgba(255, 150, 50, 0.85)'
+          ctx.beginPath(); ctx.arc(X - R * 0.25, Y - R * 0.25, R * 0.45, 0, Math.PI * 2); ctx.fill()
         }
       }
 
@@ -269,7 +292,7 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
       for (let i = effects.length - 1; i >= 0; i--) {
         const e = effects[i]
         const age = f.t - e.t0
-        const life = e.kind === 'convert' ? 1.2 : e.kind === 'impact' ? 0.7 : 0.6
+        const life = e.kind === 'convert' ? 1.2 : e.kind === 'impact' ? 0.9 : 0.6
         if (age > life || age < 0) { effects.splice(i, 1); continue }
         const a = 1 - age / life
         const X = sx(e.x), Y = sy(e.y)
@@ -283,9 +306,22 @@ export function BattleCanvas({ feed, colors, onTick }: Props) {
             ctx.lineTo(X + Math.cos(ang) * k * (0.6 + age * 1.5), Y - k + Math.sin(ang) * k * (0.6 + age * 1.5))
             ctx.stroke()
           }
+        } else if (e.kind === 'impact') {
+          // gerbe de terre et cratère
+          const rad = k * (0.6 + age * 3.4)
+          ctx.fillStyle = `rgba(95, 70, 40, ${a * 0.55})`
+          ctx.beginPath(); ctx.ellipse(X, Y, rad, rad * 0.45, 0, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = `rgba(255, 170, 70, ${a * a * 0.7})`
+          ctx.beginPath(); ctx.ellipse(X, Y - k * 0.3, k * 0.9 * a, k * 0.45 * a, 0, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = `rgba(80, 60, 35, ${a})`
+          for (let j = 0; j < 7; j++) {
+            const ang = (j / 7) * Math.PI * 2 + e.x
+            const d = age * k * 4
+            ctx.fillRect(X + Math.cos(ang) * d, Y - Math.abs(Math.sin(ang)) * d * 0.8 - Math.sin(age * 4) * k * 1.2, 3, 3)
+          }
         } else {
-          ctx.fillStyle = e.kind === 'impact' ? `rgba(120, 95, 60, ${a * 0.6})` : `rgba(180, 160, 120, ${a * 0.5})`
-          const rad = k * (0.4 + age * (e.kind === 'impact' ? 3 : 1.4))
+          ctx.fillStyle = `rgba(180, 160, 120, ${a * 0.5})`
+          const rad = k * (0.4 + age * 1.4)
           ctx.beginPath(); ctx.ellipse(X, Y, rad, rad * 0.45, 0, 0, Math.PI * 2); ctx.fill()
         }
       }

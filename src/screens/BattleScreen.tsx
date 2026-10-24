@@ -9,6 +9,8 @@ import type { ArmySpec } from '../game/state'
 import type { Exercise } from '../exercises/utils'
 import { MathText } from '../components/MathText'
 import { formatWait } from '../components/CommandPanel'
+import { MuteButton } from '../components/MuteButton'
+import { audio } from '../audio/engine'
 
 const CHAPTERS = new Map<string, Chapter>(LEVELS.flatMap((l) => l.chapters.map((c) => [c.id, c] as const)))
 
@@ -68,8 +70,23 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
     return () => window.clearInterval(t)
   }, [feed, local, startAt])
 
+  // Ambiance : cornes de guerre à l'ouverture, musique de combat à la charge, fanfare à la fin.
+  useEffect(() => {
+    audio.play(null)
+    audio.warHorns()
+    return () => audio.play(null)
+  }, [feed])
+  useEffect(() => {
+    if (started) audio.play('battle')
+  }, [started])
+  const countdownSec = Math.ceil((startAt - now) / 1000)
+  useEffect(() => {
+    if (countdownSec > 0 && countdownSec <= 3) audio.tick(false)
+  }, [countdownSec])
+
   useEffect(() => {
     if (!result) return
+    audio.fanfare(result.winner === mySide || result.winner === -1)
     setQuestion(null)
     const t = window.setTimeout(() => setShowEnd(true), 1800)
     return () => window.clearTimeout(t)
@@ -131,7 +148,17 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
       </header>
 
       <div className="battle-field">
-        <BattleCanvas feed={feed} colors={colors} onTick={local ? (dt) => local.advance(dt) : undefined} />
+        <BattleCanvas
+          feed={feed}
+          colors={colors}
+          onTick={local ? (dt) => local.advance(dt) : undefined}
+          onEvents={(evs) => {
+            for (const ev of evs) {
+              if (ev.type === 'horn') audio.battleHorn()
+              else if (ev.type === 'impact') audio.impact()
+            }
+          }}
+        />
 
         {!started && (
           <div className="battle-intro">
@@ -217,6 +244,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
           {local && (
             <button className="hud-btn" onClick={() => setSpeed(speed === 1 ? 2 : 1)}>Vitesse ×{speed === 1 ? 2 : 1}</button>
           )}
+          <MuteButton />
         </div>
       </footer>
     </div>

@@ -12,6 +12,9 @@ import { ExerciseModal, Recruits, type ScrollResult } from '../components/Exerci
 import { ResIcon } from '../components/ResIcon'
 import { TownHallModal } from '../components/TownHallModal'
 import { WorldMap } from '../components/WorldMap'
+import { CodexModal } from '../components/Codex'
+import { MuteButton } from '../components/MuteButton'
+import { StartCountdown } from './PrepScreen'
 
 export interface OpponentStatus {
   name: string
@@ -31,6 +34,8 @@ interface Props {
   opponent?: OpponentStatus
   /** Duel : fin de la phase d'entraînement (horodatage local). */
   deadline?: number
+  /** Duel : départ du chrono (compte à rebours affiché avant). */
+  startsAt?: number
   onQuit: () => void
 }
 
@@ -38,7 +43,7 @@ type Session =
   | { kind: 'series'; chapter: Chapter; pointsBefore: number; exercises: Exercise[]; tier: number; nonce: number }
   | { kind: 'upgrade' | 'age'; chapter: Chapter; n: 1 | 2 | 3; exercises: Exercise[]; nonce: number }
 
-export function TrainingScreen({ player, update, mode, teamColor, playerName, opponent, deadline, onQuit }: Props) {
+export function TrainingScreen({ player, update, mode, teamColor, playerName, opponent, deadline, startsAt, onQuit }: Props) {
   const rules = useRules()
   const now = useNow(500)
   const level = levelOf(player)
@@ -49,6 +54,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
   const [demo, setDemo] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [ageUp, setAgeUp] = useState<number | null>(null)
+  const [codex, setCodex] = useState(false)
   const chapter = chapters.find((c) => c.id === selected) ?? chapters[0]
   const age = ageOf(player, rules)
   const thresholds = [0, ...rules.ageThresholds]
@@ -132,6 +138,8 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
           <span className="res" title="Population"><ResIcon kind="pop" />{population}/{maxPopulation}</span>
         </div>
         <div className="hud-right">
+          <button className="hud-btn" onClick={() => setCodex(true)} title="Caractéristiques des unités">📜 Codex</button>
+          <MuteButton />
           {remaining !== null && (
             <div className={`hud-timer ${remaining < 60_000 ? 'urgent' : ''}`} title="Temps restant avant la bataille">
               ⏳ {formatWait(remaining)}
@@ -203,6 +211,9 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
           return { ...p, houses: { ...p.houses, [chapter.id]: { ...h, points: maxPoints(rules.ppc), upgrades: next ? [...h.upgrades, next.id] : [] } } }
         })}
       />
+
+      {codex && <CodexModal levelId={player.levelId} teamColor={teamColor} onClose={() => setCodex(false)} />}
+      {startsAt && <StartCountdown startsAt={startsAt} />}
 
       {townHall && !timeUp && (
         <TownHallModal player={player} now={now} teamColor={teamColor} onPick={(id, n) => startAge(chapters.find((c) => c.id === id)!, n)} onClose={() => setTownHall(false)} />

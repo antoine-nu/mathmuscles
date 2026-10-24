@@ -6,7 +6,9 @@ import { RulesContext, duelRules } from '../game/rules'
 import { ageOf, armyOf, emptyPlayer, populationOf, type ArmySpec, type PlayerState } from '../game/state'
 import { PROTOCOL_VERSION, isLocalNetwork, newCode, normalizeCode, openTransport, type Msg, type Transport } from '../net/transport'
 import { BattleScreen } from './BattleScreen'
-import { BATTLE_INTRO, BLUE, RED, TIME_UP_PAUSE } from './BotDuel'
+import { BATTLE_INTRO, BLUE, RED, START_COUNTDOWN, TIME_UP_PAUSE } from './BotDuel'
+import { PrepScreen } from './PrepScreen'
+import { audio } from '../audio/engine'
 import { DurationPicker, SetupFrame } from './DuelSetup'
 import { TrainingScreen } from './TrainingScreen'
 
@@ -14,7 +16,8 @@ type Role = 'host' | 'guest'
 
 type Phase =
   | { name: 'lobby' }
-  | { name: 'training'; deadline: number }
+  | { name: 'prep' }
+  | { name: 'training'; startsAt: number; deadline: number }
   | { name: 'battle'; feed: LocalFeed | RemoteFeed; armies: [ArmySpec, ArmySpec]; startAt: number }
 
 interface Peer {
@@ -37,11 +40,13 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [peer, setPeer] = useState<Peer | null>(null)
   const [peerOnline, setPeerOnline] = useState(false)
-  const [duration, setDuration] = useState(10)
+  const [duration, setDuration] = useState(15)
   const [phase, setPhase] = useState<Phase>({ name: 'lobby' })
   const [player, setPlayer] = useState<PlayerState>(() => emptyPlayer(level.id))
   const [oppStatus, setOppStatus] = useState({ age: 0, pop: 0 })
   const [notice, setNotice] = useState<string | null>(null)
+  const [meReady, setMeReady] = useState(false)
+  const [peerReady, setPeerReady] = useState(false)
   const transport = useRef<Transport | null>(null)
   const oppArmy = useRef<ArmySpec | null>(null)
   const oppFinal = useRef(false)
@@ -58,15 +63,15 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   const send = useCallback((m: Msg) => transport.current?.send(m), [])
 
   // ── Démarrage de l'entraînement (les deux côtés) ──
-  const beginTraining = useCallback((minutes: number, ms?: number) => {
+  const beginTraining = useCallback((minutes: number, ms: number, startIn: number) => {
     setDuration(minutes)
     oppArmy.current = null
     oppFinal.current = false
     setPlayer(emptyPlayer(level.id))
     setOppStatus({ age: 0, pop: 0 })
     setNotice(null)
-    const override = Number(new URLSearchParams(location.search).get('chrono'))
-    setPhase({ name: 'training', deadline: Date.now() + (ms ?? (override > 0 ? override * 1000 : minutes * 60_000)) })
+    const startsAt = Date.now() + startIn
+    setPhase({ name: 'training', startsAt, deadline: startsAt + ms })
   }, [level.id])
 
   // ── Réception des messages ──
@@ -79,8 +84,16 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
       case 'config':
         setDuration(m.duration)
         break
+      case 'prep':
+        setMeReady(false)
+        setPeerReady(false)
+        setPhase({ name: 'prep' })
+        break
+      case 'ready':
+        setPeerReady(true)
+        break
       case 'start':
-        beginTraining(m.duration, m.ms)
+        beginTraining(m.duration, m.ms, m.startIn)
         break
       case 'status':
         setOppStatus({ age: m.age, pop: m.pop })
@@ -113,6 +126,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   }, [beginTraining])
 
   const open = async (r: Role, c: string) => {
+    audio.unlock()
     setConnecting(true)
     setError(null)
     try {
@@ -212,12 +226,22 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
     return () => window.clearInterval(t)
   }, [phase, role, send])
 
-  const hostStart = () => {
+  /** L'hôte ouvre la préparation : chacun consulte le codex puis se déclare prêt. */
+  const hostPrep = () => {
+    setMeReady(false)
+    setPeerReady(false)
+    send({ t: 'prep' })
+    setPhase({ name: 'prep' })
+  }
+
+  // Les deux joueurs sont prêts : l'hôte donne le départ (compte à rebours identique des deux côtés).
+  useEffect(() => {
+    if (role !== 'host' || phase.name !== 'prep' || !meReady || !peerReady) return
     const override = Number(new URLSearchParams(location.search).get('chrono'))
     const ms = override > 0 ? override * 1000 : duration * 60_000
-    send({ t: 'start', duration, ms })
-    beginTraining(duration, ms)
-  }
+    send({ t: 'start', duration, ms, startIn: START_COUNTDOWN })
+    beginTraining(duration, ms, START_COUNTDOWN)
+  }, [role, phase.name, meReady, peerReady, duration, send, beginTraining])
 
   const quit = () => {
     send({ t: 'quit' })
@@ -225,6 +249,19 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   }
 
   // ── Affichage ──
+  if (phase.name === 'prep') {
+    return (
+      <PrepScreen
+        level={level}
+        durationMin={duration}
+        me={{ name: me, ready: meReady, color: mySide === 0 ? BLUE : RED }}
+        opponent={{ name: peer?.name ?? 'Adversaire', ready: peerReady, color: mySide === 0 ? RED : BLUE, detail: peerOnline ? 'Consulte le codex…' : 'Déconnecté' }}
+        onReady={() => { setMeReady(true); send({ t: 'ready' }) }}
+        onBack={quit}
+      />
+    )
+  }
+
   if (phase.name === 'training') {
     const oppLevel = LEVELS.find((l) => l.id === peer?.levelId)
     return (
@@ -236,6 +273,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
           teamColor={mySide === 0 ? BLUE : RED}
           playerName={me}
           opponent={{ name: `${peer?.name ?? 'Adversaire'}${oppLevel ? ` (${oppLevel.short})` : ''}`, color: mySide === 0 ? RED : BLUE, age: oppStatus.age, population: oppStatus.pop, online: peerOnline }}
+          startsAt={phase.startsAt}
           deadline={phase.deadline}
           onQuit={quit}
         />
@@ -302,12 +340,12 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
           {role === 'host' ? (
             <>
               <DurationPicker value={duration} onChange={setDuration} />
-              <button className="btn gold big" disabled={!peerOnline || !peer} onClick={hostStart}>Lancer la partie ⚔</button>
+              <button className="btn gold big" disabled={!peerOnline || !peer} onClick={() => { audio.unlock(); hostPrep() }}>Préparer la bataille ⚔</button>
             </>
           ) : (
             <div className="setup-block">
               <h3>Durée choisie par l’hôte</h3>
-              <p className="setup-note"><b>{duration} minutes</b> d’entraînement, puis la bataille. La partie démarre quand l’hôte la lance.</p>
+              <p className="setup-note"><b>{duration} minutes</b> d’entraînement, puis la bataille. L’hôte ouvre la préparation, puis chacun se déclare prêt.</p>
             </div>
           )}
         </>

@@ -56,7 +56,8 @@ export class Bot {
 
   private choose(now: number): Action {
     const level = LEVELS.find((l) => l.id === this.state.levelId)!
-    const chapters = level.chapters
+    // ordre mélangé : l'ordinateur ne favorise pas les premières maisons de la liste
+    const chapters = [...level.chapters].sort(() => Math.random() - 0.5)
     // 1. un problème de l'hôtel de ville disponible ? (le plus rentable d'abord)
     if (Math.random() < 0.55) {
       for (const n of [3, 2, 1] as const) {

@@ -7,6 +7,7 @@ import { TrainingScreen } from './screens/TrainingScreen'
 import { BotDuel } from './screens/BotDuel'
 import { DemoBattle } from './screens/DemoBattle'
 import { FriendDuel } from './screens/FriendDuel'
+import { audio } from './audio/engine'
 
 type Screen =
   | { name: 'home' }
@@ -35,6 +36,11 @@ export default function App() {
     }
   }
 
+  const home = () => {
+    audio.play(null)
+    setScreen({ name: 'home' })
+  }
+
   if (screen.name === 'solo') {
     const level = screen.level
     return (
@@ -43,20 +49,20 @@ export default function App() {
           player={solo.get(level.id)}
           update={(fn) => solo.update(level.id, fn)}
           mode="solo"
-          onQuit={() => setScreen({ name: 'home' })}
+          onQuit={home}
         />
       </RulesContext.Provider>
     )
   }
 
-  if (screen.name === 'demo') return <DemoBattle onMenu={() => setScreen({ name: 'home' })} />
+  if (screen.name === 'demo') return <DemoBattle onMenu={home} />
 
   if (screen.name === 'duel' && screen.mode === 'bot') {
-    return <BotDuel level={screen.level} playerName={name} onQuit={() => setScreen({ name: 'home' })} />
+    return <BotDuel level={screen.level} playerName={name} onQuit={home} />
   }
 
   if (screen.name === 'duel') {
-    return <FriendDuel level={screen.level} playerName={name} onQuit={() => setScreen({ name: 'home' })} />
+    return <FriendDuel level={screen.level} playerName={name} onQuit={home} />
   }
 
   return (
@@ -64,7 +70,11 @@ export default function App() {
       getSolo={solo.get}
       name={name}
       onName={saveName}
-      onPick={(level, mode) => setScreen(mode === 'solo' ? { name: 'solo', level } : { name: 'duel', level, mode })}
+      onPick={(level, mode) => {
+        audio.unlock()
+        if (mode === 'solo') audio.play('calm')
+        setScreen(mode === 'solo' ? { name: 'solo', level } : { name: 'duel', level, mode })
+      }}
     />
   )
 }

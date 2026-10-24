@@ -4,7 +4,9 @@ import { Bot } from '../bot/bot'
 import { Battle } from '../battle/sim'
 import { LocalFeed } from '../battle/feed'
 import { duelRules } from '../game/rules'
-import { armyOf, type ArmySpec } from '../game/state'
+import { armyOf, type ArmySpec, type Regiment } from '../game/state'
+import { figuresFor } from '../battle/units'
+import type { UnitKind } from '../data/curriculum'
 import { BattleScreen } from './BattleScreen'
 import { BATTLE_INTRO, BLUE, RED } from './BotDuel'
 
@@ -16,12 +18,25 @@ function makeArmy(levelId: string, grade: number): ArmySpec {
   return armyOf(bot.state, rules)
 }
 
+/** Armée fixe pour la démonstration d'artillerie (/?bataille=artillerie). */
+function siegeArmy(levelId: string): ArmySpec {
+  const level = LEVELS.find((l) => l.id === levelId)!
+  const want: Partial<Record<UnitKind, number>> = { siege: 11, infantry: 11, archer: 8, spear: 8 }
+  const regiments: Regiment[] = level.chapters.filter((c) => want[c.unit]).map((c) => ({
+    chapterId: c.id, kind: c.unit, tier: 2, upgrades: 1, soldiers: want[c.unit]!, figures: figuresFor(c.unit, 2, want[c.unit]!),
+  }))
+  return { levelId, age: 1, regiments }
+}
+
 export function DemoBattle({ onMenu }: { onMenu: () => void }) {
+  const variant = new URLSearchParams(location.search).get('bataille')
   const [round, setRound] = useState(0)
   const { feed, armies } = useMemo(() => {
-    const armies: [ArmySpec, ArmySpec] = [makeArmy(LEVELS[0].id, 17), makeArmy(LEVELS[1].id, 17)]
+    const armies: [ArmySpec, ArmySpec] = variant === 'artillerie'
+      ? [siegeArmy(LEVELS[0].id), siegeArmy(LEVELS[1].id)]
+      : [makeArmy(LEVELS[0].id, 17), makeArmy(LEVELS[1].id, 17)]
     return { armies, feed: new LocalFeed(new Battle(armies, round * 7919 + 13)) }
-  }, [round])
+  }, [round, variant])
   const startAt = useMemo(() => Date.now() + BATTLE_INTRO, [feed])
   return (
     <BattleScreen key={round} feed={feed} local={feed} armies={armies} names={['Armée bleue', 'Armée rouge']} colors={[BLUE, RED]}

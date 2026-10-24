@@ -11,7 +11,9 @@ export const PROTOCOL_VERSION = 1
 export type Msg =
   | { t: 'hello'; name: string; levelId: string; v: number; role: 'host' | 'guest' }
   | { t: 'config'; duration: number }
-  | { t: 'start'; duration: number; ms: number }
+  | { t: 'prep' }
+  | { t: 'ready' }
+  | { t: 'start'; duration: number; ms: number; startIn: number }
   | { t: 'status'; age: number; pop: number }
   | { t: 'army'; army: ArmySpec; final?: boolean }
   | { t: 'battle'; armies: [ArmySpec, ArmySpec]; seed: number; startIn: number }

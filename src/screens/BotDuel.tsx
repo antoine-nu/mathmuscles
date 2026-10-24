@@ -8,11 +8,15 @@ import { ageOf, armyOf, emptyPlayer, populationOf, type ArmySpec, type PlayerSta
 import { BattleScreen } from './BattleScreen'
 import { TrainingScreen } from './TrainingScreen'
 import { DurationPicker, SetupFrame } from './DuelSetup'
+import { PrepScreen } from './PrepScreen'
+import { audio } from '../audio/engine'
 
 export const BLUE = '#2f5fb3'
 export const RED = '#b8362f'
 /** Pause entre la fin du chrono et la bataille (message « Le temps est écoulé »). */
 export const TIME_UP_PAUSE = 2500
+/** Compte à rebours avant le départ du chrono d'entraînement. */
+export const START_COUNTDOWN = 3600
 /** Présentation des armées et compte à rebours avant la charge. */
 export const BATTLE_INTRO = 6000
 
@@ -21,7 +25,8 @@ const gradeLabel = (g: number) => GRADE_LABELS.find(([max]) => g <= max)?.[1] ??
 
 type Phase =
   | { name: 'setup' }
-  | { name: 'training'; deadline: number }
+  | { name: 'prep' }
+  | { name: 'training'; startsAt: number; deadline: number }
   | { name: 'battle'; feed: LocalFeed; armies: [ArmySpec, ArmySpec]; startAt: number }
 
 interface Props {
@@ -31,7 +36,7 @@ interface Props {
 }
 
 export function BotDuel({ level, playerName, onQuit }: Props) {
-  const [duration, setDuration] = useState(10)
+  const [duration, setDuration] = useState(15)
   const [grade, setGrade] = useState(13)
   const [botName] = useState(() => BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)])
   const [phase, setPhase] = useState<Phase>({ name: 'setup' })
@@ -50,7 +55,8 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
     setBotState(botRef.current.state)
     // ?chrono=30 : entraînement raccourci à 30 secondes (pour tester)
     const override = Number(new URLSearchParams(location.search).get('chrono'))
-    setPhase({ name: 'training', deadline: Date.now() + (override > 0 ? override * 1000 : duration * 60_000) })
+    const startsAt = Date.now() + START_COUNTDOWN
+    setPhase({ name: 'training', startsAt, deadline: startsAt + (override > 0 ? override * 1000 : duration * 60_000) })
   }
 
   // L'ordinateur s'entraîne pendant que tu t'entraînes.
@@ -58,6 +64,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
     if (phase.name !== 'training') return
     const t = window.setInterval(() => {
       const now = Date.now()
+      if (now < phase.startsAt) return
       if (botRef.current) setBotState(botRef.current.tick(now))
       if (now >= phase.deadline + TIME_UP_PAUSE) {
         window.clearInterval(t)
@@ -91,8 +98,21 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
           </div>
           <p className="setup-note"><b>{botName}</b> · {gradeLabel(grade)} : plus sa note est haute, plus il répond juste et vite, et plus il ose les problèmes de l’hôtel de ville.</p>
         </div>
-        <button className="btn gold big" onClick={start}>Lancer la partie ⚔</button>
+        <button className="btn gold big" onClick={() => { audio.unlock(); setPhase({ name: 'prep' }) }}>Préparer la bataille ⚔</button>
       </SetupFrame>
+    )
+  }
+
+  if (phase.name === 'prep') {
+    return (
+      <PrepScreen
+        level={level}
+        durationMin={duration}
+        me={{ name: me, ready: false, color: BLUE }}
+        opponent={{ name: them, ready: true, color: RED, detail: 'Prêt !' }}
+        onReady={start}
+        onBack={onQuit}
+      />
     )
   }
 
@@ -106,6 +126,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
           teamColor={BLUE}
           playerName={me}
           opponent={{ name: them, color: RED, age: ageOf(botState, rules), population: populationOf(botState, rules), online: true }}
+          startsAt={phase.startsAt}
           deadline={phase.deadline}
           onQuit={onQuit}
         />
@@ -123,7 +144,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
       mySide={0}
       startAt={phase.startAt}
       onHorn={() => phase.feed.battle.blowHorn(0)}
-      onRematch={start}
+      onRematch={() => setPhase({ name: 'prep' })}
       onMenu={onQuit}
     />
   )

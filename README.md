@@ -20,14 +20,24 @@ npm run dev        # http://localhost:5173
 | `npm run balance` | tournoi automatique d'équilibrage des unités |
 
 Pages utiles : `/?problemes` (relecture de tous les exercices et problèmes, avec figures), `/?galerie` (toutes les unités),
-`/?bataille` (bataille de démonstration immédiate).
+`/?bataille` (bataille de démonstration immédiate), `/?bataille=artillerie` (démonstration avec engins de siège).
 
 ## Modes de jeu
 
 - **Entraînement libre** : on fait grandir son royaume à son rythme ; la progression est sauvegardée dans le navigateur.
 - **Défier l'ordinateur** : on choisit la durée et la **note sur 20** de l'adversaire (sa vitesse et sa réussite en dépendent).
 - **Défier un camarade** : l'un crée une partie et donne le **code à 4 caractères**, l'autre le saisit. L'hôte choisit la
-  durée (5, 10, 15 ou 20 min) et lance la partie. Les deux classes peuvent être différentes (5e contre 2nde).
+  durée (15, 30, 45 min ou 1 heure). Les deux classes peuvent être différentes (5e contre 2nde) : les unités sont les
+  mêmes, seuls les exercices changent ; sur 2 000 batailles simulées entre élèves de même niveau, chaque classe gagne
+  entre 48 et 52 % du temps.
+
+Avant chaque partie, un écran de **préparation** présente le **Codex des armées** (vie, attaque, armures, portée,
+vitesse, coût, forces et faiblesses, améliorations de chaque unité, avec la maison et le thème qui la forment) ; chaque
+joueur clique sur « Je suis prêt », puis un compte à rebours lance le chrono. Le Codex reste consultable pendant
+l'entraînement (bouton 📜).
+
+**Musique** (synthétisée, sans fichier) : ambiance calme mais tendue pendant l'entraînement, cornes de guerre puis
+musique de combat pendant la bataille, fanfare finale. Bouton 🔊 pour couper le son.
 
 Une partie en duel : **compte à rebours d'entraînement** (chacun forme la plus grande armée possible, améliorations et
 âges compris ; on voit l'âge et la population de l'adversaire, pas sa composition) → **bataille** (les armées se
@@ -48,7 +58,7 @@ Pour tester seul : ouvrir deux onglets sur `/?reseau=local` (les onglets se parl
 ## Règles
 
 **Maisons et crans.** Chaque bonne réponse vaut 1 point. Un cran de jauge = 10 points en entraînement libre, 2 en duel
-(3 pour les parties de 20 min). 5 crans par maison ; l'effectif passe de 1 villageois à 3, 5, 8, 11 puis 15 soldats, avec
+(3 en 30 min, 4 en 45 min, 5 en 1 heure). 5 crans par maison ; l'effectif passe de 1 villageois à 3, 5, 8, 11 puis 15 soldats, avec
 des recrues intermédiaires. Rang des soldats : villageois (cran 0), recrue (1-2), vétéran (3-4), élite (5).
 
 **Entraînement.** Séries de 5 exercices ; 5 paliers de difficulté par chapitre (cran 0 → palier 1 … cran 4+ → palier 5).
@@ -60,24 +70,25 @@ cran 3, n°3 avec l'Âge impérial et le cran 4. Échec → nouvel essai après 
 
 **Hôtel de ville et âges.** Clic sur l'hôtel de ville : pour chaque maison, un problème à 1, 2 ou 3 points (débloqués aux
 crans 2, 3 et 4), chacun une fois par partie. Les points font passer de l'Âge sombre à l'Âge féodal, des châteaux puis
-impérial (seuils 3/8/14 en entraînement libre, 1/3/6 pour un duel de 15 min). Chaque âge donne +8 % de points de vie et
+impérial (seuils 3/8/14 en entraînement libre ; 1/3/6 pour un duel de 15 min, jusqu'à 1/8/16 pour une heure). Chaque âge donne +8 % de points de vie et
 d'attaque à toute l'armée.
 
 ### Grille des unités (rang « recrue »)
 
 | Unité | Coût | PV | Attaque | Armure (mêlée / flèches) | Portée | Vitesse | Fort contre | Faible contre |
 |---|---|---|---|---|---|---|---|---|
-| Infanterie | 1 | 55 | 7 | 1 / 0 | contact | 1,0 | lanciers, éclaireurs, moines | archers, chevaliers, siège |
+| Infanterie | 1 | 55 | 7 | 1 / 0 | contact | 1,0 | lanciers, éclaireurs, siège | archers, chevaliers, moines |
 | Lanciers | 1 | 45 | 4 (+12 contre cavalerie) | 0 / 0 | 1,3 | 1,0 | chevaliers, éclaireurs, siège | infanterie, archers, moines |
 | Archers | 1 | 30 | 5 (+3 contre fantassins) | 0 / 0 | 9 | 0,95 | infanterie, lanciers, moines | éclaireurs, chevaliers, siège |
-| Éclaireurs | 1,25 | 88 | 8 (+6 archers, +12 siège, +10 moines) | 1 / 2 | contact | **1,8** | archers, siège, moines | infanterie, lanciers, chevaliers |
-| Chevaliers | 2 | 140 | 11 | 2 / 2 | contact | 1,4 | infanterie, archers, éclaireurs | lanciers, moines |
-| Engins de siège | 3 | 70 | 22, **zone** | 1 / 6 | 11 | 0,5 | masses de fantassins et d'archers | lanciers, éclaireurs |
-| Moines | 2 | 40 | **conversion** 35 % / 3,5 s, soins | 0 / 0 | 6 | 0,8 | chevaliers, siège | infanterie, archers, éclaireurs |
+| Éclaireurs | 1,25 | 92 | 8 (+6 archers, +12 siège, +16 moines) | 1 / 2 | contact | **1,8** | archers, siège, moines | infanterie, lanciers, chevaliers |
+| Chevaliers | 2 | 140 | 11 | 2 / 2 | contact | 1,4 | infanterie, archers, éclaireurs, siège | lanciers, moines |
+| Engins de siège | 3 | 70 | 15, **zone** | 1 / 6 | **20** | 0,6 | lanciers, archers, moines | infanterie, éclaireurs, chevaliers |
+| Moines | 2 | 48 | **conversion** 40 % / 3,5 s, soins | 0 / 0 | 6 | 0,8 | infanterie, lanciers, chevaliers | archers, éclaireurs, siège |
 
 Le coût indique la part d'effectif consommée : une maison de chevaliers donne deux fois moins d'unités qu'une maison de
 lanciers. Rangs : vétéran ×1,3 PV, +2 attaque, +1 armure ; élite ×1,6 PV, +4, +2. Valeurs validées par `npm run balance`
-(sur des armées mixtes aléatoires, aucune unité ne fait gagner plus de 59 % ni moins de 44 % des batailles).
+(sur des armées mixtes aléatoires, aucune unité ne fait gagner plus de 55 % ni moins de 42 % des batailles).
+L'artillerie avance jusqu'à 20 m de sa cible puis bombarde : elle tire dès le début de la mêlée.
 
 ## Contenu
 
