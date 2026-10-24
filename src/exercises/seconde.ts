@@ -1,5 +1,5 @@
 import {
-  F, expression, fmt, fraction, fracText, gcd, interval, intervalText, numeric, pair, par, pick, poly, radical,
+  fresh, F, expression, fmt, fraction, fracText, gcd, interval, intervalText, numeric, pair, par, pick, poly, radical,
   randInt, randNonZero, solutionSet, term, xPlus,
   type Exercise, type Interval, type Tiers,
 } from './utils'
@@ -2070,8 +2070,8 @@ const fct: Tiers = [
         },
       )
     },
-    // Tableau de valeurs
-    () => {
+    // Tableau de valeurs (fresh : la lecture directe reste rare, et un calcul ne doit pas tomber sur un nombre du tableau)
+    fresh(() => {
       const xs = new Set<number>()
       while (xs.size < 4) xs.add(randNonZero(-5, 6))
       const X = [...xs].sort((a, b) => a - b)
@@ -2109,7 +2109,7 @@ const fct: Tiers = [
           })
         },
       )
-    },
+    }),
     // Fonction carré
     () => retry(() => {
       const k = randInt(2, 15)

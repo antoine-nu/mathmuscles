@@ -346,7 +346,9 @@ const linEq = variants(
     return cAnswer(`Résous dans ℂ : iz = ${cTxt(w)}.`, z, `On multiplie par −i (car −i × i = 1) : z = −i(${cTxt(w)}) = ${cTxt(z)}.`)
   },
   () => {
-    const z = rcz(5), a = rcz(4), b = csub(a, cmul(I, z))
+    let z = rcz(5), a = rcz(4), b = csub(a, cmul(I, z))
+    // second membre nul : « − (0) » serait maladroit, on retire
+    while (b[0] === 0 && b[1] === 0) { z = rcz(5); a = rcz(4); b = csub(a, cmul(I, z)) }
     return cAnswer(`Résous dans ℂ : ${cTxt(a)} − iz = ${cTxt(b)}.`, z, `iz = ${cTxt(a)} − (${cTxt(b)}) = ${cTxt(cmul(I, z))}, puis z = −i × (${cTxt(cmul(I, z))}) = ${cTxt(z)}.`)
   },
 )
