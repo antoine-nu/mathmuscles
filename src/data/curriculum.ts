@@ -275,14 +275,16 @@ export const UPCOMING_LEVELS = ['6e', '4e', '3e', '1re', 'Tle']
 // ── Règles de progression ──────────────────────────────────────────────
 // 1 bonne réponse = 1 point, quelle que soit la partie ; 10 points font un cran ; 5 crans par maison.
 // Chaque unité coûte un certain nombre de bonnes réponses (voir UNIT_STATS) : la maison forme une unité
-// à chaque fois que ce nombre est atteint, et toutes les unités formées partent au combat.
+// à chaque fois que ce nombre est atteint, et toutes les unités formées partent au combat. Chaque maison
+// commence avec un villageois, qui garde le camp jusqu'au premier soldat.
 export const SERIES_SIZE = 5
 export const POINTS_PER_LEVEL = 10
 export const MAX_LEVEL = 5 // 5 crans par maison
 export const MAX_POINTS = POINTS_PER_LEVEL * MAX_LEVEL
 
-/** Rang du soldat selon le cran de jauge (0 = villageois). */
-export const TIER_PER_LEVEL = [0, 1, 1, 2, 2, 3]
+/** Rang des soldats selon le nombre de crans terminés : recrue, vétéran après le cran 3, élite après le cran 5.
+ *  (Le rang 0, villageois, est celui du villageois qui garde un camp encore sans soldat.) */
+export const TIER_PER_LEVEL = [1, 1, 1, 2, 2, 3]
 
 export const maxPoints = (ppc = POINTS_PER_LEVEL) => ppc * MAX_LEVEL
 
@@ -306,7 +308,7 @@ export const AGE_BONUS = 0.08
 export const AGE_PROBLEM_CRAN = [0, 1, 2, 3]
 /** Améliorations n = 1, 2, 3 : âge et cran requis. */
 export const UPGRADE_AGE = [0, 1, 2, 3]
-export const UPGRADE_CRAN = [0, 2, 3, 4]
+export const UPGRADE_CRAN = [0, 1, 2, 3]
 
 export function ageFromPoints(agePoints: number, thresholds: readonly number[]): number {
   let age = 0

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AGES, levelFromPoints, maxPoints, type Chapter } from '../data/curriculum'
-import { figuresFor } from '../battle/units'
+import { garrison } from '../battle/units'
 import { difficultyForLevel, makeAgeProblem, makeSeries, makeUpgradeProblem, pickDrill } from '../exercises'
 import type { Exercise } from '../exercises/utils'
 import {
@@ -101,7 +101,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
       update((p) => addSeries(p, c.id, result.correct, result.answered, rules))
       const after = Math.min(maxPoints(rules.ppc), s.pointsBefore + result.correct)
       const lvlBefore = levelFromPoints(s.pointsBefore, rules.ppc), lvlAfter = levelFromPoints(after, rules.ppc)
-      if (lvlAfter > lvlBefore) flash(`${c.corpsName} : cran ${lvlAfter} terminé ! ${figuresFor(c.unit, after)} unités sous ta bannière.`)
+      if (lvlAfter > lvlBefore) flash(`${c.corpsName} : cran ${lvlAfter} terminé ! ${garrison(c.unit, after).units} unités sous ta bannière.`)
       return
     }
     const ok = result.correct > 0

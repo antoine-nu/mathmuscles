@@ -97,11 +97,11 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
       </div>
 
       <div className="cx-rules">
-        <div><b>Rangs.</b> Villageois pendant le cran 1, recrue une fois le cran 1 terminé, vétéran après le cran 3 (×1,3 vie, +2 attaque, +1 armure), élite après le cran 5 (×1,6 vie, +4 attaque, +2 armure).</div>
+        <div><b>Rangs.</b> Chaque maison commence avec un villageois, qui garde le camp jusqu’au premier soldat. Les soldats sont recrues, puis vétérans après le cran 3 (×1,3 vie, +2 attaque, +1 armure), élites après le cran 5 (×1,6 vie, +4 attaque, +2 armure).</div>
         <div><b>Âges.</b> Chaque âge donne +{Math.round(AGE_BONUS * 100)} % de vie et d’attaque à toute l’armée.</div>
-        <div><b>Coût.</b> Nombre de bonnes réponses pour former une unité : 1 lancier par bonne réponse, 1 chevalier toutes les 2, 1 engin de siège toutes les 3. Pendant le cran 1, chaque maison forme des villageois (1 par bonne réponse). À la fin du chrono, toutes les unités formées partent au combat.</div>
+        <div><b>Coût.</b> Nombre de bonnes réponses pour former une unité : 1 lancier par bonne réponse, 1 chevalier toutes les 2, 1 engin de siège toutes les 3. À la fin du chrono, toutes les unités formées partent au combat.</div>
         <div><b>Taille des armées.</b> Dans les petites batailles, l’infanterie, les lanciers et les éclaireurs brillent ; dans les grandes, l’artillerie, les chevaliers et les moines prennent l’avantage.</div>
-        <div><b>Crans.</b> 10 bonnes réponses par cran, quelle que soit la durée de la partie. À chaque cran, un nouveau type d’exercice, plus difficile, et l’on s’y entraîne jusqu’au cran suivant. Hôtel de ville : le problème à 1 point s’ouvre une fois le cran 1 de la maison terminé, celui à 2 points après le cran 2, celui à 3 points après le cran 3.</div>
+        <div><b>Crans.</b> 10 bonnes réponses par cran, quelle que soit la durée de la partie. À chaque cran, un nouveau type d’exercice, plus difficile, et l’on s’y entraîne jusqu’au cran suivant. Hôtel de ville et améliorations : le problème à 1 point et la 1re amélioration s’ouvrent une fois le cran 1 de la maison terminé, ceux à 2 points et la 2e après le cran 2, ceux à 3 points et la 3e après le cran 3 (les améliorations demandent aussi l’âge correspondant).</div>
         <div><b>Bataille.</b> Fantassins devant, tireurs derrière, artillerie et moines au fond, cavalerie sur les ailes. Le cor de guerre (+25 % d’attaque, 5 s) s’obtient par le calcul mental.</div>
         <div><b>Duel.</b> Ton adversaire dispose des mêmes 7 types d’unités, quelle que soit sa classe.</div>
       </div>

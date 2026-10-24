@@ -1,12 +1,12 @@
 import { audio } from '../audio/engine'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  AGES, MAX_LEVEL, ROMAN, TIER_PER_LEVEL, levelFromPoints, unitName,
+  AGES, MAX_LEVEL, ROMAN, levelFromPoints, unitName,
   type Chapter,
 } from '../data/curriculum'
 import type { HouseState } from '../game/state'
 import { useRules } from '../game/rules'
-import { figuresFor } from '../battle/units'
+import { garrison } from '../battle/units'
 import { seeded, shade } from '../game/color'
 import { MAP_SIZE, TILE_H, TILE_W, iso, pts, unIso, type Pt } from '../game/iso'
 import { Banner, Building, TownCenter } from './Buildings'
@@ -37,9 +37,8 @@ function campTiles(n: number): Pt[] {
 /** Au-delà, le camp n'affiche pas toutes ses unités (l'écusson donne l'effectif exact). */
 const MAX_CAMP_FIGURES = 20
 
-export function lookFor(chapter: Chapter, progress: HouseState, ppc: number, teamColor?: string): UnitLook {
-  const level = levelFromPoints(progress.points, ppc)
-  const tier = TIER_PER_LEVEL[level]
+export function lookFor(chapter: Chapter, progress: HouseState, teamColor?: string): UnitLook {
+  const { tier } = garrison(chapter.unit, progress.points)
   return {
     kind: chapter.unit,
     tier,
@@ -50,10 +49,10 @@ export function lookFor(chapter: Chapter, progress: HouseState, ppc: number, tea
   }
 }
 
-function formation(camp: Camp, ppc: number, teamColor?: string): { pos: Pt; look: UnitLook; key: string }[] {
+function formation(camp: Camp, teamColor?: string): { pos: Pt; look: UnitLook; key: string }[] {
   const { chapter, tile, progress } = camp
-  const look = lookFor(chapter, progress, ppc, teamColor)
-  const count = Math.min(MAX_CAMP_FIGURES, figuresFor(chapter.unit, progress.points))
+  const look = lookFor(chapter, progress, teamColor)
+  const count = Math.min(MAX_CAMP_FIGURES, garrison(chapter.unit, progress.points).units)
   const cav = look.tier > 0 && (chapter.unit === 'knight' || chapter.unit === 'scout')
   const siege = look.tier > 0 && chapter.unit === 'siege'
   const sp = siege ? 1.05 : cav ? 0.72 : 0.5
@@ -216,7 +215,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
     objects.push({ depth: by + 20, node: <g key={`b-${chapter.id}`} className={active ? 'building active' : 'building'}><Building kind={chapter.building} x={bx} y={by} /></g> })
     const [fx, fy] = iso(tile[0] + 0.75, tile[1] - 1.05)
     objects.push({ depth: fy, node: <Banner key={`f-${chapter.id}`} x={fx} y={fy} color={chapter.color} emblem={chapter.emblem} /> })
-    formation(camp, ppc, teamColor).forEach(({ pos, look, key }, i) => {
+    formation(camp, teamColor).forEach(({ pos, look, key }, i) => {
       const [sx, sy] = iso(pos[0], pos[1])
       allKeys.push(key)
       const fresh = seenUnits.current !== null && !seenUnits.current.has(key)
@@ -329,7 +328,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
             onPointerEnter={() => setHover(chapter.id)} onPointerLeave={() => setHover(null)}
             onClick={() => { if (!drag.current?.moved) { audio.ui('select'); onSelect(chapter.id) } }}>
             <ellipse cx={hx} cy={hy - 20} rx={TILE_W * 1.6} ry={TILE_H * 2.2} fill="transparent" />
-            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} units={figuresFor(chapter.unit, progress.points)} />
+            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} units={garrison(chapter.unit, progress.points).units} />
             <g transform={`translate(${lx} ${ly - 112})`} filter="url(#labelShadow)">
               <rect x={-112} y={-36} width={224} height={58} rx={4} fill={isSel ? '#3a2410' : '#2a1a0c'} stroke={isSel ? '#f2d27a' : '#b8913a'} strokeWidth={isSel ? 2.4 : 1.4} opacity={0.94} />
               <text x={0} y={-16} textAnchor="middle" className="lbl-title">{chapter.corpsName}</text>

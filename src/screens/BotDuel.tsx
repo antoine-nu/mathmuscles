@@ -146,6 +146,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
       onHorn={() => phase.feed.battle.blowHorn(0)}
       onRematch={() => setPhase({ name: 'prep' })}
       onMenu={onQuit}
+      villages={[player, botState]}
     />
   )
 }

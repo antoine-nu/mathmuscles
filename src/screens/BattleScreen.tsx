@@ -5,7 +5,9 @@ import type { Feed, LocalFeed } from '../battle/feed'
 import { hornQuestion } from '../battle/hornQuestions'
 import { HORN_DURATION, HORN_MAX, MAX_DURATION, type BattleResult, type Side } from '../battle/sim'
 import { UNIT_STATS } from '../battle/units'
-import type { ArmySpec } from '../game/state'
+import { playerFromArmy, type ArmySpec, type PlayerState } from '../game/state'
+import { SOLO_RULES } from '../game/rules'
+import { Debrief } from './Debrief'
 import type { Exercise } from '../exercises/utils'
 import { MathText } from '../components/MathText'
 import { formatWait } from '../components/CommandPanel'
@@ -27,6 +29,8 @@ interface Props {
   onHorn: () => void
   onRematch?: () => void
   onMenu: () => void
+  /** Villages des deux camps à la fin de l'entraînement (bilan) ; à défaut, reconstitués à partir des armées. */
+  villages?: [PlayerState | null, PlayerState | null]
   /** Message d'état réseau (ex. adversaire déconnecté). */
   notice?: string | null
   /** Message sous le bilan quand il n'y a pas de bouton « Revanche » (invité d'un duel). */
@@ -42,7 +46,8 @@ interface Hud {
   hornLeft: [number, number]
 }
 
-export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint }: Props) {
+export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint, villages }: Props) {
+  const [debrief, setDebrief] = useState(false)
   const [hud, setHud] = useState<Hud>({ t: 0, alive: [0, 0], hornsUsed: [0, 0], hornOn: [false, false], hornLeft: [0, 0] })
   const [now, setNow] = useState(Date.now())
   const [result, setResult] = useState<BattleResult | null>(null)
@@ -201,6 +206,20 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
 
         {notice && <div className="battle-notice">{notice}</div>}
 
+        {debrief && result && (
+          <Debrief
+            armies={armies}
+            villages={[villages?.[0] ?? playerFromArmy(armies[0], SOLO_RULES), villages?.[1] ?? playerFromArmy(armies[1], SOLO_RULES)]}
+            names={names}
+            colors={colors}
+            mySide={mySide}
+            result={result}
+            onClose={() => setDebrief(false)}
+            onRematch={onRematch}
+            onMenu={onMenu}
+          />
+        )}
+
         {showEnd && result && (
           <div className="battle-end">
             <div className="be-card">
@@ -224,6 +243,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
                 })}
               </div>
               <div className="be-actions">
+                <button className="btn gold" onClick={() => setDebrief(true)}>🔍 Bilan et villages</button>
                 {onRematch && <button className="btn gold" onClick={onRematch}>Revanche</button>}
                 {!onRematch && endHint && <p className="be-hint">{endHint}</p>}
                 <button className="btn gold" onClick={onMenu}>Menu principal</button>

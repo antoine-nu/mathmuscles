@@ -107,19 +107,21 @@ function applyUpgrades(s: Combatant, kind: BattleKind, n: number) {
   }
 }
 
-/** Bonnes réponses par unité pour une maison : tant qu'elle est au cran 0, elle forme des villageois (1 chacun). */
-export function unitCost(kind: UnitKind, points: number): number {
-  return TIER_PER_LEVEL[levelFromPoints(points)] === 0 ? 1 : UNIT_STATS[kind].cost
-}
-
-/** Nombre d'unités formées par une maison : une unité toutes les « coût » bonnes réponses. */
+/** Soldats formés par une maison : un soldat toutes les « coût » bonnes réponses. */
 export function figuresFor(kind: UnitKind, points: number): number {
-  return Math.floor(points / unitCost(kind, points))
+  return Math.floor(points / UNIT_STATS[kind].cost)
 }
 
-/** Bonnes réponses manquantes avant la prochaine unité. */
+/** Effectif d'une maison : ses soldats (rang selon les crans terminés) ; tant qu'elle n'en a formé aucun,
+ *  un villageois garde le camp. */
+export function garrison(kind: UnitKind, points: number): { tier: number; units: number } {
+  const soldiers = figuresFor(kind, points)
+  return soldiers > 0 ? { tier: TIER_PER_LEVEL[levelFromPoints(points)], units: soldiers } : { tier: 0, units: 1 }
+}
+
+/** Bonnes réponses manquantes avant le prochain soldat. */
 export function pointsToNextUnit(kind: UnitKind, points: number): number {
-  const cost = unitCost(kind, points)
+  const cost = UNIT_STATS[kind].cost
   return cost - (points % cost)
 }
 

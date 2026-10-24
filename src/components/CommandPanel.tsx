@@ -1,5 +1,5 @@
 import { MAX_LEVEL, TIER_PER_LEVEL, levelFromPoints, maxPoints, unitName, type Chapter } from '../data/curriculum'
-import { MATCHUPS, UNIT_STATS, figuresFor, pointsToNextUnit, unitCost } from '../battle/units'
+import { MATCHUPS, UNIT_STATS, figuresFor, garrison, pointsToNextUnit } from '../battle/units'
 import { upgradeAvailability, type HouseState, type PlayerState } from '../game/state'
 import { useRules } from '../game/rules'
 import { difficultyForLevel } from '../exercises'
@@ -30,14 +30,15 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
   const rules = useRules()
   const { ppc } = rules
   const level = levelFromPoints(house.points, ppc)
-  const look = lookFor(chapter, house, ppc, teamColor)
+  const look = lookFor(chapter, house, teamColor)
   const maxed = level >= MAX_LEVEL
   const inLevel = maxed ? ppc : house.points % ppc
   const nextTier = TIER_PER_LEVEL.findIndex((t) => t > look.tier)
-  const figures = figuresFor(chapter.unit, house.points)
+  const figures = garrison(chapter.unit, house.points).units
   const stats = UNIT_STATS[chapter.unit]
   const noun = chapter.unit === 'siege' && look.tier > 0 ? 'engin' : 'unité'
-  const cost = unitCost(chapter.unit, house.points)
+  const cost = stats.cost
+  const toNext = pointsToNextUnit(chapter.unit, house.points)
   const role = MATCHUPS[chapter.unit]
 
   return (
@@ -71,7 +72,7 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
         <div className="gauge-caption">
           {maxed
             ? 'Corps d’armée au complet ! Il reste les améliorations →'
-            : `${house.points}/${maxPoints(ppc)} bonnes réponses · ${cost === 1 ? `1 ${noun} par bonne réponse` : `1 ${noun} toutes les ${cost} · prochain${noun === 'unité' ? 'e' : ''} dans ${pointsToNextUnit(chapter.unit, house.points)}`} · cran ${level + 1} terminé dans ${ppc - inLevel}`}
+            : `${house.points}/${maxPoints(ppc)} bonnes réponses · ${cost === 1 ? `1 ${noun} par bonne réponse` : `1 ${noun} toutes les ${cost} · prochain${noun === 'unité' ? 'e' : ''} dans ${toNext}`} · cran ${level + 1} terminé dans ${ppc - inLevel}`}
         </div>
 
         <div className="ranks">
@@ -85,7 +86,9 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
             )
           })}
           <div className="unit-role">
-            {nextTier > 0 && !maxed && <div className="rank-hint">Prochain rang après le cran {nextTier}</div>}
+            {look.tier === 0
+              ? <div className="rank-hint">Un villageois garde le camp : premier soldat dans {toNext} bonne{toNext > 1 ? 's' : ''} réponse{toNext > 1 ? 's' : ''}</div>
+              : nextTier > 0 && !maxed && <div className="rank-hint">Prochain rang après le cran {nextTier}</div>}
             <div><b>Fort contre</b> {role.strong}</div>
             <div><b>Faible contre</b> {role.weak}</div>
             <div className="unit-stats">

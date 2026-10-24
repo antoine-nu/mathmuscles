@@ -43,6 +43,8 @@ export interface BUnit {
   phase: number
   kills: number
   conversions: number
+  /** Unité qui l'a tuée ou convertie (0 si aucune). */
+  lostTo: number
 }
 
 export interface Projectile {
@@ -77,6 +79,20 @@ export interface BattleResult {
   conversions: [number, number]
   /** Régiment le plus meurtrier de chaque camp. */
   heroes: [string | null, string | null]
+  /** Bilan par régiment, pour comprendre la bataille après coup. */
+  regiments: [RegimentReport[], RegimentReport[]]
+}
+
+export interface RegimentReport {
+  /** Identifiant du régiment (chapitre). */
+  id: string
+  deployed: number
+  survived: number
+  /** Ennemis tués et convertis par ce régiment. */
+  kills: number
+  /** Régiment ennemi qui lui a fait le plus de pertes, et combien. */
+  nemesis: string | null
+  nemesisCount: number
 }
 
 /** Générateur pseudo-aléatoire reproductible (mulberry32). */
@@ -121,7 +137,7 @@ export class Battle {
             id: id++, side, origin: side, regiment: reg.chapterId, kind, tier: reg.tier, upgrades: reg.upgrades, s,
             x: 0, y: 0, hp: s.hp, maxHp: s.hp, target: -1, cooldown: this.rand() * s.reload, retarget: this.rand() * 0.5,
             state: 0, swing: 9, facing: side === 0 ? 1 : -1, deadAt: 0, channel: 0, convertCd: 0,
-            phase: this.rand() * Math.PI * 2, kills: 0, conversions: 0,
+            phase: this.rand() * Math.PI * 2, kills: 0, conversions: 0, lostTo: 0,
           }
           groups[LINE_OF[kind]].push(u)
           this.units.push(u)
@@ -261,6 +277,7 @@ export class Battle {
           u.convertCd = c.cooldown
           if (this.rand() < c.chance) {
             target.side = u.side
+            if (!target.lostTo) target.lostTo = u.id
             target.target = -1
             target.retarget = 0
             u.conversions++
@@ -342,6 +359,7 @@ export class Battle {
       target.deadAt = this.t
       const killer = this.byId(attackerId)
       if (killer) killer.kills++
+      if (!target.lostTo) target.lostTo = attackerId
       this.events.push({ t: this.t, type: 'death', id: target.id })
     }
   }
@@ -417,6 +435,25 @@ export class Battle {
       for (const [k, v] of m) if (v > n) { n = v; best = k }
       return best
     }
-    this.result = { winner, duration: this.t, survivors: [a, b], losses, conversions: conv, heroes: [hero(kills[0]), hero(kills[1])] }
+    this.result = { winner, duration: this.t, survivors: [a, b], losses, conversions: conv, heroes: [hero(kills[0]), hero(kills[1])], regiments: [this.report(0), this.report(1)] }
+  }
+
+  private report(side: Side): RegimentReport[] {
+    const out = new Map<string, RegimentReport & { by: Map<string, number> }>()
+    for (const u of this.units) {
+      if (u.origin !== side) continue
+      let r = out.get(u.regiment)
+      if (!r) out.set(u.regiment, (r = { id: u.regiment, deployed: 0, survived: 0, kills: 0, nemesis: null, nemesisCount: 0, by: new Map() }))
+      r.deployed++
+      r.kills += u.kills + u.conversions
+      const lost = u.state === 2 || u.side !== u.origin
+      if (!lost) r.survived++
+      const killer = lost && u.lostTo ? this.byId(u.lostTo) : undefined
+      if (killer && killer.origin !== side) r.by.set(killer.regiment, (r.by.get(killer.regiment) ?? 0) + 1)
+    }
+    return [...out.values()].map(({ by, ...r }) => {
+      for (const [id, n] of by) if (n > r.nemesisCount) { r.nemesis = id; r.nemesisCount = n }
+      return r
+    })
   }
 }

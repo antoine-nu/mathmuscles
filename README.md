@@ -49,6 +49,11 @@ grande valeur d'armée restante l'emporte). Pendant la bataille, le **cor de gue
 carrés… selon la classe, sans limite de temps pour répondre) donne +25 % d'attaque pendant 5 s, 3 fois au plus ; un
 bandeau et une aura dorée sur les troupes montrent qu'il est actif.
 
+Après la bataille, **« Bilan et villages »** : pour chaque corps, unités engagées, survivants, ennemis mis hors de combat
+et corps adverse qui lui a fait le plus de pertes ; quelques conseils tirés de ces chiffres (composition adverse et ce
+qui la contre, corps le plus meurtrier, écart de bonnes réponses, d'âge, d'améliorations) ; et la visite des deux
+villages tels qu'ils étaient à la fin de l'entraînement.
+
 ### La tuyauterie du duel
 
 Pas de serveur à héberger : les deux navigateurs se parlent directement (WebRTC) et se trouvent grâce à
@@ -71,17 +76,16 @@ Les règles sont **les mêmes en entraînement libre et en duel, quelle que soit
 **Maisons et crans.** Chaque bonne réponse vaut 1 point. Un cran = 10 points ; 5 crans par maison (numérotés de 1 à 5).
 **Coût** d'une unité = nombre de bonnes réponses pour la former : la maison forme une unité chaque fois que ce nombre est
 atteint (1 lancier par bonne réponse, 1 chevalier toutes les 2, 1 engin de siège toutes les 3), et à la fin du chrono
-toutes les unités formées partent au combat. Pendant le cran 1, chaque maison forme des villageois (1 par bonne
-réponse) ; une fois le cran 1 terminé, ils deviennent des soldats de la maison. Rangs : recrue après le cran 1, vétéran
-après le cran 3, élite après le cran 5.
+toutes les unités formées partent au combat. Chaque maison commence avec un villageois, qui garde le camp jusqu'au
+premier soldat. Rangs des soldats : recrue, vétéran après le cran 3, élite après le cran 5.
 
 **Entraînement.** Séries de 5 exercices. Pendant tout un cran, les exercices sont **du même type** (entraînement par
 répétition, avec des nombres différents) ; au cran suivant, le type change et la difficulté augmente (5 paliers). Le
 type de chaque cran est tiré parmi les modèles les moins récemment vus, pour que deux parties ne se ressemblent pas.
 
 **Améliorations** (3 par maison, effets réels en bataille). Chacune s'obtient en résolvant **un problème** de
-généralisation, plus difficile que l'entraînement : n°1 avec l'Âge féodal et le cran 2 terminé, n°2 avec l'Âge des
-châteaux et le cran 3 terminé, n°3 avec l'Âge impérial et le cran 4 terminé. Échec → nouvel essai après une courte attente.
+généralisation, plus difficile que l'entraînement : n°1 avec l'Âge féodal et le cran 1 terminé, n°2 avec l'Âge des
+châteaux et le cran 2 terminé, n°3 avec l'Âge impérial et le cran 3 terminé. Échec → nouvel essai après une courte attente.
 
 **Hôtel de ville et âges.** Clic sur l'hôtel de ville : pour chaque maison, un problème à 1, 2 ou 3 points (le problème à
 n points s'ouvre une fois le cran n de la maison terminé), chacun une fois par partie. Les points font passer de l'Âge

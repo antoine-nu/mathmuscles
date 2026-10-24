@@ -1,10 +1,10 @@
 // État d'un joueur : maisons (jauges, améliorations), points d'âge, problèmes résolus, temps de recharge.
 import { useCallback, useEffect, useState } from 'react'
 import {
-  AGE_PROBLEM_CRAN, LEVELS, MAX_LEVEL, TIER_PER_LEVEL, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints,
+  AGE_PROBLEM_CRAN, LEVELS, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints,
   levelFromPoints, maxPoints, type Chapter, type Level,
 } from '../data/curriculum'
-import { figuresFor } from '../battle/units'
+import { figuresFor, garrison } from '../battle/units'
 import type { Rules } from './rules'
 
 export interface HouseState {
@@ -115,20 +115,32 @@ export interface ArmySpec {
   regiments: Regiment[]
 }
 
-export function regimentOf(p: PlayerState, chapter: Chapter, rules: Rules): Regiment {
+export function regimentOf(p: PlayerState, chapter: Chapter): Regiment {
   const h = houseOf(p, chapter.id)
-  const cran = levelFromPoints(h.points, rules.ppc)
-  const tier = TIER_PER_LEVEL[Math.min(MAX_LEVEL, cran)]
-  return { chapterId: chapter.id, kind: chapter.unit, tier, upgrades: h.upgrades.length, points: h.points, figures: figuresFor(chapter.unit, h.points) }
+  const g = garrison(chapter.unit, h.points)
+  return { chapterId: chapter.id, kind: chapter.unit, tier: g.tier, upgrades: h.upgrades.length, points: h.points, figures: g.units }
 }
 
 export function armyOf(p: PlayerState, rules: Rules): ArmySpec {
-  return { levelId: p.levelId, age: ageOf(p, rules), regiments: levelOf(p).chapters.map((c) => regimentOf(p, c, rules)) }
+  return { levelId: p.levelId, age: ageOf(p, rules), regiments: levelOf(p).chapters.map((c) => regimentOf(p, c)) }
+}
+
+/** Village reconstitué à partir d'une armée (pour revoir celui de l'adversaire après la bataille) :
+ *  les améliorations s'obtiennent dans l'ordre, et l'âge donne le minimum de points d'âge. */
+export function playerFromArmy(army: ArmySpec, rules: Rules): PlayerState {
+  const p = emptyPlayer(army.levelId)
+  for (const r of army.regiments) {
+    const chapter = levelOf(p).chapters.find((c) => c.id === r.chapterId)
+    if (!chapter) continue
+    p.houses[r.chapterId] = { points: r.points, series: 0, upgrades: chapter.upgrades.slice(0, r.upgrades).map((u) => u.id) }
+  }
+  p.agePoints = army.age > 0 ? rules.ageThresholds[army.age - 1] : 0
+  return p
 }
 
 /** Nombre total d'unités de l'armée. */
 export const populationOf = (p: PlayerState) =>
-  levelOf(p).chapters.reduce((s, c) => s + figuresFor(c.unit, houseOf(p, c.id).points), 0)
+  levelOf(p).chapters.reduce((s, c) => s + garrison(c.unit, houseOf(p, c.id).points).units, 0)
 
 /** Population maximale (toutes les maisons au complet). */
 export const maxPopulationOf = (p: PlayerState, rules: Rules) =>

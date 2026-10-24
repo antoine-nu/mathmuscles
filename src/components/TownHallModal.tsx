@@ -65,7 +65,7 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
             return (
               <div key={c.id} className="th-row" role="row">
                 <span className="th-house" role="cell">
-                  <Portrait look={lookFor(c, h, rules.ppc, teamColor)} size={40} />
+                  <Portrait look={lookFor(c, h, teamColor)} size={40} />
                   <span>
                     <b>{c.corpsName}</b>
                     <small>{c.title} · {cran === 0 ? 'aucun cran terminé' : `${cran} cran${cran > 1 ? 's' : ''} terminé${cran > 1 ? 's' : ''}`}</small>

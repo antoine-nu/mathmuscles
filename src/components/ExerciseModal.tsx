@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { TIER_PER_LEVEL, levelFromPoints, maxPoints, unitName, type Chapter } from '../data/curriculum'
-import { figuresFor, pointsToNextUnit } from '../battle/units'
+import { levelFromPoints, maxPoints, unitName, type Chapter } from '../data/curriculum'
+import { figuresFor, garrison, pointsToNextUnit } from '../battle/units'
 import type { Exercise } from '../exercises/utils'
 import { FigureView } from './FigureView'
 import { MathText } from './MathText'
@@ -205,10 +205,11 @@ export function Recruits({ chapter, before, after, ppc }: { chapter: Chapter; be
   const recruits = units - figuresFor(chapter.unit, before)
   const levelBefore = levelFromPoints(before, ppc)
   const levelAfter = levelFromPoints(capped, ppc)
-  const tierAfter = TIER_PER_LEVEL[levelAfter]
-  const promoted = tierAfter > TIER_PER_LEVEL[levelBefore]
-  // une fois le cran 1 terminé, les villageois (1 bonne réponse chacun) deviennent des soldats de la maison (coût propre)
-  const graduated = TIER_PER_LEVEL[levelBefore] === 0 && tierAfter > 0
+  const tierBefore = garrison(chapter.unit, before).tier
+  const tierAfter = garrison(chapter.unit, capped).tier
+  // premier soldat : le villageois qui gardait le camp laisse sa place
+  const graduated = tierBefore === 0 && tierAfter > 0
+  const promoted = tierAfter > tierBefore && !graduated
   const next = capped >= maxPoints(ppc) ? 0 : pointsToNextUnit(chapter.unit, capped)
   if (capped === before) {
     return <p>{before >= maxPoints(ppc) ? 'Ton corps est déjà au complet : place aux améliorations !' : 'Aucune recrue cette fois… les forgerons t’attendent pour une revanche.'}</p>
@@ -218,14 +219,14 @@ export function Recruits({ chapter, before, after, ppc }: { chapter: Chapter; be
       <p>
         <b>+{capped - before} point{capped - before > 1 ? 's' : ''}</b> d’entraînement.{' '}
         {graduated
-          ? <>Fin de l’apprentissage : tes villageois deviennent <b>{units} unité{units > 1 ? 's' : ''}</b> au rang de <b>{unitName(chapter, tierAfter)}</b>.</>
+          ? <>Tes premiers soldats ! Le villageois laisse la place à <b>{units} soldat{units > 1 ? 's' : ''}</b> au rang de <b>{unitName(chapter, tierAfter)}</b>.</>
           : recruits > 0
           ? <>Le corps « {chapter.corpsName} » accueille <b>{recruits} nouvelle{recruits > 1 ? 's' : ''} unité{recruits > 1 ? 's' : ''}</b> : il en compte maintenant <b>{units}</b>.</>
           : next > 0 ? <>Encore {next} bonne{next > 1 ? 's' : ''} réponse{next > 1 ? 's' : ''} pour la prochaine unité.</> : null}
       </p>
       {levelAfter > levelBefore && (
         <p className="levelup">
-          Cran {levelAfter} terminé ! {promoted && !graduated && <>Tes soldats passent au rang de <b>{unitName(chapter, tierAfter)}</b>. </>}
+          Cran {levelAfter} terminé ! {promoted && <>Tes soldats passent au rang de <b>{unitName(chapter, tierAfter)}</b>. </>}
           Nouveau type d’exercice, un peu plus difficile.
         </p>
       )}

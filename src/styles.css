@@ -675,3 +675,40 @@ button { font-family: inherit; cursor: pointer; }
 .sc-num { font-family: var(--font-title); font-weight: 900; font-size: clamp(64px, 16vw, 160px); color: var(--gold-bright); text-shadow: 0 6px 0 #000, 0 0 40px rgba(242, 210, 122, 0.6); animation: age-in 0.45s ease-out; text-align: center; }
 .start-countdown small { color: var(--muted); font-size: 18px; }
 .hud-btn.mute { font-size: 18px; padding: 3px 10px; }
+
+/* ── Bilan d'après-bataille ─────────────────────────────────────────── */
+.debrief { position: fixed; inset: 0; z-index: 40; display: grid; grid-template-rows: auto 1fr; background: #140d07; color: #f1e2bd; animation: fade 0.3s; }
+.db-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: linear-gradient(180deg, #3a2412, #24150a); border-bottom: 2px solid var(--gold); }
+.db-tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: center; }
+.db-tabs button { padding: 7px 14px; font-family: var(--font-title); font-size: 14px; color: #e6d4a8; background: rgba(0, 0, 0, 0.3); border: 2px solid #5a4024; border-radius: 4px; }
+.db-tabs button.on { color: #24150a; background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border-color: var(--gold-bright); }
+.db-actions { display: flex; gap: 6px; }
+.db-bilan { overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; max-width: 1200px; width: 100%; margin: 0 auto; }
+.db-tips { padding: 12px 18px; background: var(--parchment); color: var(--ink); border: 2px solid #8a6a3c; border-radius: 6px; }
+.db-tips h3 { margin: 0 0 6px; font-family: var(--font-title); }
+.db-tips ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; line-height: 1.4; }
+.db-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr)); gap: 16px; }
+.db-side { padding: 12px; background: rgba(0, 0, 0, 0.25); border: 2px solid; border-radius: 6px; min-width: 0; }
+.db-side h3 { margin: 0; font-family: var(--font-title); }
+.db-summary { margin: 4px 0 10px; color: #cdb98d; font-size: 14px; }
+.db-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.db-table th { text-align: center; font-weight: 600; color: #cdb98d; padding: 4px; border-bottom: 1px solid #5a4024; }
+.db-table th:first-child, .db-table td:first-child { text-align: left; }
+.db-table td { text-align: center; padding: 4px; border-bottom: 1px solid rgba(90, 64, 36, 0.4); }
+.db-corps { display: flex; align-items: center; gap: 8px; }
+.db-corps span { display: flex; flex-direction: column; }
+.db-corps small { color: #cdb98d; font-size: 12px; }
+.db-nemesis { font-size: 13px; color: #e6a07a; }
+.db-village { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
+.db-village .map-wrap { min-height: 0; }
+.db-card { overflow: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; background: linear-gradient(180deg, #3a2412, #24150a); border-left: 2px solid var(--gold); }
+.db-card h3 { margin: 0; font-family: var(--font-title); color: var(--gold-bright); }
+.db-facts { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; font-size: 14px; }
+.db-ups { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.db-ups span { padding: 5px 8px; font-size: 13px; border: 1px solid #5a4024; border-radius: 4px; color: #a8957a; }
+.db-ups span.owned { color: #24150a; background: var(--gold); border-color: var(--gold-bright); }
+@media (max-width: 760px) {
+  .db-village { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
+  .db-card { border-left: none; border-top: 2px solid var(--gold); }
+  .db-table th:last-child, .db-table td:last-child { display: none; }
+}
