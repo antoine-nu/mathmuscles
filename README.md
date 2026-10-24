@@ -133,8 +133,10 @@ L'artillerie avance jusqu'à 20 m de sa cible puis bombarde : elle tire dès le 
 
 ## Contenu
 
-782 modèles d'exercices générés aléatoirement (356 d'entraînement, 211 problèmes d'amélioration, 215 problèmes de
-l'hôtel de ville), dont beaucoup avec figure de géométrie. Chaque modèle d'entraînement varie ses énoncés (3 à 6 contextes ou configurations de la même mécanique) et
+46 chapitres (15 en 5e, 13 en 2nde, 18 de Terminale pour les adultes) et 2 101 modèles d'exercices générés
+aléatoirement (1 074 d'entraînement, 510 problèmes d'amélioration, 517 problèmes de l'hôtel de ville), dont 681 avec
+figure : triangles, parallèles, solides en perspective, repères et courbes, arbres, tableaux, graphes, cercle
+trigonométrique… Les exercices d'algorithmique affichent des programmes Python. Chaque modèle d'entraînement varie ses énoncés (3 à 6 contextes ou configurations de la même mécanique) et
 ne donne pas la réponse dans l'énoncé : `npm run check:exercises` le vérifie (section « Monotonie »). Réponses ouvertes autant que possible : nombres, fractions,
 expressions en x (contrôle « développé » / « factorisé »), a√b, couples, intervalles, ensembles de solutions.
 
