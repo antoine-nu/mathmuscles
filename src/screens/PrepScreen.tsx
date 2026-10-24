@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { chaptersFor, type Level } from '../data/curriculum'
 import { normalizeSelection } from '../game/selection'
-import { SubjectPicker } from '../components/SubjectPicker'
 import { audio } from '../audio/engine'
 import { Codex } from '../components/Codex'
 import { MuteButton } from '../components/MuteButton'
@@ -18,15 +17,14 @@ interface Props {
   durationMin: number
   me: Side
   opponent: Side
-  /** Sujets choisis pour les 7 maisons. */
+  /** Chapitres des 7 maisons (choisis dans les Options, répartis au hasard pour cette partie). */
   selection: string[]
-  onSelection: (selection: string[]) => void
   onReady: () => void
   onBack: () => void
 }
 
 /** Avant la partie : on consulte le codex des armées, puis chacun déclare « Je suis prêt ». */
-export function PrepScreen({ level, durationMin, me, opponent, selection, onSelection, onReady, onBack }: Props) {
+export function PrepScreen({ level, durationMin, me, opponent, selection, onReady, onBack }: Props) {
   const sel = normalizeSelection(level.id, selection)
   return (
     <div className="prep">
@@ -40,12 +38,11 @@ export function PrepScreen({ level, durationMin, me, opponent, selection, onSele
       </header>
       <main className="prep-body">
         <p className="prep-intro">
-          Chaque maison de ton royaume forme un type de soldat. Choisis d’abord le chapitre qui entraîne chaque maison,
-          puis, pendant le chrono, entraîne celles que tu veux : beaucoup d’unités (chacune coûte quelques bonnes
-          réponses), des améliorations, des âges… Les forces et faiblesses ci-dessous t’aident à composer une armée qui
-          résiste à tout.
+          Chaque maison de ton royaume forme un type de soldat ; tes chapitres (choisis dans les Options) viennent d’être
+          répartis au hasard entre les maisons. Pendant le chrono, entraîne celles que tu veux : beaucoup d’unités
+          (chacune coûte quelques bonnes réponses), des améliorations, des âges… Les forces et faiblesses ci-dessous
+          t’aident à composer une armée qui résiste à tout.
         </p>
-        <SubjectPicker levelId={level.id} selection={sel} onChange={onSelection} teamColor={me.color} disabled={me.ready} />
         <Codex chapters={chaptersFor(level.id, sel)} teamColor={me.color} />
       </main>
       <footer className="prep-bar">
@@ -58,7 +55,7 @@ export function PrepScreen({ level, durationMin, me, opponent, selection, onSele
             </div>
           ))}
         </div>
-        <button className="btn gold ready-btn" disabled={me.ready} onClick={() => { audio.unlock(); audio.play('calm'); onSelection(sel); onReady() }}>
+        <button className="btn gold ready-btn" disabled={me.ready} onClick={() => { audio.unlock(); audio.play('calm'); onReady() }}>
           {me.ready ? `Prêt ✓ — en attente de ${opponent.name}` : 'Je suis prêt ⚔'}
         </button>
       </footer>

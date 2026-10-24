@@ -7,13 +7,15 @@ import { TrainingScreen } from './screens/TrainingScreen'
 import { BotDuel } from './screens/BotDuel'
 import { DemoBattle } from './screens/DemoBattle'
 import { FriendDuel } from './screens/FriendDuel'
-import { SoloSubjects } from './screens/SoloSubjects'
+import { OptionsScreen } from './screens/OptionsScreen'
+import { loadChosen, randomAssignment, sameChapters } from './game/selection'
 import { audio, useUiSounds } from './audio/engine'
 
 type Screen =
   | { name: 'home' }
   | { name: 'demo' }
   | { name: 'solo'; level: Level }
+  | { name: 'options'; level: Level }
   | { name: 'duel'; level: Level; mode: Exclude<HomeChoice, 'solo'> }
 
 function loadName(): string {
@@ -45,10 +47,6 @@ export default function App() {
 
   if (screen.name === 'solo') {
     const level = screen.level
-    const p = solo.get(level.id)
-    if (!p.selection) {
-      return <SoloSubjects level={level} onBack={home} onConfirm={(selection) => solo.update(level.id, (q) => ({ ...q, selection }))} />
-    }
     return (
       <RulesContext.Provider value={SOLO_RULES}>
         <TrainingScreen
@@ -62,6 +60,7 @@ export default function App() {
   }
 
   if (screen.name === 'demo') return <DemoBattle onMenu={home} />
+  if (screen.name === 'options') return <OptionsScreen level={screen.level} onBack={() => setScreen({ name: 'home' })} />
 
   if (screen.name === 'duel' && screen.mode === 'bot') {
     return <BotDuel level={screen.level} playerName={name} onQuit={home} />
@@ -76,8 +75,15 @@ export default function App() {
       getSolo={solo.get}
       name={name}
       onName={saveName}
+      onOptions={(level) => setScreen({ name: 'options', level })}
       onPick={(level, mode) => {
         audio.unlock()
+        // entraînement libre : si les chapitres choisis ont changé, nouvelle répartition au hasard entre les maisons
+        // (la progression de chaque chapitre est conservée)
+        const p = solo.get(level.id)
+        if (mode === 'solo' && (!p.selection || !sameChapters(p.selection, loadChosen(level.id)))) {
+          solo.update(level.id, (q) => ({ ...q, selection: randomAssignment(level.id) }))
+        }
         if (mode === 'solo') audio.play('calm')
         setScreen(mode === 'solo' ? { name: 'solo', level } : { name: 'duel', level, mode })
       }}

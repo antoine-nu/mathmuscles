@@ -29,11 +29,13 @@ Quatre niveaux : **Cinquième**, **Seconde**, et deux niveaux **adultes** sur to
 un peu oublié) et « aguerris » (paliers 2 à 5).
 
 Le village a toujours **7 maisons**, une par type d'unité (infanterie, lanciers, archers, chevaliers, éclaireurs,
-siège, moines). Avant de jouer, chaque joueur choisit le **chapitre** qui entraîne chaque maison, parmi le programme
-complet de son niveau (15 chapitres en 5e, 13 en 2nde, 18 pour les adultes) : en entraînement libre à la première
-visite (puis bouton 📚 Sujets ; la progression de chaque chapitre est conservée), en duel sur l'écran de préparation
-(la dernière sélection est mémorisée). L'ordinateur tire ses chapitres au hasard. Un chapitre dont les exercices ne
-sont pas encore écrits n'est pas proposé ; un niveau sans assez de chapitres reste verrouillé.
+siège, moines). Dans les **Options** (bouton ⚙ de l'accueil), chacun choisit les **7 chapitres** sur lesquels il veut
+s'entraîner parmi le programme complet de son niveau (15 chapitres en 5e, 13 en 2nde, 18 pour les adultes) : on
+sélectionne ou désélectionne un chapitre en cliquant sur sa ligne ; le choix est mémorisé par niveau. À chaque partie,
+ces 7 chapitres sont **répartis au hasard** entre les maisons (en entraînement libre, la répartition change quand on
+modifie ses chapitres ; la progression de chaque chapitre est conservée). L'ordinateur tire ses chapitres au hasard.
+Un chapitre dont les exercices ne sont pas encore écrits n'est pas proposé ; un niveau sans assez de chapitres reste
+verrouillé.
 
 ## Modes de jeu
 

@@ -33,19 +33,10 @@ export function randomSelection(levelId: string): string[] {
   return normalizeSelection(levelId, pool.slice(0, levelById(levelId).houses.length))
 }
 
-/** Affecte un sujet à une maison ; s'il était déjà pris par une autre maison, les deux échangent. */
-export function assignSubject(selection: readonly string[], house: number, subjectId: string): string[] {
-  const out = [...selection]
-  const j = out.indexOf(subjectId)
-  if (j >= 0) out[j] = out[house]
-  out[house] = subjectId
-  return out
-}
+const KEY = (levelId: string) => `mathmuscles:chapitres:${levelId}`
 
-const KEY = (levelId: string) => `mathmuscles:selection:${levelId}`
-
-/** Dernière sélection utilisée pour ce niveau en duel (mémorisée dans le navigateur). */
-export function loadSelection(levelId: string): string[] {
+/** Les 7 chapitres choisis dans les Options pour ce niveau (défauts du niveau sinon). */
+export function loadChosen(levelId: string): string[] {
   let saved: string[] | undefined
   try {
     saved = JSON.parse(localStorage.getItem(KEY(levelId)) ?? 'null') ?? undefined
@@ -55,10 +46,18 @@ export function loadSelection(levelId: string): string[] {
   return normalizeSelection(levelId, saved)
 }
 
-export function saveSelection(levelId: string, selection: string[]) {
+export function saveChosen(levelId: string, chosen: string[]) {
   try {
-    localStorage.setItem(KEY(levelId), JSON.stringify(selection))
+    localStorage.setItem(KEY(levelId), JSON.stringify(chosen))
   } catch {
-    /* sélection non mémorisée */
+    /* choix non mémorisé */
   }
 }
+
+/** Répartition aléatoire des chapitres choisis entre les 7 maisons (à chaque nouvelle partie). */
+export function randomAssignment(levelId: string): string[] {
+  return normalizeSelection(levelId, shuffle(loadChosen(levelId)))
+}
+
+/** Les deux sélections portent-elles sur les mêmes chapitres (dans n'importe quel ordre) ? */
+export const sameChapters = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x) => b.includes(x))

@@ -15,7 +15,6 @@ import { ResIcon } from '../components/ResIcon'
 import { TownHallModal } from '../components/TownHallModal'
 import { WorldMap } from '../components/WorldMap'
 import { CodexModal } from '../components/Codex'
-import { SubjectPicker } from '../components/SubjectPicker'
 import { MuteButton } from '../components/MuteButton'
 import { audio } from '../audio/engine'
 import { THEME_IDS, themeOf } from '../game/themes'
@@ -61,7 +60,6 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
   const [toast, setToast] = useState<string | null>(null)
   const [ageUp, setAgeUp] = useState<number | null>(null)
   const [codex, setCodex] = useState(false)
-  const [subjects, setSubjects] = useState(false)
   const chapter = chapters.find((c) => c.id === selected) ?? chapters[0]
   const age = ageOf(player, rules)
   const thresholds = [0, ...rules.ageThresholds]
@@ -156,9 +154,6 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
         <div className="hud-right">
           <button className="hud-btn" onClick={() => setCodex(true)} title="Caractéristiques des unités">📜 Codex</button>
           {mode === 'solo' && (
-            <button className="hud-btn" onClick={() => setSubjects(true)} title="Choisir le chapitre de chaque maison">📚 Sujets</button>
-          )}
-          {mode === 'solo' && (
             <button className="hud-btn" title={`Décor : ${themeOf(player.mapTheme).name} (cliquer pour changer)`}
               onClick={() => update((p) => ({ ...p, mapTheme: THEME_IDS[(THEME_IDS.indexOf(themeOf(p.mapTheme).id) + 1) % THEME_IDS.length] }))}>
               🗺
@@ -239,22 +234,6 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
       />
 
       {codex && <CodexModal chapters={chapters} teamColor={teamColor} onClose={() => setCodex(false)} />}
-      {subjects && (
-        <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') setSubjects(false) }}>
-          <div className="townhall codex-modal" role="dialog" aria-label="Sujets des maisons">
-            <header className="th-head">
-              <div>
-                <div className="eyebrow">Programme</div>
-                <h2>Sujets des maisons</h2>
-              </div>
-              <button className="close light" onClick={() => setSubjects(false)} aria-label="Fermer" autoFocus>✕</button>
-            </header>
-            <SubjectPicker levelId={player.levelId} selection={player.selection ?? []} teamColor={teamColor}
-              onChange={(selection) => update((p) => ({ ...p, selection }))} />
-            <p className="setup-note">La progression de chaque chapitre est conservée quand tu changes de sujet.</p>
-          </div>
-        </div>
-      )}
       {startsAt && <StartCountdown startsAt={startsAt} />}
 
       {townHall && !timeUp && (

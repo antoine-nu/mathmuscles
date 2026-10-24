@@ -12,7 +12,7 @@ import { audio } from '../audio/engine'
 import { DurationPicker, SetupFrame } from './DuelSetup'
 import { TrainingScreen } from './TrainingScreen'
 import { randomTheme, type ThemeId } from '../game/themes'
-import { loadSelection, normalizeSelection, saveSelection } from '../game/selection'
+import { normalizeSelection, randomAssignment } from '../game/selection'
 
 type Role = 'host' | 'guest'
 
@@ -45,10 +45,13 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   const [duration, setDuration] = useState(15)
   const [phase, setPhase] = useState<Phase>({ name: 'lobby' })
   const [player, setPlayer] = useState<PlayerState>(() => emptyPlayer(level.id))
-  const [selection, setSelection] = useState(() => loadSelection(level.id))
+  const [selection, setSelection] = useState(() => randomAssignment(level.id))
   const selectionRef = useRef(selection)
   selectionRef.current = selection
-  const chooseSubjects = (s: string[]) => { setSelection(s); saveSelection(level.id, s) }
+  // à chaque préparation (nouvelle partie ou revanche), les chapitres choisis sont répartis au hasard
+  useEffect(() => {
+    if (phase.name === 'prep') setSelection(randomAssignment(level.id))
+  }, [phase.name, level.id])
   const [oppStatus, setOppStatus] = useState({ age: 0, pop: 0 })
   const [notice, setNotice] = useState<string | null>(null)
   const [meReady, setMeReady] = useState(false)
@@ -266,7 +269,6 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         me={{ name: me, ready: meReady, color: mySide === 0 ? BLUE : RED }}
         opponent={{ name: peer?.name ?? 'Adversaire', ready: peerReady, color: mySide === 0 ? RED : BLUE, detail: peerOnline ? 'Consulte le codex…' : 'Déconnecté' }}
         selection={selection}
-        onSelection={chooseSubjects}
         onReady={() => { setMeReady(true); send({ t: 'ready' }) }}
         onBack={quit}
       />

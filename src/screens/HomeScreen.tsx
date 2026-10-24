@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { LEVELS, UPCOMING_LEVELS, maxPoints, type Level } from '../data/curriculum'
+import { LEVELS, SUBJECTS, UPCOMING_LEVELS, maxPoints, type Level } from '../data/curriculum'
 import { chaptersOf, houseOf, type PlayerState } from '../game/state'
-import { levelPlayable } from '../game/selection'
+import { levelPlayable, loadChosen } from '../game/selection'
 import { SOLO_RULES } from '../game/rules'
 import { Portrait } from '../components/Portrait'
 
@@ -12,6 +12,7 @@ interface Props {
   name: string
   onName: (name: string) => void
   onPick: (level: Level, mode: HomeChoice) => void
+  onOptions: (level: Level) => void
 }
 
 const MODES: { id: HomeChoice; title: string; text: string; icon: string }[] = [
@@ -20,7 +21,7 @@ const MODES: { id: HomeChoice; title: string; text: string; icon: string }[] = [
   { id: 'bot', title: 'Défier l’ordinateur', text: 'Choisis la note sur 20 de ton adversaire et mesure-toi à lui.', icon: '♜' },
 ]
 
-export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
+export function HomeScreen({ getSolo, name, onName, onPick, onOptions }: Props) {
   const [levelId, setLevelId] = useState<string>(() => {
     try {
       return localStorage.getItem('mathmuscles:level') ?? LEVELS[0].id
@@ -77,6 +78,14 @@ export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
               <div className="ls-label">Bientôt</div>
             </div>
           ))}
+        </div>
+
+        <div className="ls-options">
+          <div className="ls-opt-text">
+            <b>Tes 7 chapitres ({level.label})</b>
+            <span>{loadChosen(level.id).map((id) => SUBJECTS.get(id)?.title).join(' · ')}</span>
+          </div>
+          <button className="hud-btn" onClick={() => onOptions(level)}>⚙ Options</button>
         </div>
 
         <h2 className="ls-h">2 · Que veux-tu faire ?</h2>

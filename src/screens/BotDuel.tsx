@@ -11,7 +11,7 @@ import { DurationPicker, SetupFrame } from './DuelSetup'
 import { PrepScreen } from './PrepScreen'
 import { audio } from '../audio/engine'
 import { randomTheme } from '../game/themes'
-import { loadSelection, normalizeSelection, saveSelection } from '../game/selection'
+import { normalizeSelection, randomAssignment } from '../game/selection'
 
 export const BLUE = '#2f5fb3'
 export const RED = '#b8362f'
@@ -43,8 +43,11 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
   const [botName] = useState(() => BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)])
   const [phase, setPhase] = useState<Phase>({ name: 'setup' })
   const [player, setPlayer] = useState<PlayerState>(() => emptyPlayer(level.id))
-  const [selection, setSelection] = useState(() => loadSelection(level.id))
-  const chooseSubjects = (s: string[]) => { setSelection(s); saveSelection(level.id, s) }
+  const [selection, setSelection] = useState(() => randomAssignment(level.id))
+  // à chaque préparation (nouvelle partie ou revanche), les chapitres choisis sont répartis au hasard
+  useEffect(() => {
+    if (phase.name === 'prep') setSelection(randomAssignment(level.id))
+  }, [phase.name, level.id])
   const [botState, setBotState] = useState<PlayerState>(() => emptyPlayer(level.id))
   const botRef = useRef<Bot | null>(null)
   const playerRef = useRef(player)
@@ -117,7 +120,6 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
         me={{ name: me, ready: false, color: BLUE }}
         opponent={{ name: them, ready: true, color: RED, detail: 'Prêt !' }}
         selection={selection}
-        onSelection={chooseSubjects}
         onReady={start}
         onBack={onQuit}
       />
