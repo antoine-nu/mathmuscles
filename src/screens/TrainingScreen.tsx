@@ -18,7 +18,7 @@ import { CodexModal } from '../components/Codex'
 import { MuteButton } from '../components/MuteButton'
 import { audio } from '../audio/engine'
 import { StartCountdown } from './PrepScreen'
-import { TEST_DURATION } from './DuelSetup'
+import { TEST_DURATIONS } from './DuelSetup'
 
 export interface OpponentStatus {
   name: string
@@ -165,7 +165,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
               <span className="opp-info">{AGES[opponent.age]} · {opponent.population} unités</span>
             </div>
           )}
-          {(mode === 'solo' || rules.durationMin === TEST_DURATION) && (
+          {(mode === 'solo' || TEST_DURATIONS.includes(rules.durationMin ?? 0)) && (
             <label className="demo-toggle" title="Pour tester : simuler la progression">
               <input type="checkbox" checked={demo} onChange={(e) => setDemo(e.target.checked)} />
               Mode démo

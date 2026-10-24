@@ -607,7 +607,8 @@ button { font-family: inherit; cursor: pointer; }
 .setup-tabs button { padding: 10px; font-family: var(--font-title); font-size: 15px; color: var(--text-light); background: #1f140a; border: 1px solid #7a5a2c; border-radius: 4px; }
 .setup-tabs button.on { border-color: var(--gold-bright); color: var(--gold-bright); background: linear-gradient(180deg, #6b4524, #3a2410); }
 @media (max-width: 520px) { .durations { grid-template-columns: repeat(2, 1fr); } }
-.dev-test { display: block; margin: 6px 0 0 auto; padding: 2px 8px; font-size: 11px; color: var(--muted); background: none; border: 1px dashed #5a4024; border-radius: 3px; opacity: 0.55; }
+.dev-tests { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.dev-test { display: block; padding: 2px 8px; font-size: 11px; color: var(--muted); background: none; border: 1px dashed #5a4024; border-radius: 3px; opacity: 0.55; }
 .dev-test:hover, .dev-test.on { opacity: 1; color: var(--gold-bright); border-color: var(--gold); }
 .setup-note.small { font-size: 13px; color: var(--muted); margin-top: 16px; }
 .setup-note.error { color: #ff9a8a; }

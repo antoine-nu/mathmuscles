@@ -66,8 +66,8 @@ sur une clé USB, puis sur chaque ordinateur, l'ouvrir d'un double-clic (Chrome,
 doivent avoir accès à Internet (les relais servent à se trouver). Le premier joueur choisit « Défier un camarade » →
 « Créer une partie » et lit le code à l'autre, qui le saisit puis clique sur « Rejoindre ».
 
-**Partie de test (développeur)** : sous les durées, le petit bouton « 🛠 test 5 min » lance une partie de 5 minutes
-où le « Mode démo » est disponible (+1 cran, améliorations, points d'âge) pour former vite une armée et voir une
+**Partie de test (développeur)** : sous les durées, les petits boutons « 🛠 test 1 min » et « 🛠 test 5 min » lancent une
+partie de 1 ou 5 minutes où le « Mode démo » est disponible (+1 cran, améliorations, points d'âge) pour former vite une armée et voir une
 bataille.
 
 Pour tester seul : ouvrir deux onglets sur `/?reseau=local` (les onglets se parlent sans Internet) ; ajouter
