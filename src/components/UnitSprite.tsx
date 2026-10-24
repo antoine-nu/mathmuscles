@@ -173,7 +173,7 @@ function Footman({ look }: { look: UnitLook }) {
   const cape = upgrades >= 3 || tier === 3
   const rim = goldArmor ? GOLD : tier >= 2 ? STEEL : WOOD
 
-  if (kind === 'scholar') {
+  if (kind === 'monk') {
     const robe = tier === 3 ? shade(color, -0.25) : tier === 2 ? shade(color, -0.1) : '#8a7a5c'
     return (
       <g>

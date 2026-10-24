@@ -1,9 +1,11 @@
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  MAX_LEVEL, POINTS_PER_LEVEL, ROMAN, TIER_PER_LEVEL, armySize, levelFromPoints, unitName,
+  AGES, MAX_LEVEL, ROMAN, TIER_PER_LEVEL, armySize, levelFromPoints, unitName,
   type Chapter,
 } from '../data/curriculum'
-import type { ChapterProgress } from '../game/progress'
+import type { HouseState } from '../game/state'
+import { useRules } from '../game/rules'
+import { figuresFor } from '../battle/units'
 import { seeded, shade } from '../game/color'
 import { MAP_SIZE, TILE_H, TILE_W, iso, pts, unIso, type Pt } from '../game/iso'
 import { Banner, Building, TownCenter } from './Buildings'
@@ -13,13 +15,12 @@ import { SpriteDefs, UnitSprite, type UnitLook } from './UnitSprite'
 const CENTER = MAP_SIZE / 2
 const POND: Pt = [1.6, 16.4]
 const POND_R = 2.4
-const PLAYER_COLOR = '#2f5fb3'
 const UNIT_SCALE = 1.35
 
 interface Camp {
   chapter: Chapter
   tile: Pt
-  progress: ChapterProgress
+  progress: HouseState
 }
 
 /** Emplacements des camps : une ellipse autour de l'hôtel de ville. */
@@ -32,29 +33,29 @@ function campTiles(n: number): Pt[] {
   })
 }
 
-/** Nombre de figurines affichées (les engins de siège comptent pour 3 soldats). */
-export function displayedUnits(chapter: Chapter, points: number) {
-  const n = armySize(points)
-  return chapter.unit === 'siege' && levelFromPoints(points) > 0 ? Math.max(1, Math.round(n / 3)) : n
+/** Nombre de figurines affichées : les unités coûteuses (cavalerie, siège, moines) viennent en moins grand nombre. */
+export function displayedUnits(chapter: Chapter, points: number, ppc: number) {
+  const tier = TIER_PER_LEVEL[levelFromPoints(points, ppc)]
+  return figuresFor(chapter.unit, tier, armySize(points, ppc))
 }
 
-export function lookFor(chapter: Chapter, progress: ChapterProgress): UnitLook {
-  const level = levelFromPoints(progress.points)
+export function lookFor(chapter: Chapter, progress: HouseState, ppc: number, teamColor?: string): UnitLook {
+  const level = levelFromPoints(progress.points, ppc)
   const tier = TIER_PER_LEVEL[level]
   return {
     kind: chapter.unit,
     tier,
-    color: chapter.color,
+    color: teamColor ?? chapter.color,
     emblem: chapter.emblem,
     name: unitName(chapter, tier),
     upgrades: progress.upgrades.length,
   }
 }
 
-function formation(camp: Camp): { pos: Pt; look: UnitLook; key: string }[] {
+function formation(camp: Camp, ppc: number, teamColor?: string): { pos: Pt; look: UnitLook; key: string }[] {
   const { chapter, tile, progress } = camp
-  const look = lookFor(chapter, progress)
-  const count = displayedUnits(chapter, progress.points)
+  const look = lookFor(chapter, progress, ppc, teamColor)
+  const count = displayedUnits(chapter, progress.points, ppc)
   const cav = look.tier > 0 && (chapter.unit === 'knight' || chapter.unit === 'scout')
   const siege = look.tier > 0 && chapter.unit === 'siege'
   const sp = siege ? 1.05 : cav ? 0.72 : 0.5
@@ -147,12 +148,21 @@ const Terrain = memo(function Terrain({ camps }: { camps: Pt[] }) {
 // ── Carte complète ──────────────────────────────────────────────────────
 interface Props {
   chapters: Chapter[]
-  getProgress: (chapterId: string) => ChapterProgress
+  getProgress: (chapterId: string) => HouseState
+  /** Âge atteint (0 à 3) : change l'allure de l'hôtel de ville. */
+  age: number
+  /** Points d'âge et seuil du prochain âge (pour la jauge de l'hôtel de ville). */
+  agePoints: number
+  nextAgeAt: number | null
+  /** Couleur imposée aux unités (duel : bleu ou rouge). */
+  teamColor?: string
+  onTownCenter: () => void
   selected: string | null
   onSelect: (id: string) => void
 }
 
-export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
+export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePoints, nextAgeAt, teamColor, onTownCenter }: Props) {
+  const { ppc } = useRules()
   const tiles = useMemo(() => campTiles(chapters.length), [chapters.length])
   const camps: Camp[] = chapters.map((chapter, i) => ({ chapter, tile: tiles[i], progress: getProgress(chapter.id) }))
   const [hover, setHover] = useState<string | null>(null)
@@ -200,7 +210,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
   // objets triés par profondeur (peintre)
   const objects: { depth: number; node: ReactNode }[] = [...scenery]
   const [tcx, tcy] = iso(CENTER, CENTER)
-  objects.push({ depth: tcy + 30, node: <TownCenter key="tc" x={tcx} y={tcy} color={PLAYER_COLOR} /> })
+  objects.push({ depth: tcy + 30, node: <TownCenter key="tc" x={tcx} y={tcy} color={teamColor ?? '#2f5fb3'} age={age} /> })
   for (const camp of camps) {
     const { chapter, tile } = camp
     const [bx, by] = iso(tile[0] - 0.7, tile[1] - 0.9)
@@ -208,7 +218,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
     objects.push({ depth: by + 20, node: <g key={`b-${chapter.id}`} className={active ? 'building active' : 'building'}><Building kind={chapter.building} x={bx} y={by} /></g> })
     const [fx, fy] = iso(tile[0] + 0.75, tile[1] - 1.05)
     objects.push({ depth: fy, node: <Banner key={`f-${chapter.id}`} x={fx} y={fy} color={chapter.color} emblem={chapter.emblem} /> })
-    formation(camp).forEach(({ pos, look, key }, i) => {
+    formation(camp, ppc, teamColor).forEach(({ pos, look, key }, i) => {
       const [sx, sy] = iso(pos[0], pos[1])
       allKeys.push(key)
       const fresh = seenUnits.current !== null && !seenUnits.current.has(key)
@@ -297,10 +307,22 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
 
       {objects.map((o) => o.node)}
 
+      {/* hôtel de ville : clic → âges */}
+      <g className="camp-hit" onClick={() => { if (!drag.current?.moved) onTownCenter() }}>
+        <ellipse cx={tcx} cy={tcy - 40} rx={TILE_W * 1.7} ry={TILE_H * 2.4} fill="transparent" />
+        <g transform={`translate(${tcx} ${tcy + 92})`} filter="url(#labelShadow)">
+          <rect x={-104} y={-30} width={208} height={50} rx={4} fill="#3a2410" stroke="#f2d27a" strokeWidth={2} opacity={0.95} />
+          <text x={0} y={-11} textAnchor="middle" className="lbl-title">Hôtel de ville</text>
+          <text x={0} y={5} textAnchor="middle" className="lbl-sub">{AGES[age]}{nextAgeAt !== null ? ` · ${agePoints}/${nextAgeAt} pts` : ' · âge maximal'}</text>
+          <rect x={-80} y={10} width={160} height={5} rx={2} fill="#4a3a28" />
+          <rect x={-80} y={10} width={160 * (nextAgeAt ? Math.min(1, agePoints / nextAgeAt) : 1)} height={5} rx={2} fill="#e2b43c" />
+        </g>
+      </g>
+
       {/* zones cliquables + étiquettes */}
       {camps.map((camp) => {
         const { chapter, tile, progress } = camp
-        const level = levelFromPoints(progress.points)
+        const level = levelFromPoints(progress.points, ppc)
         const [lx, ly] = iso(tile[0] - 0.7, tile[1] - 0.9)
         const [hx, hy] = iso(tile[0] + 0.2, tile[1] + 0.3)
         const isSel = selected === chapter.id
@@ -309,13 +331,13 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
             onPointerEnter={() => setHover(chapter.id)} onPointerLeave={() => setHover(null)}
             onClick={() => { if (!drag.current?.moved) onSelect(chapter.id) }}>
             <ellipse cx={hx} cy={hy - 20} rx={TILE_W * 1.6} ry={TILE_H * 2.2} fill="transparent" />
-            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} color={chapter.color} soldiers={armySize(progress.points)} />
+            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} soldiers={armySize(progress.points, ppc)} />
             <g transform={`translate(${lx} ${ly - 112})`} filter="url(#labelShadow)">
               <rect x={-112} y={-36} width={224} height={58} rx={4} fill={isSel ? '#3a2410' : '#2a1a0c'} stroke={isSel ? '#f2d27a' : '#b8913a'} strokeWidth={isSel ? 2.4 : 1.4} opacity={0.94} />
               <text x={0} y={-16} textAnchor="middle" className="lbl-title">{chapter.corpsName}</text>
               <text x={0} y={1} textAnchor="middle" className="lbl-sub">{chapter.title}</text>
               {Array.from({ length: MAX_LEVEL }, (_, i) => {
-                const fill = i < level ? 1 : i === level ? (progress.points % POINTS_PER_LEVEL) / POINTS_PER_LEVEL : 0
+                const fill = i < level ? 1 : i === level ? (progress.points % ppc) / ppc : 0
                 return (
                   <g key={i}>
                     <rect x={-75 + i * 30.4} y={8} width={26} height={8} rx={2} fill="#4a3a28" stroke={i < level ? '#f2d27a' : '#6b5638'} strokeWidth={0.8} />
@@ -335,9 +357,9 @@ export function WorldMap({ chapters, getProgress, selected, onSelect }: Props) {
 }
 
 /** Écusson posé sur le bâtiment : cran (chiffres romains), anneau de progression vers le cran suivant, effectif. */
-function CampBadge({ x, y, level, points, color, soldiers }: { x: number; y: number; level: number; points: number; color: string; soldiers: number }) {
+function CampBadge({ x, y, level, points, ppc, color, soldiers }: { x: number; y: number; level: number; points: number; ppc: number; color: string; soldiers: number }) {
   const maxed = level >= MAX_LEVEL
-  const within = maxed ? 1 : (points % POINTS_PER_LEVEL) / POINTS_PER_LEVEL
+  const within = maxed ? 1 : (points % ppc) / ppc
   const r = 15
   const C = 2 * Math.PI * r
   return (

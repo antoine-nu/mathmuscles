@@ -1,30 +1,92 @@
 import { CINQUIEME } from './cinquieme'
 import { SECONDE } from './seconde'
+import * as U5 from './upgrades5e'
+import * as U2 from './upgrades2nde'
+import * as A5 from './age5e'
+import * as A2 from './age2nde'
 import { MAX_LEVEL, SERIES_SIZE } from '../data/curriculum'
-import { shuffle, type Difficulty, type Exercise, type Tiers } from './utils'
+import type { Difficulty, Exercise, Ladder, Maker, Tiers } from './utils'
 
 export const TIERS: Record<string, Tiers> = { ...CINQUIEME, ...SECONDE }
+type Registry = Record<string, Ladder>
+const reg = (m: object, name: string): Registry => ((m as Record<string, Registry | undefined>)[name] ?? {})
+export const UPGRADE_PROBLEMS: Registry = { ...reg(U5, 'UPGRADES_5E'), ...reg(U2, 'UPGRADES_2NDE') }
+export const AGE_PROBLEMS: Registry = { ...reg(A5, 'AGE_5E'), ...reg(A2, 'AGE_2NDE') }
 
-/** Le palier suit la jauge : cran 0 → palier 1, …, cran 4 et plus → palier 5. Les séries d'élite sont au palier 5. */
+/** Le palier suit la jauge : cran 0 → palier 1, …, cran 4 et plus → palier 5. */
 export function difficultyForLevel(level: number, elite = false): Difficulty {
   return (elite ? MAX_LEVEL : Math.min(MAX_LEVEL, level + 1)) as Difficulty
 }
 
-/** Série de 5 exercices du palier courant, en variant les modèles d'exercices. */
+// ── Mémoire des modèles déjà vus ───────────────────────────────────────
+// Pour qu'une partie ne ressemble pas à la précédente, on retient (dans le navigateur) quand chaque
+// modèle d'exercice a été servi, et on privilégie toujours les modèles les moins récemment vus.
+const HISTORY_KEY = 'mathmuscles:history'
+type History = Record<string, number>
+let history: History = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '{}') as History
+  } catch {
+    return {}
+  }
+})()
+let clock = Math.max(0, ...Object.values(history))
+
+function remember(key: string) {
+  history[key] = ++clock
+  try {
+    const entries = Object.entries(history)
+    if (entries.length > 4000) history = Object.fromEntries(entries.sort((a, b) => b[1] - a[1]).slice(0, 3000))
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
+  } catch {
+    /* stockage indisponible */
+  }
+}
+
+/** Ordonne les modèles du moins récemment vu au plus récent (ex æquo mélangés). */
+function freshOrder(prefix: string, pool: Maker[]): number[] {
+  return pool
+    .map((_, i) => ({ i, seen: history[`${prefix}#${i}`] ?? 0, r: Math.random() }))
+    .sort((a, b) => a.seen - b.seen || a.r - b.r)
+    .map((o) => o.i)
+}
+
+/** Série de 5 exercices du palier courant, en privilégiant les modèles les moins récemment vus. */
 export function makeSeries(chapterId: string, level: number, elite = false): Exercise[] {
-  const pool = TIERS[chapterId][difficultyForLevel(level, elite) - 1]
+  const d = difficultyForLevel(level, elite)
+  const pool = TIERS[chapterId][d - 1]
+  const prefix = `t:${chapterId}:${d}`
   const series: Exercise[] = []
   const seen = new Set<string>()
-  let order = shuffle(pool)
+  let order = freshOrder(prefix, pool)
   let guard = 0
   while (series.length < SERIES_SIZE && guard++ < 100) {
-    if (order.length === 0) order = shuffle(pool)
-    const ex = order.shift()!()
+    if (order.length === 0) order = freshOrder(prefix, pool)
+    const i = order.shift()!
+    const ex = pool[i]()
     if (seen.has(ex.prompt)) continue
     seen.add(ex.prompt)
+    remember(`${prefix}#${i}`)
     series.push(ex)
   }
   return series
 }
+
+function fromLadder(kind: 'u' | 'a', ladders: Record<string, Ladder>, chapterId: string, n: 1 | 2 | 3): Exercise {
+  const pool = ladders[chapterId]?.[n - 1]
+  if (!pool || pool.length === 0) {
+    // Repli si un problème manque : un exercice du palier 5 (ne devrait pas arriver).
+    return TIERS[chapterId][4][0]()
+  }
+  const prefix = `${kind}:${chapterId}:${n}`
+  const i = freshOrder(prefix, pool)[0]
+  remember(`${prefix}#${i}`)
+  return pool[i]()
+}
+
+/** Problème permettant d'obtenir l'amélioration n (1 à 3) d'une maison. */
+export const makeUpgradeProblem = (chapterId: string, n: 1 | 2 | 3) => fromLadder('u', UPGRADE_PROBLEMS, chapterId, n)
+/** Problème de l'hôtel de ville de niveau n (rapporte n points d'âge). */
+export const makeAgeProblem = (chapterId: string, n: 1 | 2 | 3) => fromLadder('a', AGE_PROBLEMS, chapterId, n)
 
 export type { Exercise }

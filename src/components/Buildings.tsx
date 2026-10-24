@@ -185,31 +185,65 @@ const CONFIG: Record<BuildingKind, BoxProps> = {
   range: { size: 1.6, height: 26, wall: '#b08a5a', roof: '#4f6b3a', roofHeight: 24, roofType: 'gable', timber: true },
   stable: { size: 1.8, height: 26, wall: '#a87a4c', roof: '#7a5a34', roofHeight: 22, roofType: 'gable', timber: true },
   workshop: { size: 1.7, height: 30, wall: '#8a6a44', roof: '#5a4a3a', roofHeight: 28, roofType: 'pyramid', timber: true },
-  library: { size: 1.6, height: 38, wall: '#cfc3a6', roof: '#3a5a8a', roofHeight: 34, roofType: 'pyramid', stone: true },
+  monastery: { size: 1.6, height: 38, wall: '#cfc3a6', roof: '#3a5a8a', roofHeight: 34, roofType: 'pyramid', stone: true },
 }
 
 export function Building({ kind, x, y }: { kind: BuildingKind; x: number; y: number }) {
   const cfg = CONFIG[kind]
   const hw = (cfg.size * TILE_W) / 2
+  const hh = (cfg.size * TILE_H) / 2
   return (
     <g transform={`translate(${x} ${y})`}>
+      {kind === 'monastery' && (
+        // clocher à l'arrière du monastère
+        <g transform={`translate(${hw * 0.15} ${-hh * 0.55})`}>
+          <IsoBox size={0.62} height={74} wall="#d8cdb2" roof="#6b3f24" roofHeight={30} roofType="pyramid" stone />
+          <rect x={-5} y={-66} width={10} height={12} rx={5} fill="#2a1a0e" />
+          <circle cx={0} cy={-58} r={3.2} fill="#e2b43c" stroke={OUTLINE} strokeWidth={0.6} />
+        </g>
+      )}
       <IsoBox {...cfg} />
       {kind === 'range' && <ArcheryTarget x={-hw - 4} y={10} />}
       {kind === 'stable' && <><HayBale x={-hw + 2} y={14} /><HayBale x={-hw + 18} y={22} /></>}
       {kind === 'barracks' && <WeaponRack x={-hw + 4} y={16} />}
-      {kind === 'library' && <Scrolls x={-hw + 8} y={18} />}
+      {kind === 'monastery' && <Scrolls x={-hw + 8} y={18} />}
       {kind === 'workshop' && <g transform={`translate(${-hw + 6} 16)`}><rect x={-10} y={-6} width={20} height={6} fill="#6e4a26" stroke={OUTLINE} strokeWidth={0.7} /><rect x={-8} y={-10} width={16} height={4} fill="#8a5a2e" stroke={OUTLINE} strokeWidth={0.7} /></g>}
     </g>
   )
 }
 
-/** Hôtel de ville : le cœur du royaume. */
-export function TownCenter({ x, y, color }: { x: number; y: number; color: string }) {
+/** Hôtel de ville : son allure change avec l'âge (bois → pierre → tours → toits d'or). */
+export function TownCenter({ x, y, color, age = 1 }: { x: number; y: number; color: string; age?: number }) {
+  const tower = (tx: number, ty: number, roof: string) => (
+    <g transform={`translate(${tx} ${ty})`}>
+      <IsoBox size={0.7} height={78} wall="#b3a68f" roof={roof} roofHeight={34} roofType="pyramid" stone />
+      <Banner x={0} y={-112} color={color} emblem="∑" height={22} />
+    </g>
+  )
+  if (age === 0) {
+    return (
+      <g transform={`translate(${x} ${y})`}>
+        <IsoBox size={2.5} height={34} wall="#9a7448" roof="#b8933f" roofHeight={52} roofType="pyramid" timber />
+        <Banner x={0} y={-86} color={color} emblem="∑" height={30} />
+        <g className="smoke">
+          <circle cx={30} cy={-60} r={5} fill="#d9d4cc" opacity={0.55} />
+          <circle cx={34} cy={-72} r={7} fill="#d9d4cc" opacity={0.4} />
+          <circle cx={30} cy={-86} r={9} fill="#d9d4cc" opacity={0.25} />
+        </g>
+      </g>
+    )
+  }
+  const roof = age >= 3 ? '#e2b43c' : '#8e3a2a'
+  const towerRoof = age >= 3 ? '#e2b43c' : '#3a5a8a'
   return (
     <g transform={`translate(${x} ${y})`}>
+      {age >= 2 && tower(0, -62, towerRoof)}
+      {age >= 3 && <ellipse cx={0} cy={-60} rx={150} ry={80} fill="#ffe08a" opacity={0.12} className="glow" />}
       <IsoBox size={2.8} height={40} wall="#a99b86" roof="#7d3326" roofHeight={0} roofType="flat" stone />
+      {age >= 2 && tower(-122, 2, towerRoof)}
+      {age >= 2 && tower(122, 2, towerRoof)}
       <g transform="translate(0 -40)">
-        <IsoBox size={1.4} height={42} wall="#b8ab95" roof="#8e3a2a" roofHeight={46} roofType="pyramid" stone />
+        <IsoBox size={1.4} height={42} wall="#b8ab95" roof={roof} roofHeight={46} roofType="pyramid" stone />
       </g>
       <Banner x={0} y={-128} color={color} emblem="∑" height={34} />
       <g className="smoke">

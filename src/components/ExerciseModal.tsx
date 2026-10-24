@@ -1,63 +1,56 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import {
-  MAX_POINTS, SERIES_SIZE, TIER_PER_LEVEL, UPGRADE_THRESHOLD, armySize, levelFromPoints, pointsToNextRecruit, unitName,
-  type Chapter, type Upgrade,
-} from '../data/curriculum'
-import { difficultyForLevel, makeSeries } from '../exercises'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { TIER_PER_LEVEL, armySize, levelFromPoints, maxPoints, pointsToNextRecruit, unitName, type Chapter } from '../data/curriculum'
 import type { Exercise } from '../exercises/utils'
+import { FigureView } from './FigureView'
+import { MathText } from './MathText'
 
-/** Affiche la mini-syntaxe des énoncés : {a/b} fraction, ^n exposant, √{…} racine, x_B indice. */
-export function MathText({ text }: { text: string }) {
-  const out: ReactNode[] = []
-  const re = /\{(-?[^{}/]+)\/([^{}/]+)\}|√\{([^}]+)\}|\^\{([^}]+)\}|\^(-?\d+|n)|_([A-Za-z])/g
-  let last = 0
-  let m: RegExpExecArray | null
-  let k = 0
-  while ((m = re.exec(text))) {
-    if (m.index > last) out.push(text.slice(last, m.index))
-    if (m[1] !== undefined) {
-      out.push(<span key={k++} className="mfrac"><span><MathText text={m[1]} /></span><span><MathText text={m[2]} /></span></span>)
-    } else if (m[3] !== undefined) {
-      out.push(<span key={k++} className="msqrt">√<span>{m[3]}</span></span>)
-    } else if (m[4] !== undefined || m[5] !== undefined) {
-      out.push(<sup key={k++}>{m[4] ?? m[5]}</sup>)
-    } else if (m[6] !== undefined) {
-      out.push(<sub key={k++}>{m[6]}</sub>)
-    }
-    last = re.lastIndex
-  }
-  if (last < text.length) out.push(text.slice(last))
-  return <>{out}</>
+export { MathText }
+
+export interface ScrollResult {
+  correct: number
+  answered: number
 }
 
 interface Props {
-  chapter: Chapter
-  level: number
-  /** Si défini : série d'élite pour débloquer cette amélioration. */
-  upgrade?: Upgrade
-  /** Points du corps avant la série (pour annoncer les recrues). */
-  points: number
-  /** correct = null si la série est abandonnée en cours de route. */
-  onClose: (correct: number | null) => void
+  eyebrow: string
+  heading: string
+  exercises: Exercise[]
+  /** Indication de difficulté (palier, points…), affichée à droite du numéro. */
+  tierLabel?: ReactNode
+  /** Horodatage de fin de partie : le parchemin se referme alors tout seul en comptant les réponses données. */
+  deadline?: number
+  /** Bilan affiché à la fin. */
+  summary: (correct: number, total: number) => ReactNode
+  /** null = abandon (fermé avant la fin). */
+  onClose: (result: ScrollResult | null) => void
 }
 
 type Phase = 'question' | 'feedback' | 'done'
 
-export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Props) {
-  const series = useMemo<Exercise[]>(() => makeSeries(chapter.id, level, !!upgrade), [chapter.id, level, upgrade])
+/** Parchemin d'exercices : une série de 5 ou un problème unique (titre, figure). */
+export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline, summary, onClose }: Props) {
   const [index, setIndex] = useState(0)
   const [value, setValue] = useState('')
   const [results, setResults] = useState<boolean[]>([])
   const [phase, setPhase] = useState<Phase>('question')
   const [warning, setWarning] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const difficulty = difficultyForLevel(level, !!upgrade)
-  const ex = series[index]
+  const ex = exercises[index]
   const correct = results.filter(Boolean).length
+  const single = exercises.length === 1
 
   useEffect(() => {
     if (phase === 'question') inputRef.current?.focus()
   }, [phase, index])
+
+  // Fin du temps : on referme en comptant ce qui a été répondu.
+  const latest = useRef({ correct, answered: results.length })
+  latest.current = { correct, answered: results.length }
+  useEffect(() => {
+    if (!deadline) return
+    const t = window.setTimeout(() => onClose(latest.current), Math.max(0, deadline - Date.now()))
+    return () => window.clearTimeout(t)
+  }, [deadline, onClose])
 
   const submit = (answer: string) => {
     if (phase !== 'question' || !answer.trim()) return
@@ -73,7 +66,7 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
   }
 
   const next = () => {
-    if (index + 1 < series.length) {
+    if (index + 1 < exercises.length) {
       setIndex(index + 1)
       setValue('')
       setWarning(null)
@@ -94,8 +87,7 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
     const el = inputRef.current
     const start = el?.selectionStart ?? value.length
     const end = el?.selectionEnd ?? value.length
-    const next = value.slice(0, start) + sym + value.slice(end)
-    setValue(next)
+    setValue(value.slice(0, start) + sym + value.slice(end))
     setWarning(null)
     requestAnimationFrame(() => {
       el?.focus()
@@ -105,34 +97,35 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
 
   return (
     <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Enter' && phase === 'feedback') next() }}>
-      <div className="scroll" role="dialog" aria-label="Série d'exercices">
+      <div className={`scroll ${single ? 'wide' : ''}`} role="dialog" aria-label={heading}>
         <div className="scroll-rod top" />
         <div className="scroll-body">
           <header className="scroll-head">
             <div>
-              <div className="eyebrow">{upgrade ? `Amélioration · ${upgrade.name}` : `Entraînement · ${chapter.corpsName}`}</div>
-              <h2>{chapter.title}</h2>
+              <div className="eyebrow">{eyebrow}</div>
+              <h2>{heading}</h2>
             </div>
-            <button className="close" onClick={() => onClose(phase === 'done' ? correct : null)} aria-label="Fermer">✕</button>
+            <button className="close" onClick={() => onClose(phase === 'done' ? { correct, answered: results.length } : null)} aria-label="Fermer">✕</button>
           </header>
 
-          <div className="pips">
-            {Array.from({ length: SERIES_SIZE }, (_, i) => (
-              <span key={i} className={`pip ${i < results.length ? (results[i] ? 'ok' : 'ko') : i === index && phase !== 'done' ? 'current' : ''}`} />
-            ))}
-          </div>
+          {!single && (
+            <div className="pips">
+              {exercises.map((_, i) => (
+                <span key={i} className={`pip ${i < results.length ? (results[i] ? 'ok' : 'ko') : i === index && phase !== 'done' ? 'current' : ''}`} />
+              ))}
+            </div>
+          )}
 
           {phase !== 'done' && ex && (
             <div className="question">
               <div className="q-num">
-                Exercice {index + 1} / {series.length}
-                <span className="q-tier" title="Palier de difficulté (il monte avec la jauge)">
-                  Palier {difficulty} <span aria-hidden>{'★'.repeat(difficulty)}{'☆'.repeat(5 - difficulty)}</span>
-                </span>
+                {single ? (ex.title ? <span className="q-title">{ex.title}</span> : 'Problème') : <>Exercice {index + 1} / {exercises.length}</>}
+                {tierLabel && <span className="q-tier">{tierLabel}</span>}
               </div>
               <p className="q-text"><MathText text={ex.prompt} /></p>
+              {ex.figure && <FigureView figure={ex.figure} />}
 
-              {ex.kind === 'input' ? (
+              {ex.kind === 'input' && (
                 <form className="answer-row" onSubmit={(e) => { e.preventDefault(); submit(value) }}>
                   <input
                     ref={inputRef}
@@ -142,10 +135,11 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
                     placeholder={ex.inputHint ?? 'Ta réponse'}
                     inputMode="text"
                     autoComplete="off"
+                    aria-label="Ta réponse"
                   />
                   {phase === 'question' && <button className="btn gold" type="submit">Valider</button>}
                 </form>
-              ) : null}
+              )}
               {ex.kind === 'input' && phase === 'question' && ex.keypad && (
                 <div className="keypad" aria-label="Symboles">
                   {ex.keypad.map((k) => (
@@ -174,7 +168,7 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
                   {diagnosis && <div className="diag">{diagnosis}</div>}
                   {ex.explanation && <div className="expl"><MathText text={ex.explanation} /></div>}
                   <button className="btn gold" onClick={next} autoFocus>
-                    {index + 1 < series.length ? 'Suivant →' : 'Voir le bilan'}
+                    {index + 1 < exercises.length ? 'Suivant →' : single ? 'Continuer' : 'Voir le bilan'}
                   </button>
                 </div>
               )}
@@ -183,18 +177,10 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
 
           {phase === 'done' && (
             <div className="summary">
-              <div className="score">{correct}<small>/{series.length}</small></div>
-              {upgrade ? (
-                correct >= UPGRADE_THRESHOLD ? (
-                  <p>Amélioration <b>{upgrade.name}</b> acquise ! {upgrade.description}</p>
-                ) : (
-                  <p>Il faut au moins {UPGRADE_THRESHOLD}/5 pour débloquer <b>{upgrade.name}</b>. Retente ta chance !</p>
-                )
-              ) : (
-                <Recruits chapter={chapter} before={points} after={Math.min(MAX_POINTS, points + correct)} />
-              )}
+              {!single && <div className="score">{correct}<small>/{exercises.length}</small></div>}
+              {summary(correct, exercises.length)}
               <div className="summary-actions">
-                <button className="btn gold" onClick={() => onClose(correct)} autoFocus>Retour au camp</button>
+                <button className="btn gold" onClick={() => onClose({ correct, answered: results.length })} autoFocus>Retour au camp</button>
               </div>
             </div>
           )}
@@ -206,23 +192,24 @@ export function ExerciseModal({ chapter, level, upgrade, points, onClose }: Prop
 }
 
 /** Bilan de recrutement : nouvelles recrues, cran atteint, nouveau rang. */
-function Recruits({ chapter, before, after }: { chapter: Chapter; before: number; after: number }) {
-  const recruits = armySize(after) - armySize(before)
-  const levelBefore = levelFromPoints(before)
-  const levelAfter = levelFromPoints(after)
+export function Recruits({ chapter, before, after, ppc }: { chapter: Chapter; before: number; after: number; ppc: number }) {
+  const capped = Math.min(maxPoints(ppc), after)
+  const recruits = armySize(capped, ppc) - armySize(before, ppc)
+  const levelBefore = levelFromPoints(before, ppc)
+  const levelAfter = levelFromPoints(capped, ppc)
   const tierAfter = TIER_PER_LEVEL[levelAfter]
   const promoted = tierAfter > TIER_PER_LEVEL[levelBefore]
-  const next = pointsToNextRecruit(after)
-  if (after === before) {
-    return <p>Aucune recrue cette fois… les forgerons t’attendent pour une revanche.</p>
+  const next = pointsToNextRecruit(capped, ppc)
+  if (capped === before) {
+    return <p>{before >= maxPoints(ppc) ? 'Ton corps est déjà au complet : place aux améliorations !' : 'Aucune recrue cette fois… les forgerons t’attendent pour une revanche.'}</p>
   }
   return (
     <div className="recruits">
       <p>
-        <b>+{after - before} point{after - before > 1 ? 's' : ''}</b> d’entraînement.{' '}
+        <b>+{capped - before} point{capped - before > 1 ? 's' : ''}</b> d’entraînement.{' '}
         {recruits > 0
-          ? <>Le corps « {chapter.corpsName} » accueille <b>{recruits} recrue{recruits > 1 ? 's' : ''}</b> : il compte maintenant <b>{armySize(after)} soldats</b>.</>
-          : <>Encore {next} bonne{next > 1 ? 's' : ''} réponse{next > 1 ? 's' : ''} pour la prochaine recrue.</>}
+          ? <>Le corps « {chapter.corpsName} » accueille <b>{recruits} recrue{recruits > 1 ? 's' : ''}</b> : il compte maintenant <b>{armySize(capped, ppc)} soldats</b>.</>
+          : next > 0 ? <>Encore {next} bonne{next > 1 ? 's' : ''} réponse{next > 1 ? 's' : ''} pour la prochaine recrue.</> : null}
       </p>
       {levelAfter > levelBefore && (
         <p className="levelup">

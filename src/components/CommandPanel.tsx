@@ -1,30 +1,43 @@
-import {
-  MAX_LEVEL, MAX_POINTS, POINTS_PER_LEVEL, TIER_PER_LEVEL, UNITS_PER_LEVEL, armySize, levelFromPoints, pointsToNextRecruit, unitName,
-  type Chapter, type Upgrade,
-} from '../data/curriculum'
-import type { ChapterProgress } from '../game/progress'
-import { Portrait } from './Portrait'
+import { MAX_LEVEL, TIER_PER_LEVEL, UNITS_PER_LEVEL, armySize, levelFromPoints, maxPoints, pointsToNextRecruit, unitName, type Chapter } from '../data/curriculum'
+import { MATCHUPS, UNIT_STATS } from '../battle/units'
+import { upgradeAvailability, type HouseState, type PlayerState } from '../game/state'
+import { useRules } from '../game/rules'
 import { difficultyForLevel } from '../exercises'
+import { Portrait } from './Portrait'
 import { displayedUnits, lookFor } from './WorldMap'
 
 interface Props {
   chapter: Chapter
-  progress: ChapterProgress
+  house: HouseState
+  player: PlayerState
+  now: number
+  teamColor?: string
   demo: boolean
   onTrain: () => void
-  onUpgrade: (u: Upgrade) => void
+  onUpgrade: (n: 1 | 2 | 3) => void
   onDemoPoints: (delta: number) => void
   onDemoUpgrades: () => void
 }
 
 const UPGRADE_ICONS = ['🛡', '⚒', '⚑']
 
-export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDemoPoints, onDemoUpgrades }: Props) {
-  const level = levelFromPoints(progress.points)
-  const look = lookFor(chapter, progress)
+export const formatWait = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+export function CommandPanel({ chapter, house, player, now, teamColor, demo, onTrain, onUpgrade, onDemoPoints, onDemoUpgrades }: Props) {
+  const rules = useRules()
+  const { ppc } = rules
+  const level = levelFromPoints(house.points, ppc)
+  const look = lookFor(chapter, house, ppc, teamColor)
   const maxed = level >= MAX_LEVEL
-  const inLevel = maxed ? POINTS_PER_LEVEL : progress.points % POINTS_PER_LEVEL
+  const inLevel = maxed ? ppc : house.points % ppc
   const nextTier = TIER_PER_LEVEL.findIndex((t) => t > look.tier)
+  const soldiers = armySize(house.points, ppc)
+  const figures = displayedUnits(chapter, house.points, ppc)
+  const stats = UNIT_STATS[chapter.unit]
+  const role = MATCHUPS[chapter.unit]
 
   return (
     <section className="command">
@@ -33,7 +46,9 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
           <Portrait look={look} size={112} />
         </div>
         <div className="portrait-name">{look.name}</div>
-        <div className="portrait-count">{armySize(progress.points)} soldat{armySize(progress.points) > 1 ? 's' : ''}{chapter.unit === 'siege' && level > 0 ? ` · ${displayedUnits(chapter, progress.points)} engins` : ''}</div>
+        <div className="portrait-count">
+          {soldiers} soldat{soldiers > 1 ? 's' : ''}{figures !== soldiers ? ` · ${figures} ${chapter.unit === 'siege' ? 'engin' : 'unité'}${figures > 1 ? 's' : ''}` : ''}
+        </div>
       </div>
 
       <div className="cmd-info">
@@ -43,7 +58,7 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
 
         <div className="gauge" aria-label={`Jauge ${level}/${MAX_LEVEL}`}>
           {Array.from({ length: MAX_LEVEL }, (_, i) => {
-            const fill = i < level ? 1 : i === level ? inLevel / POINTS_PER_LEVEL : 0
+            const fill = i < level ? 1 : i === level ? inLevel / ppc : 0
             return (
               <div key={i} className={`gauge-seg ${i < level ? 'full' : ''}`}>
                 <div className="gauge-fill" style={{ width: `${fill * 100}%`, background: chapter.color }} />
@@ -54,8 +69,8 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
         </div>
         <div className="gauge-caption">
           {maxed
-            ? 'Corps d’armée au complet ! Débloque les améliorations →'
-            : `${progress.points}/${MAX_POINTS} bonnes réponses · prochaine recrue dans ${pointsToNextRecruit(progress.points)} · cran ${level + 1} dans ${POINTS_PER_LEVEL - inLevel}`}
+            ? 'Corps d’armée au complet ! Il reste les améliorations →'
+            : `${house.points}/${maxPoints(ppc)} bonnes réponses · prochaine recrue dans ${pointsToNextRecruit(house.points, ppc)} · cran ${level + 1} dans ${ppc - inLevel}`}
         </div>
 
         <div className="ranks">
@@ -68,7 +83,14 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
               </div>
             )
           })}
-          {nextTier > 0 && !maxed && <div className="rank-hint">Prochain rang au cran {nextTier}</div>}
+          <div className="unit-role">
+            {nextTier > 0 && !maxed && <div className="rank-hint">Prochain rang au cran {nextTier}</div>}
+            <div><b>Fort contre</b> {role.strong}</div>
+            <div><b>Faible contre</b> {role.weak}</div>
+            <div className="unit-stats">
+              ❤ {stats.hp} · ⚔ {stats.attack || '—'} · 🛡 {stats.armor} · {stats.range > 2 ? `🎯 ${stats.range} m · ` : ''}🐎 {stats.speed} m/s{stats.cost !== 1 ? ` · coût ${String(stats.cost).replace('.', ',')}` : ''}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -82,22 +104,24 @@ export function CommandPanel({ chapter, progress, demo, onTrain, onUpgrade, onDe
         </button>
         <div className="upgrades">
           {chapter.upgrades.map((u, i) => {
-            const owned = progress.upgrades.includes(u.id)
-            const available = maxed && !owned && (i === 0 || progress.upgrades.includes(chapter.upgrades[i - 1].id))
+            const n = (i + 1) as 1 | 2 | 3
+            const av = upgradeAvailability(player, chapter, n, rules, now)
+            const cls = av.state === 'owned' ? 'owned' : av.state === 'available' ? 'available' : 'locked'
+            const info = av.state === 'owned' ? 'acquise' : av.state === 'available' ? 'un problème à résoudre' : av.state === 'cooldown' ? `nouvel essai dans ${formatWait(av.until - now)}` : av.reason
             return (
-              <button key={u.id} className={`upgrade ${owned ? 'owned' : available ? 'available' : 'locked'}`}
-                disabled={!available} onClick={() => onUpgrade(u)}
-                title={`${u.name} — ${u.description}${owned ? ' (acquise)' : available ? ' · Série d’élite : 4/5 requis' : ' · Verrouillée'}`}>
-                <span className="up-icon">{owned ? UPGRADE_ICONS[i] : available ? UPGRADE_ICONS[i] : '🔒'}</span>
+              <button key={u.id} className={`upgrade ${cls}`} disabled={av.state !== 'available'} onClick={() => onUpgrade(n)}
+                title={`${u.name} — ${u.description} (${info})`}>
+                <span className="up-icon">{av.state === 'locked' ? '🔒' : av.state === 'cooldown' ? '⏳' : UPGRADE_ICONS[i]}</span>
                 <span className="up-name">{u.name}</span>
+                <span className="up-req">{av.state === 'owned' ? '✓ acquise' : av.state === 'cooldown' ? formatWait(av.until - now) : av.state === 'locked' ? av.reason.replace('Requis : ', '') : 'Problème'}</span>
               </button>
             )
           })}
         </div>
         {demo && (
           <div className="demo-tools">
-            <button onClick={() => onDemoPoints(-POINTS_PER_LEVEL)}>−10</button>
-            <button onClick={() => onDemoPoints(POINTS_PER_LEVEL)}>+10 pts</button>
+            <button onClick={() => onDemoPoints(-ppc)}>−1 cran</button>
+            <button onClick={() => onDemoPoints(ppc)}>+1 cran</button>
             <button onClick={onDemoUpgrades}>Améliorer</button>
           </div>
         )}

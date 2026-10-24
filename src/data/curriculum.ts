@@ -1,8 +1,8 @@
 // Programme : niveaux scolaires → chapitres → corps d'armée.
 // Chaque chapitre est incarné par un corps d'armée qui grossit avec les exercices réussis.
 
-export type UnitKind = 'infantry' | 'spear' | 'archer' | 'knight' | 'scout' | 'siege' | 'scholar'
-export type BuildingKind = 'barracks' | 'range' | 'stable' | 'workshop' | 'library'
+export type UnitKind = 'infantry' | 'spear' | 'archer' | 'knight' | 'scout' | 'siege' | 'monk'
+export type BuildingKind = 'barracks' | 'range' | 'stable' | 'workshop' | 'monastery'
 
 export interface Upgrade {
   id: string
@@ -35,30 +35,36 @@ export interface Level {
   chapters: Chapter[]
 }
 
+// Les améliorations ont un effet réel dans la bataille (voir battle/units.ts).
 const INFANTRY_UPGRADES: Chapter['upgrades'] = [
-  { id: 'mailles', name: 'Cotte de mailles', description: 'Armure renforcée : les soldats encaissent mieux.' },
-  { id: 'forge', name: 'Forge', description: 'Lames trempées : +1 en attaque.' },
-  { id: 'etendard', name: 'Étendard', description: 'Capes et bannières : le corps impressionne l’ennemi.' },
+  { id: 'mailles', name: 'Cotte de mailles', description: '+2 en armure.' },
+  { id: 'forge', name: 'Forge', description: 'Lames trempées : +2 en attaque.' },
+  { id: 'etendard', name: 'Étendard', description: 'Le corps marche fièrement : +15 % de vitesse et +10 % de points de vie.' },
+]
+const SPEAR_UPGRADES: Chapter['upgrades'] = [
+  { id: 'mailles', name: 'Cotte de mailles', description: '+2 en armure.' },
+  { id: 'forge', name: 'Forge', description: 'Fers de lance trempés : +2 en attaque.' },
+  { id: 'piques', name: 'Piques longues', description: 'Frappent plus loin : +4 de bonus contre la cavalerie et allonge accrue.' },
 ]
 const ARCHER_UPGRADES: Chapter['upgrades'] = [
-  { id: 'matelassee', name: 'Armure matelassée', description: 'Gambison épais pour les tireurs.' },
-  { id: 'empennage', name: 'Empennage', description: 'Flèches plus précises : +1 portée.' },
-  { id: 'balistique', name: 'Balistique', description: 'Les tirs anticipent la cible. Capes de maîtres-archers.' },
+  { id: 'matelassee', name: 'Armure matelassée', description: '+2 en armure.' },
+  { id: 'empennage', name: 'Empennage', description: 'Flèches plus tranchantes : +2 en attaque.' },
+  { id: 'balistique', name: 'Balistique', description: 'Les tirs anticipent la cible : +1,5 de portée.' },
 ]
 const CAVALRY_UPGRADES: Chapter['upgrades'] = [
-  { id: 'barde', name: 'Barde', description: 'Armure de cheval aux couleurs du corps.' },
-  { id: 'ferrage', name: 'Ferrage', description: 'Fers forgés : charge plus rapide.' },
-  { id: 'chevalerie', name: 'Chevalerie', description: 'Capes et honneurs des ordres de chevalerie.' },
+  { id: 'barde', name: 'Barde', description: 'Armure de cheval : +2 en armure.' },
+  { id: 'trempe', name: 'Armes trempées', description: '+2 en attaque.' },
+  { id: 'ferrage', name: 'Ferrage', description: 'Fers forgés : +20 % de vitesse.' },
 ]
 const SIEGE_UPGRADES: Chapter['upgrades'] = [
-  { id: 'charpente', name: 'Charpente renforcée', description: 'Machines cerclées de fer.' },
-  { id: 'chimie', name: 'Chimie', description: 'Projectiles enflammés : +1 attaque.' },
-  { id: 'ingenieurs', name: 'Ingénieurs', description: 'Calculs de trajectoire : +1 portée.' },
+  { id: 'charpente', name: 'Charpente renforcée', description: 'Machines cerclées de fer : +2 en armure et +20 points de vie.' },
+  { id: 'chimie', name: 'Chimie', description: 'Projectiles enflammés : +6 en attaque.' },
+  { id: 'ingenieurs', name: 'Ingénieurs', description: 'Calculs de trajectoire : +2 de portée.' },
 ]
-const SCHOLAR_UPGRADES: Chapter['upgrades'] = [
-  { id: 'enluminure', name: 'Enluminure', description: 'Manuscrits ornés d’or.' },
-  { id: 'astrolabe', name: 'Astrolabe', description: 'Mesure du ciel et des chances.' },
-  { id: 'sagesse', name: 'Sagesse', description: 'Robes de maîtres et bâtons d’or.' },
+const MONK_UPGRADES: Chapter['upgrades'] = [
+  { id: 'saintete', name: 'Sainteté', description: '+20 points de vie.' },
+  { id: 'redemption', name: 'Rédemption', description: '+10 points de pourcentage de chance de conversion.' },
+  { id: 'illumination', name: 'Illumination', description: 'Conversion plus rapide et soins doublés.' },
 ]
 
 export const LEVELS: Level[] = [
@@ -93,7 +99,7 @@ export const LEVELS: Level[] = [
         tierNames: ['Lancier', 'Piquier', 'Hallebardier'],
         color: '#b8362f',
         emblem: '±',
-        upgrades: INFANTRY_UPGRADES,
+        upgrades: SPEAR_UPGRADES,
       },
       {
         id: '5e-frac',
@@ -151,14 +157,14 @@ export const LEVELS: Level[] = [
         id: '5e-stat',
         title: 'Statistiques & probabilités',
         topics: ['Moyenne', 'Fréquences', 'Probabilités simples'],
-        unit: 'scholar',
-        building: 'library',
-        buildingName: 'Bibliothèque',
-        corpsName: 'Érudits',
-        tierNames: ['Apprenti', 'Érudit', 'Grand Érudit'],
+        unit: 'monk',
+        building: 'monastery',
+        buildingName: 'Monastère',
+        corpsName: 'Moines',
+        tierNames: ['Novice', 'Moine', 'Abbé'],
         color: '#1f8a8a',
         emblem: 'σ',
-        upgrades: SCHOLAR_UPGRADES,
+        upgrades: MONK_UPGRADES,
       },
     ],
   },
@@ -206,7 +212,7 @@ export const LEVELS: Level[] = [
         tierNames: ['Piquier', 'Hallebardier', 'Garde royale'],
         color: '#b8362f',
         emblem: '=',
-        upgrades: INFANTRY_UPGRADES,
+        upgrades: SPEAR_UPGRADES,
       },
       {
         id: '2-fct',
@@ -251,14 +257,14 @@ export const LEVELS: Level[] = [
         id: '2-stat',
         title: 'Statistiques & probabilités',
         topics: ['Moyenne pondérée', 'Évolutions en %', 'Probabilités'],
-        unit: 'scholar',
-        building: 'library',
-        buildingName: 'Université',
-        corpsName: 'Érudits',
-        tierNames: ['Érudit', 'Savant', 'Grand Savant'],
+        unit: 'monk',
+        building: 'monastery',
+        buildingName: 'Monastère',
+        corpsName: 'Moines',
+        tierNames: ['Moine', 'Prieur', 'Abbé'],
         color: '#1f8a8a',
         emblem: 'σ',
-        upgrades: SCHOLAR_UPGRADES,
+        upgrades: MONK_UPGRADES,
       },
     ],
   },
@@ -267,35 +273,38 @@ export const LEVELS: Level[] = [
 export const UPCOMING_LEVELS = ['6e', '4e', '3e', '1re', 'Tle']
 
 // ── Règles de progression ──────────────────────────────────────────────
+// « ppc » = points (bonnes réponses) par cran : 10 en entraînement libre, moins en duel chronométré.
 export const SERIES_SIZE = 5
-export const POINTS_PER_LEVEL = 10 // 10 bonnes réponses = 1 cran de jauge (≈ 2 séries)
-export const MAX_LEVEL = 5 // 5 crans → 50 bonnes réponses = corps au complet
+export const POINTS_PER_LEVEL = 10
+export const MAX_LEVEL = 5 // 5 crans par maison
 export const MAX_POINTS = POINTS_PER_LEVEL * MAX_LEVEL
-export const UPGRADE_THRESHOLD = 4 // une amélioration s'obtient avec ≥ 4/5 sur une série d'élite
 
-/** Taille de l'armée affichée selon le cran de jauge. */
+/** Effectif du corps (en « soldats ») selon le cran de jauge. */
 export const UNITS_PER_LEVEL = [1, 3, 5, 8, 11, 15]
 /** Rang visuel du soldat selon le cran de jauge (0 = villageois). */
 export const TIER_PER_LEVEL = [0, 1, 1, 2, 2, 3]
 
-export function levelFromPoints(points: number): number {
-  return Math.min(MAX_LEVEL, Math.floor(points / POINTS_PER_LEVEL))
+export const maxPoints = (ppc = POINTS_PER_LEVEL) => ppc * MAX_LEVEL
+
+export function levelFromPoints(points: number, ppc = POINTS_PER_LEVEL): number {
+  return Math.min(MAX_LEVEL, Math.floor(points / ppc))
 }
 
 /** Effectif du corps : grandit à chaque bonne réponse, entre deux crans. */
-export function armySize(points: number): number {
-  const level = levelFromPoints(points)
+export function armySize(points: number, ppc = POINTS_PER_LEVEL): number {
+  const level = levelFromPoints(points, ppc)
   if (level >= MAX_LEVEL) return UNITS_PER_LEVEL[MAX_LEVEL]
-  const within = (points - level * POINTS_PER_LEVEL) / POINTS_PER_LEVEL
+  const within = (points - level * ppc) / ppc
   return UNITS_PER_LEVEL[level] + Math.floor((UNITS_PER_LEVEL[level + 1] - UNITS_PER_LEVEL[level]) * within)
 }
 
 /** Nombre de bonnes réponses avant la prochaine recrue (0 si l'armée est complète). */
-export function pointsToNextRecruit(points: number): number {
-  if (points >= MAX_POINTS) return 0
-  const size = armySize(points)
+export function pointsToNextRecruit(points: number, ppc = POINTS_PER_LEVEL): number {
+  const max = maxPoints(ppc)
+  if (points >= max) return 0
+  const size = armySize(points, ppc)
   let p = points
-  while (p < MAX_POINTS && armySize(p) === size) p++
+  while (p < max && armySize(p, ppc) === size) p++
   return p - points
 }
 
@@ -305,9 +314,20 @@ export function unitName(chapter: Chapter, tier: number): string {
   return tier === 0 ? 'Villageois' : chapter.tierNames[tier - 1]
 }
 
-export function eraFromRatio(ratio: number): string {
-  if (ratio >= 0.9) return 'Âge impérial'
-  if (ratio >= 0.55) return 'Âge des châteaux'
-  if (ratio >= 0.2) return 'Âge féodal'
-  return 'Âge sombre'
+// ── Âges ───────────────────────────────────────────────────────────────
+export const AGES = ['Âge sombre', 'Âge féodal', 'Âge des châteaux', 'Âge impérial'] as const
+export const AGE_SHORT = ['Sombre', 'Féodal', 'Châteaux', 'Impérial'] as const
+/** Bonus de points de vie et d'attaque par âge atteint (sur toute l'armée). */
+export const AGE_BONUS = 0.08
+/** Cran de la maison requis pour un problème de l'hôtel de ville de niveau n (1 → cran 2, 2 → 3, 3 → 4). */
+export const AGE_PROBLEM_CRAN = [0, 2, 3, 4]
+/** Améliorations n = 1, 2, 3 : âge et cran requis. */
+export const UPGRADE_AGE = [0, 1, 2, 3]
+export const UPGRADE_CRAN = [0, 2, 3, 4]
+
+export function ageFromPoints(agePoints: number, thresholds: readonly number[]): number {
+  let age = 0
+  while (age < thresholds.length && agePoints >= thresholds[age]) age++
+  return age
 }
+

@@ -1,4 +1,10 @@
+import type { Figure } from './figure'
+
 export interface Exercise {
+  /** Titre court d'un problème (« Le pont-levis », « La part du trésor »…), affiché au-dessus de l'énoncé. */
+  title?: string
+  /** Figure de géométrie accompagnant l'énoncé. */
+  figure?: Figure
   /** Énoncé. Mini-syntaxe : {a/b} → fraction empilée, ^n ou ^{…} → exposant, √{…} → racine, x_B → indice. */
   prompt: string
   kind: 'input' | 'choice'
@@ -24,6 +30,11 @@ export type Difficulty = 1 | 2 | 3 | 4 | 5
 export type Maker = () => Exercise
 /** Pour chaque palier (index 0 → palier 1), une réserve de modèles d'exercices. */
 export type Tiers = [Maker[], Maker[], Maker[], Maker[], Maker[]]
+/** Trois niveaux croissants (améliorations 1-2-3, ou problèmes de l'hôtel de ville à 1-2-3 points). */
+export type Ladder = [Maker[], Maker[], Maker[]]
+
+/** Ajoute un titre et/ou une figure à un exercice existant. */
+export const withMeta = (ex: Exercise, meta: { title?: string; figure?: Figure }): Exercise => ({ ...ex, ...meta })
 
 export const randInt = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1))
 export const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]
