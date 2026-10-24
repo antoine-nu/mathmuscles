@@ -393,6 +393,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ── Écussons et recrues sur la carte ───────────── */
 .badge-lvl { font-family: var(--font-title); font-weight: 900; font-size: 15px; fill: var(--gold-bright); }
+.badge-lvl.small { font-size: 11px; }
 .badge-count { font-family: var(--font-body); font-weight: 700; font-size: 12px; fill: var(--text-light); }
 .badge-pop { animation: badge-pop 0.7s cubic-bezier(.3, 1.6, .5, 1); transform-box: fill-box; transform-origin: center; }
 @keyframes badge-pop { from { transform: scale(0.3); opacity: 0; } }

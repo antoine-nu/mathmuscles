@@ -8,6 +8,7 @@ import { UNIT_STATS } from '../battle/units'
 import { playerFromArmy, type ArmySpec, type PlayerState } from '../game/state'
 import { SOLO_RULES } from '../game/rules'
 import { Debrief } from './Debrief'
+import type { ThemeId } from '../game/themes'
 import type { Exercise } from '../exercises/utils'
 import { MathText } from '../components/MathText'
 import { formatWait } from '../components/CommandPanel'
@@ -31,6 +32,8 @@ interface Props {
   onMenu: () => void
   /** Villages des deux camps à la fin de l'entraînement (bilan) ; à défaut, reconstitués à partir des armées. */
   villages?: [PlayerState | null, PlayerState | null]
+  /** Décor du champ de bataille (celui des villages). */
+  themeId?: ThemeId
   /** Message d'état réseau (ex. adversaire déconnecté). */
   notice?: string | null
   /** Message sous le bilan quand il n'y a pas de bouton « Revanche » (invité d'un duel). */
@@ -46,7 +49,7 @@ interface Hud {
   hornLeft: [number, number]
 }
 
-export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint, villages }: Props) {
+export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint, villages, themeId }: Props) {
   const [debrief, setDebrief] = useState(false)
   const [hud, setHud] = useState<Hud>({ t: 0, alive: [0, 0], hornsUsed: [0, 0], hornOn: [false, false], hornLeft: [0, 0] })
   const [now, setNow] = useState(Date.now())
@@ -154,6 +157,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
       <div className="battle-field">
         <BattleCanvas
           feed={feed}
+          themeId={themeId}
           colors={colors}
           onTick={local ? (dt) => local.advance(dt) : undefined}
           onEvents={(evs) => {
@@ -209,7 +213,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
         {debrief && result && (
           <Debrief
             armies={armies}
-            villages={[villages?.[0] ?? playerFromArmy(armies[0], SOLO_RULES), villages?.[1] ?? playerFromArmy(armies[1], SOLO_RULES)]}
+            villages={[villages?.[0] ?? playerFromArmy(armies[0], SOLO_RULES, themeId), villages?.[1] ?? playerFromArmy(armies[1], SOLO_RULES, themeId)]}
             names={names}
             colors={colors}
             mySide={mySide}

@@ -146,7 +146,9 @@ export class RemoteFeed implements Feed {
   private last: { frame: Frame; at: number } | null = null
   private pending: BattleEvent[] = []
   private res: BattleResult | null = null
-  constructor(public meta: UnitMeta[]) {}
+  /** `initial` : armées déployées (calculées sur place à partir des armées et de la graine), affichées pendant
+   *  le compte à rebours avant que l'hôte n'envoie ses premières images. */
+  constructor(public meta: UnitMeta[], private initial?: Frame) {}
   push(s: Snapshot) {
     this.prev = this.last
     this.last = { frame: decodeSnapshot(s), at: performance.now() }
@@ -154,7 +156,7 @@ export class RemoteFeed implements Feed {
     if (s.res) this.res = s.res
   }
   frame(): Frame {
-    if (!this.last) return { t: 0, units: [], projectiles: [], horn: [-1, -1], hornsUsed: [0, 0] }
+    if (!this.last) return this.initial ?? { t: 0, units: [], projectiles: [], horn: [-1, -1], hornsUsed: [0, 0] }
     if (!this.prev) return this.last.frame
     const span = Math.max(1, this.last.at - this.prev.at)
     const k = Math.min(1.25, (performance.now() - this.last.at) / span)

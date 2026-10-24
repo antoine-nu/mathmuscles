@@ -1,3 +1,4 @@
+import type { ThemeId } from '../game/themes'
 // Tuyauterie du duel : deux navigateurs reliés directement (WebRTC), mis en relation par Trystero via des
 // relais publics Nostr — aucun serveur à héberger. Une variante locale (BroadcastChannel, deux onglets du
 // même navigateur) sert aux tests : ajouter ?reseau=local à l'adresse.
@@ -13,7 +14,7 @@ export type Msg =
   | { t: 'config'; duration: number }
   | { t: 'prep' }
   | { t: 'ready' }
-  | { t: 'start'; duration: number; ms: number; startIn: number }
+  | { t: 'start'; duration: number; ms: number; startIn: number; theme?: ThemeId }
   | { t: 'status'; age: number; pop: number }
   | { t: 'army'; army: ArmySpec; final?: boolean }
   | { t: 'battle'; armies: [ArmySpec, ArmySpec]; seed: number; startIn: number }

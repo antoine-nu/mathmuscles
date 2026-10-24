@@ -10,11 +10,16 @@ import { garrison } from '../battle/units'
 import { seeded, shade } from '../game/color'
 import { MAP_SIZE, TILE_H, TILE_W, iso, pts, unIso, type Pt } from '../game/iso'
 import { Banner, Building, TownCenter } from './Buildings'
-import { Bush, Deer, Oak, Pine, Rocks } from './Scenery'
+import { BareTree, Boat, Bush, Cactus, Deer, Mountain, Oak, Palm, Pine, Rocks } from './Scenery'
+import { themeOf, type MapTheme, type ThemeId } from '../game/themes'
 import { SpriteDefs, UnitSprite, type UnitLook } from './UnitSprite'
 
-const CENTER = MAP_SIZE / 2
-const POND: Pt = [1.6, 16.4]
+// Le village occupe toujours MAP_SIZE × MAP_SIZE tuiles ; la carte, plus grande, l'entoure d'un décor
+// propre au thème (forêts, mer, montagnes…).
+const WORLD = 32
+const OFF = (WORLD - MAP_SIZE) / 2
+const CENTER = WORLD / 2
+const POND: Pt = [1.6 + OFF, 16.4 + OFF]
 const POND_R = 2.4
 const UNIT_SCALE = 1.35
 
@@ -70,33 +75,55 @@ function formation(camp: Camp, teamColor?: string): { pos: Pt; look: UnitLook; k
 }
 
 // ── Terrain (statique, mémoïsé) ─────────────────────────────────────────
-const Terrain = memo(function Terrain({ camps }: { camps: Pt[] }) {
+/** Côté gauche de l'écran (y − x grand) : plage puis mer ; côté droit (x − y grand) : montagnes. */
+const BEACH_AT = 13
+const SEA_AT = 14.6
+const ROCK_AT = 13.6
+/** Ondulation des limites (côte, pied des montagnes), le long de la diagonale x + y. */
+const wave = (x: number, y: number, phase: number) => 1.1 * Math.sin((x + y) * 0.42 + phase) + 0.5 * Math.sin((x + y) * 1.07 + phase * 2)
+const isSea = (t: MapTheme, x: number, y: number) => t.sea && y - x + wave(x, y, 0) > SEA_AT
+const isBeach = (t: MapTheme, x: number, y: number) => t.sea && y - x + wave(x, y, 0) > BEACH_AT
+const isRock = (t: MapTheme, x: number, y: number) => t.mountains && x - y + wave(x, y, 2) > ROCK_AT
+const hasPond = (t: MapTheme) => !t.sea
+
+const Terrain = memo(function Terrain({ camps, theme }: { camps: Pt[]; theme: MapTheme }) {
   const rnd = seeded(7)
   const tiles: ReactNode[] = []
   const details: ReactNode[] = []
-  const grass = ['#6f9a3c', '#77a142', '#68923a', '#80a84a', '#5f8a36']
-  for (let x = 0; x < MAP_SIZE; x++) {
-    for (let y = 0; y < MAP_SIZE; y++) {
+  const g = theme.ground
+  const sea = ['#2f6f98', '#33769f', '#2c6890', '#3a7ea6']
+  const rock = theme.id === 'hiver' ? ['#c3ccd3', '#b6c0c8', '#cfd7dd'] : ['#8d8a80', '#837f76', '#979387']
+  for (let x = 0; x < WORLD; x++) {
+    for (let y = 0; y < WORLD; y++) {
       const v = Math.sin(x * 0.7) + Math.cos(y * 0.55) + Math.sin((x + y) * 0.33) * 0.8 + rnd() * 0.8
-      const c = grass[Math.max(0, Math.min(grass.length - 1, Math.floor((v + 2.4) * 1.05)))]
+      const cx = x + 0.5, cy = y + 0.5
+      let c = g[Math.max(0, Math.min(g.length - 1, Math.floor((v + 2.4) * 1.05)))]
+      const water = isSea(theme, cx, cy)
+      if (water) c = sea[Math.floor(rnd() * sea.length)]
+      else if (isBeach(theme, cx, cy)) c = rnd() < 0.5 ? '#dcc790' : '#d4bd84'
+      else if (isRock(theme, cx, cy)) c = rock[Math.floor(rnd() * rock.length)]
       const corners: Pt[] = [iso(x, y), iso(x + 1, y), iso(x + 1, y + 1), iso(x, y + 1)]
       tiles.push(<polygon key={`t${x}-${y}`} points={pts(corners)} fill={c} stroke={c} strokeWidth={1} />)
-      if (rnd() < 0.55) {
-        const [sx, sy] = iso(x + rnd(), y + rnd())
-        details.push(
-          <path key={`g${x}-${y}`} d={`M${sx - 3},${sy} l1.5,-4 M${sx},${sy} l0,-5 M${sx + 3},${sy} l-1.5,-4`} stroke={shade(c, -0.25)} strokeWidth={1} opacity={0.7} />,
-        )
+      const [sx, sy] = iso(x + rnd(), y + rnd())
+      if (water) {
+        if (rnd() < 0.3) details.push(<path key={`w${x}-${y}`} className="shimmer" style={{ animationDelay: `${(x * 7 + y * 3) % 30 / 10}s` }} d={`M${sx - 9},${sy} q5,-4 9,0 q5,-4 9,0`} stroke="#bfe3f7" strokeWidth={1.4} fill="none" />)
+        continue
       }
-      if (rnd() < 0.06) {
-        const [sx, sy] = iso(x + rnd(), y + rnd())
-        details.push(<circle key={`f${x}-${y}`} cx={sx} cy={sy} r={1.6} fill={rnd() < 0.5 ? '#f3e37c' : '#f4f1ea'} />)
+      if (theme.blades && rnd() < 0.55) {
+        details.push(<path key={`g${x}-${y}`} d={`M${sx - 3},${sy} l1.5,-4 M${sx},${sy} l0,-5 M${sx + 3},${sy} l-1.5,-4`} stroke={shade(c, -0.25)} strokeWidth={1} opacity={0.7} />)
+      } else if (theme.id === 'desert' && rnd() < 0.35) {
+        details.push(<path key={`d${x}-${y}`} d={`M${sx - 12},${sy} q6,-3 12,0 t12,0`} stroke={shade(c, -0.12)} strokeWidth={1.2} fill="none" opacity={0.7} />)
+      }
+      if (theme.specks.length && rnd() < 0.07) {
+        const [fx, fy] = iso(x + rnd(), y + rnd())
+        details.push(<circle key={`f${x}-${y}`} cx={fx} cy={fy} r={1.6} fill={theme.specks[Math.floor(rnd() * theme.specks.length)]} />)
       }
     }
   }
 
   // bords de la carte : falaise de terre
   const depth = 46
-  const L = iso(0, MAP_SIZE), B = iso(MAP_SIZE, MAP_SIZE), R = iso(MAP_SIZE, 0)
+  const L = iso(0, WORLD), B = iso(WORLD, WORLD), R = iso(WORLD, 0)
   const down = (p: Pt): Pt => [p[0], p[1] + depth]
 
   // chemins de terre de l'hôtel de ville vers chaque camp
@@ -108,15 +135,16 @@ const Terrain = memo(function Terrain({ camps }: { camps: Pt[] }) {
     return `M${cx},${cy} Q${mx},${my} ${tx},${ty}`
   })
 
-  // étang
+  // étang (oasis dans le désert, lac gelé en hiver)
   const [px, py] = iso(POND[0], POND[1])
   const pondRx = POND_R * TILE_W * 0.62
   const pondRy = POND_R * TILE_H * 0.62
+  const w = theme.water
 
   return (
     <g>
-      <polygon points={pts([L, B, down(B), down(L)])} fill="#7a5532" stroke="#3a2614" strokeWidth={1} />
-      <polygon points={pts([B, R, down(R), down(B)])} fill="#5c3e22" stroke="#3a2614" strokeWidth={1} />
+      <polygon points={pts([L, B, down(B), down(L)])} fill={theme.cliff[0]} stroke="#3a2614" strokeWidth={1} />
+      <polygon points={pts([B, R, down(R), down(B)])} fill={theme.cliff[1]} stroke="#3a2614" strokeWidth={1} />
       {[0.33, 0.66].map((t) => (
         <g key={t} stroke="#3a2614" strokeWidth={1} opacity={0.4}>
           <line x1={L[0]} y1={L[1] + depth * t} x2={B[0]} y2={B[1] + depth * t} />
@@ -125,19 +153,23 @@ const Terrain = memo(function Terrain({ camps }: { camps: Pt[] }) {
       ))}
       {tiles}
       <g fill="none" strokeLinecap="round">
-        {paths.map((d, i) => <path key={`pd${i}`} d={d} stroke="#9a7a4a" strokeWidth={30} opacity={0.55} />)}
-        {paths.map((d, i) => <path key={`pl${i}`} d={d} stroke="#b8955c" strokeWidth={16} opacity={0.6} />)}
+        {paths.map((d, i) => <path key={`pd${i}`} d={d} stroke={theme.path[0]} strokeWidth={30} opacity={0.55} />)}
+        {paths.map((d, i) => <path key={`pl${i}`} d={d} stroke={theme.path[1]} strokeWidth={16} opacity={0.6} />)}
       </g>
-      <ellipse cx={cx} cy={cy + 10} rx={190} ry={95} fill="#a78656" opacity={0.45} />
+      <ellipse cx={cx} cy={cy + 10} rx={190} ry={95} fill={theme.plaza} opacity={0.45} />
       {details}
-      <g>
-        <ellipse cx={px} cy={py} rx={pondRx + 10} ry={pondRy + 6} fill="#c9b27a" />
-        <ellipse cx={px} cy={py} rx={pondRx} ry={pondRy} fill="#3f7fa8" stroke="#2c5f80" strokeWidth={2} />
-        <ellipse cx={px - 10} cy={py - 6} rx={pondRx * 0.7} ry={pondRy * 0.6} fill="#5598c0" opacity={0.6} />
-        {[0, 1, 2, 3].map((i) => (
-          <path key={i} className="shimmer" style={{ animationDelay: `${i * 0.7}s` }} d={`M${px - 50 + i * 28},${py - 20 + i * 12} q8,-4 16,0`} stroke="#d6efff" strokeWidth={1.6} fill="none" />
-        ))}
-      </g>
+      {hasPond(theme) && (
+        <g>
+          <ellipse cx={px} cy={py} rx={pondRx + 10} ry={pondRy + 6} fill={w.rim} />
+          <ellipse cx={px} cy={py} rx={pondRx} ry={pondRy} fill={w.deep} stroke={shade(w.deep, -0.2)} strokeWidth={2} />
+          <ellipse cx={px - 10} cy={py - 6} rx={pondRx * 0.7} ry={pondRy * 0.6} fill={w.light} opacity={0.6} />
+          {w.frozen
+            ? <path d={`M${px - 60},${py - 4} l30,8 l18,-12 l26,10 M${px - 20},${py + 14} l16,-10 l22,4`} stroke="#ffffff" strokeWidth={1.4} fill="none" opacity={0.8} />
+            : [0, 1, 2, 3].map((i) => (
+              <path key={i} className="shimmer" style={{ animationDelay: `${i * 0.7}s` }} d={`M${px - 50 + i * 28},${py - 20 + i * 12} q8,-4 16,0`} stroke="#d6efff" strokeWidth={1.6} fill="none" />
+            ))}
+        </g>
+      )}
     </g>
   )
 })
@@ -156,40 +188,83 @@ interface Props {
   onTownCenter: () => void
   selected: string | null
   onSelect: (id: string) => void
+  /** Décor de la carte (plaine par défaut). */
+  themeId?: ThemeId
 }
 
-export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePoints, nextAgeAt, teamColor, onTownCenter }: Props) {
+export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePoints, nextAgeAt, teamColor, onTownCenter, themeId }: Props) {
   const { ppc } = useRules()
+  const theme = themeOf(themeId)
   const tiles = useMemo(() => campTiles(chapters.length), [chapters.length])
   const camps: Camp[] = chapters.map((chapter, i) => ({ chapter, tile: tiles[i], progress: getProgress(chapter.id) }))
   const [hover, setHover] = useState<string | null>(null)
 
-  // décor statique : forêts, rochers, buissons, gibier
+  // décor statique : forêts autour du village, montagnes, bateaux, rochers, buissons, gibier
   const scenery = useMemo(() => {
     const rnd = seeded(42)
     const items: { depth: number; node: ReactNode }[] = []
     const free = (x: number, y: number, margin: number) =>
       tiles.every((t) => Math.hypot(t[0] - x + 0.4, t[1] - y + 0.4) > margin) &&
       Math.hypot(CENTER - x, CENTER - y) > 3.6 &&
-      Math.hypot(POND[0] - x, POND[1] - y) > POND_R + 0.4
-    for (let i = 0; i < 520; i++) {
-      const x = rnd() * MAP_SIZE
-      const y = rnd() * MAP_SIZE
-      const edge = Math.min(x, y, MAP_SIZE - x, MAP_SIZE - y)
-      const backEdge = Math.min(x, y)
-      const p = backEdge < 2.2 ? 0.95 : edge < 1.5 ? 0.6 : 0.05
-      if (rnd() > p || !free(x, y, 2.7)) continue
-      const [sx, sy] = iso(x, y)
+      (!hasPond(theme) || Math.hypot(POND[0] - x, POND[1] - y) > POND_R + 0.4)
+    const totalWeight = theme.trees.reduce((n, [, w]) => n + w, 0)
+    const tree = (i: number, sx: number, sy: number) => {
       const s = 0.85 + rnd() * 0.4
       const hue = Math.floor(rnd() * 4)
-      items.push({ depth: sy, node: rnd() < 0.65 ? <Pine key={`tr${i}`} x={sx} y={sy} s={s} hue={hue} /> : <Oak key={`tr${i}`} x={sx} y={sy} s={s} hue={hue} /> })
+      let r = rnd() * totalWeight
+      const kind = theme.trees.find(([, w]) => (r -= w) < 0)?.[0] ?? theme.trees[0][0]
+      const key = `tr${i}`
+      if (kind === 'pine') return <Pine key={key} x={sx} y={sy} s={s} hue={hue} snow={theme.snow} leaves={theme.id === 'plaine' ? undefined : theme.leaves.map((c) => shade(c, -0.25))} />
+      if (kind === 'oak') return <Oak key={key} x={sx} y={sy} s={s} hue={hue} leaves={theme.leaves} />
+      if (kind === 'palm') return <Palm key={key} x={sx} y={sy} s={s} hue={hue} />
+      if (kind === 'cactus') return <Cactus key={key} x={sx} y={sy} s={s * 0.9} />
+      return <BareTree key={key} x={sx} y={sy} s={s} />
+    }
+    const sparse = theme.id === 'desert'
+    for (let i = 0; i < 1500; i++) {
+      const x = rnd() * WORLD
+      const y = rnd() * WORLD
+      if (isBeach(theme, x, y)) continue
+      // hors du village : forêt (clairsemée dans le désert et sur les pentes) ; dans le village, quelques arbres
+      const out = Math.max(Math.abs(x - CENTER), Math.abs(y - CENTER))
+      const backEdge = Math.min(x, y)
+      let p = out > MAP_SIZE / 2 ? 0.42 : out > MAP_SIZE / 2 - 1.5 ? 0.35 : 0.04
+      if (backEdge < 2) p = 0.9
+      if (isRock(theme, x, y)) p *= 0.25
+      if (sparse) p *= 0.35
+      if (rnd() > p || !free(x, y, 2.7)) continue
+      const [sx, sy] = iso(x, y)
+      items.push({ depth: sy, node: tree(i, sx, sy) })
+    }
+    // montagnes alignées le long du bord droit
+    if (theme.mountains) {
+      let n = 0
+      for (let t = 3; t < 2 * WORLD - 3; t += 3.4) {
+        for (const k of [16.5, 21, 25.5]) {
+          const kk = k + (rnd() - 0.5) * 1.6
+          const x = (t + kk) / 2, y = (t - kk) / 2
+          if (x < 1 || y < 1 || x > WORLD - 1 || y > WORLD - 1) continue
+          const [sx, sy] = iso(x, y)
+          items.push({ depth: sy, node: <Mountain key={`m${n++}`} x={sx} y={sy} s={0.75 + rnd() * 0.55} snowy={theme.id === 'hiver' || rnd() < 0.7} /> })
+        }
+      }
+    }
+    // bateaux sur la mer
+    if (theme.sea) {
+      ;[[CENTER - 9, CENTER + 10], [CENTER - 5, CENTER + 13.5], [CENTER - 12, CENTER + 6.5]].forEach(([x, y], i) => {
+        if (!isSea(theme, x, y)) return
+        const [sx, sy] = iso(x, y)
+        items.push({ depth: sy, node: <Boat key={`boat${i}`} x={sx} y={sy} color={['#b8362f', '#2f5fb3', '#d9b45a'][i]} /> })
+      })
     }
     const props: [number, number, 'rock' | 'gold' | 'bush' | 'deer'][] = [
       [13.4, 3.2, 'gold'], [14.2, 4.0, 'gold'], [4.2, 9.6, 'rock'], [15.6, 12.2, 'rock'], [9.6, 15.8, 'bush'],
       [10.4, 16.2, 'bush'], [16.0, 15.6, 'deer'], [15.2, 16.4, 'deer'], [5.0, 16.8, 'bush'],
     ]
-    props.forEach(([x, y, kind], i) => {
-      if (!free(x, y, 2.2)) return
+    props.forEach(([vx, vy, kind], i) => {
+      const x = vx + OFF, y = vy + OFF
+      if (!free(x, y, 2.2) || isBeach(theme, x, y)) return
+      if ((kind === 'bush' && !theme.bushes) || (kind === 'deer' && !theme.deer)) return
       const [sx, sy] = iso(x, y)
       const node = kind === 'deer' ? <Deer key={`p${i}`} x={sx} y={sy} />
         : kind === 'bush' ? <Bush key={`p${i}`} x={sx} y={sy} />
@@ -197,7 +272,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
       items.push({ depth: sy, node })
     })
     return items
-  }, [tiles])
+  }, [tiles, theme])
 
   // recrues apparues depuis le rendu précédent → animation d'arrivée
   const seenUnits = useRef<Set<string> | null>(null)
@@ -241,9 +316,10 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
   })
 
   // ── pan & zoom ──
-  const L = iso(0, MAP_SIZE)
-  const R = iso(MAP_SIZE, 0)
-  const base = { x: L[0] - 40, y: -150, w: R[0] - L[0] + 80, h: MAP_SIZE * TILE_H + 230 }
+  // cadrage initial sur le village (même taille qu'avant) ; on peut dézoomer pour voir les environs
+  const L = iso(OFF, OFF + MAP_SIZE)
+  const R = iso(OFF + MAP_SIZE, OFF)
+  const base = { x: L[0] - 40, y: OFF * TILE_H - 150, w: R[0] - L[0] + 80, h: MAP_SIZE * TILE_H + 230 }
   const [view, setView] = useState({ cx: base.x + base.w / 2, cy: base.y + base.h / 2 - 50, zoom: 1.25 })
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -260,6 +336,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
     <svg
       ref={svgRef}
       className="world"
+      style={{ background: theme.backdrop }}
       viewBox={`${view.cx - vw / 2} ${view.cy - vh / 2} ${vw} ${vh}`}
       preserveAspectRatio="xMidYMid meet"
       onPointerDown={(e) => {
@@ -280,7 +357,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
         setTimeout(() => (drag.current = null), 0)
       }}
       onWheel={(e) => {
-        const zoom = Math.min(2.6, Math.max(0.8, view.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12)))
+        const zoom = Math.min(2.6, Math.max(0.55, view.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12)))
         setView((v) => ({ ...v, zoom }))
       }}
     >
@@ -290,7 +367,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
           <feDropShadow dx={0} dy={2} stdDeviation={2} floodOpacity={0.5} />
         </filter>
       </defs>
-      <Terrain camps={tiles} />
+      <Terrain camps={tiles} theme={theme} />
 
       {/* cercles de sélection sous les formations */}
       {camps.map((camp) => {
@@ -353,7 +430,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
   )
 }
 
-/** Écusson posé sur le bâtiment : cran (chiffres romains), anneau de progression vers le cran suivant, effectif. */
+/** Écusson posé sur le bâtiment : effectif au centre, anneau de progression dans le cran en cours, cran en dessous. */
 function CampBadge({ x, y, level, points, ppc, color, units }: { x: number; y: number; level: number; points: number; ppc: number; color: string; units: number }) {
   const maxed = level >= MAX_LEVEL
   const within = maxed ? 1 : (points % ppc) / ppc
@@ -365,10 +442,10 @@ function CampBadge({ x, y, level, points, ppc, color, units }: { x: number; y: n
         <circle r={20} fill="#24150a" stroke={maxed ? '#ffe08a' : '#b8913a'} strokeWidth={2} />
         <circle r={r} fill="none" stroke="#4a3a28" strokeWidth={4} />
         <circle r={r} fill="none" stroke={maxed ? '#e2b43c' : color} strokeWidth={4} strokeDasharray={`${within * C} ${C}`} transform="rotate(-90)" strokeLinecap="butt" />
-        <text y={5} textAnchor="middle" className="badge-lvl">{ROMAN[level]}</text>
+        <text y={units > 99 ? 4 : 5} textAnchor="middle" className={`badge-lvl ${units > 99 ? 'small' : ''}`}>{units}</text>
         <g transform="translate(0 24)">
-          <rect x={-24} y={-8} width={48} height={16} rx={8} fill="#24150a" stroke="#b8913a" strokeWidth={1} />
-          <text y={4.5} textAnchor="middle" className="badge-count">⚔ {units}</text>
+          <rect x={-26} y={-8} width={52} height={16} rx={8} fill="#24150a" stroke="#b8913a" strokeWidth={1} />
+          <text y={4.5} textAnchor="middle" className="badge-count">{maxed ? '★ complet' : `cran ${ROMAN[level + 1]}`}</text>
         </g>
       </g>
     </g>

@@ -25,6 +25,11 @@ Pages utiles : `/?problemes` (relecture de tous les exercices et problèmes, ave
 ## Modes de jeu
 
 - **Entraînement libre** : on fait grandir son royaume à son rythme ; la progression est sauvegardée dans le navigateur.
+
+Chaque partie tire un **décor** : plaine, mer et montagnes, désert, hiver ou automne (bouton 🗺 pour en changer en
+entraînement libre). Le village est entouré de forêts, de mer ou de montagnes selon le décor, et le champ de la bataille
+finale reprend le même thème. En duel, l'hôte tire le décor pour les deux joueurs. Démonstration :
+`/?bataille&theme=desert` (plaine, cote, desert, hiver, automne).
 - **Défier l'ordinateur** : on choisit la durée et la **note sur 20** de l'adversaire (sa vitesse et sa réussite en dépendent).
 - **Défier un camarade** : l'un crée une partie et donne le **code à 4 caractères**, l'autre le saisit. L'hôte choisit la
   durée (15, 30, 45 min ou 1 heure). Les deux classes peuvent être différentes (5e contre 2nde) : les unités sont les
@@ -46,7 +51,7 @@ Une partie en duel : **compte à rebours d'entraînement** (chacun forme la plus
 et qu'il faut une longue partie pour bâtir un grand empire ; on voit l'âge et la population de l'adversaire, pas sa composition) → **bataille** (les armées se
 déploient, se ruent l'une sur l'autre et combattent jusqu'à l'élimination d'un camp ; au bout de 2 min 30, la plus
 grande valeur d'armée restante l'emporte). Pendant la bataille, le **cor de guerre** : un calcul mental juste (tables, relatifs,
-carrés… selon la classe, sans limite de temps pour répondre) donne +25 % d'attaque pendant 5 s, 3 fois au plus ; un
+carrés… selon la classe, sans limite de temps pour répondre) donne +25 % d'attaque pendant 5 s, 5 fois au plus ; un
 bandeau et une aura dorée sur les troupes montrent qu'il est actif.
 
 Après la bataille, **« Bilan et villages »** : pour chaque corps, unités engagées, survivants, ennemis mis hors de combat

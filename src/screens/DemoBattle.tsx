@@ -9,6 +9,7 @@ import { figuresFor } from '../battle/units'
 import type { UnitKind } from '../data/curriculum'
 import { BattleScreen } from './BattleScreen'
 import { BATTLE_INTRO, BLUE, RED } from './BotDuel'
+import { THEME_IDS, randomTheme, type ThemeId } from '../game/themes'
 
 /** Bataille de démonstration entre deux armées d'ordinateurs (/?bataille) : pour voir le combat sans attendre. */
 function makeArmy(levelId: string, grade: number): ArmySpec {
@@ -32,15 +33,18 @@ function siegeArmy(levelId: string): ArmySpec {
 export function DemoBattle({ onMenu }: { onMenu: () => void }) {
   const variant = new URLSearchParams(location.search).get('bataille')
   const [round, setRound] = useState(0)
-  const { feed, armies } = useMemo(() => {
+  const { feed, armies, themeId } = useMemo(() => {
     const armies: [ArmySpec, ArmySpec] = variant === 'artillerie'
       ? [siegeArmy(LEVELS[0].id), siegeArmy(LEVELS[1].id)]
       : [makeArmy(LEVELS[0].id, 17), makeArmy(LEVELS[1].id, 17)]
-    return { armies, feed: new LocalFeed(new Battle(armies, round * 7919 + 13)) }
+    // ?theme=desert (plaine, cote, desert, hiver, automne) : décor imposé ; sinon tiré au hasard
+    const forced = new URLSearchParams(location.search).get('theme') as ThemeId | null
+    const themeId = forced && THEME_IDS.includes(forced) ? forced : randomTheme()
+    return { armies, themeId, feed: new LocalFeed(new Battle(armies, round * 7919 + 13)) }
   }, [round, variant])
   const startAt = useMemo(() => Date.now() + BATTLE_INTRO, [feed])
   return (
     <BattleScreen key={round} feed={feed} local={feed} armies={armies} names={['Armée bleue', 'Armée rouge']} colors={[BLUE, RED]}
-      mySide={0} startAt={startAt} onHorn={() => feed.battle.blowHorn(0)} onRematch={() => setRound(round + 1)} onMenu={onMenu} />
+      mySide={0} startAt={startAt} onHorn={() => feed.battle.blowHorn(0)} onRematch={() => setRound(round + 1)} onMenu={onMenu} themeId={themeId} />
   )
 }

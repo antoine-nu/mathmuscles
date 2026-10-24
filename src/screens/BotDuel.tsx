@@ -10,6 +10,7 @@ import { TrainingScreen } from './TrainingScreen'
 import { DurationPicker, SetupFrame } from './DuelSetup'
 import { PrepScreen } from './PrepScreen'
 import { audio } from '../audio/engine'
+import { randomTheme } from '../game/themes'
 
 export const BLUE = '#2f5fb3'
 export const RED = '#b8362f'
@@ -51,7 +52,9 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
 
   const start = () => {
     botRef.current = new Bot(level.id, grade, rules)
-    setPlayer(emptyPlayer(level.id))
+    const theme = randomTheme()
+    botRef.current.state = { ...botRef.current.state, mapTheme: theme }
+    setPlayer(emptyPlayer(level.id, theme))
     setBotState(botRef.current.state)
     // ?chrono=30 : entraînement raccourci à 30 secondes (pour tester)
     const override = Number(new URLSearchParams(location.search).get('chrono'))
@@ -147,6 +150,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
       onRematch={() => setPhase({ name: 'prep' })}
       onMenu={onQuit}
       villages={[player, botState]}
+      themeId={player.mapTheme}
     />
   )
 }

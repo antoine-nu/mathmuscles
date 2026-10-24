@@ -17,6 +17,7 @@ import { WorldMap } from '../components/WorldMap'
 import { CodexModal } from '../components/Codex'
 import { MuteButton } from '../components/MuteButton'
 import { audio } from '../audio/engine'
+import { THEME_IDS, themeOf } from '../game/themes'
 import { StartCountdown } from './PrepScreen'
 import { TEST_DURATIONS } from './DuelSetup'
 
@@ -152,6 +153,12 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
         </div>
         <div className="hud-right">
           <button className="hud-btn" onClick={() => setCodex(true)} title="Caractéristiques des unités">📜 Codex</button>
+          {mode === 'solo' && (
+            <button className="hud-btn" title={`Décor : ${themeOf(player.mapTheme).name} (cliquer pour changer)`}
+              onClick={() => update((p) => ({ ...p, mapTheme: THEME_IDS[(THEME_IDS.indexOf(themeOf(p.mapTheme).id) + 1) % THEME_IDS.length] }))}>
+              🗺
+            </button>
+          )}
           <MuteButton />
           {remaining !== null && (
             <div className={`hud-timer ${remaining < 60_000 ? 'urgent' : ''}`} title="Temps restant avant la bataille">
@@ -188,6 +195,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
           nextAgeAt={age < 3 ? thresholds[age + 1] : null}
           teamColor={teamColor}
           onTownCenter={() => setTownHall(true)}
+          themeId={player.mapTheme}
         />
         <div className="map-hint">Glisser pour se déplacer · molette pour zoomer · clic sur un camp ou sur l’hôtel de ville</div>
         {toast && <div className="toast">{toast}</div>}

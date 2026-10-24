@@ -6,6 +6,7 @@ import {
 } from '../data/curriculum'
 import { figuresFor, garrison } from '../battle/units'
 import type { Rules } from './rules'
+import { randomTheme, type ThemeId } from './themes'
 
 export interface HouseState {
   points: number
@@ -26,12 +27,14 @@ export interface PlayerState {
   /** Type d'exercice tiré pour chaque cran d'une maison (« chapitre:cran » → n° du modèle) : on s'entraîne
    *  par répétition sur le même type jusqu'au cran suivant. */
   drills?: Record<string, number>
+  /** Décor de la carte (et du champ de bataille). */
+  mapTheme?: ThemeId
 }
 
 export const EMPTY_HOUSE: HouseState = { points: 0, series: 0, upgrades: [] }
 
-export function emptyPlayer(levelId: string): PlayerState {
-  return { levelId, houses: {}, agePoints: 0, solved: [], cooldowns: {}, answered: 0, correct: 0 }
+export function emptyPlayer(levelId: string, mapTheme?: ThemeId): PlayerState {
+  return { levelId, houses: {}, agePoints: 0, solved: [], cooldowns: {}, answered: 0, correct: 0, mapTheme }
 }
 
 export const levelOf = (p: PlayerState): Level => LEVELS.find((l) => l.id === p.levelId) ?? LEVELS[0]
@@ -127,8 +130,8 @@ export function armyOf(p: PlayerState, rules: Rules): ArmySpec {
 
 /** Village reconstitué à partir d'une armée (pour revoir celui de l'adversaire après la bataille) :
  *  les améliorations s'obtiennent dans l'ordre, et l'âge donne le minimum de points d'âge. */
-export function playerFromArmy(army: ArmySpec, rules: Rules): PlayerState {
-  const p = emptyPlayer(army.levelId)
+export function playerFromArmy(army: ArmySpec, rules: Rules, mapTheme?: ThemeId): PlayerState {
+  const p = emptyPlayer(army.levelId, mapTheme)
   for (const r of army.regiments) {
     const chapter = levelOf(p).chapters.find((c) => c.id === r.chapterId)
     if (!chapter) continue
@@ -151,15 +154,18 @@ const STORE_KEY = 'mathmuscles:v2'
 const OLD_KEY = 'mathmuscles:v1'
 
 function loadStore(): Record<string, PlayerState> {
+  let store: Record<string, PlayerState> = {}
   try {
     const raw = localStorage.getItem(STORE_KEY)
-    if (raw) return JSON.parse(raw) as Record<string, PlayerState>
     const old = localStorage.getItem(OLD_KEY)
-    if (old) return migrate(JSON.parse(old) as Record<string, Record<string, HouseState>>)
+    if (raw) store = JSON.parse(raw) as Record<string, PlayerState>
+    else if (old) store = migrate(JSON.parse(old) as Record<string, Record<string, HouseState>>)
   } catch {
     /* stockage indisponible ou illisible : on repart de zéro */
   }
-  return {}
+  // chaque classe reçoit un décor tiré au hasard, conservé ensuite
+  for (const level of LEVELS) store[level.id] = { ...(store[level.id] ?? emptyPlayer(level.id)), mapTheme: store[level.id]?.mapTheme ?? randomTheme() }
+  return store
 }
 
 /** Ancienne sauvegarde (v1) : on garde les jauges et les améliorations encore valides. */

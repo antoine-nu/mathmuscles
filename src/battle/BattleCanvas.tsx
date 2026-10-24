@@ -5,6 +5,7 @@ import { seeded } from '../game/color'
 import type { Feed, UnitMeta } from './feed'
 import type { BattleEvent } from './sim'
 import { FIELD_H, FIELD_W, type Side } from './sim'
+import { themeOf, type MapTheme, type ThemeId } from '../game/themes'
 import { SPRITE_BOX, preloadSprites, spriteImage } from './sprites'
 
 /** Écrasement vertical de la vue « trois-quarts ». */
@@ -39,6 +40,8 @@ interface Props {
   onTick?: (dt: number) => void
   /** Événements de la bataille (pour les sons). */
   onEvents?: (events: BattleEvent[]) => void
+  /** Décor du sol (celui des villages). */
+  themeId?: ThemeId
 }
 
 /** Terrain vague : herbe, plaques de terre, un peu de marais, cailloux et fleurs. */
@@ -46,11 +49,11 @@ interface Props {
 const PAD = 10
 const GROUND_RES = 26
 
-function paintGround(ctx: CanvasRenderingContext2D, w: number, h: number, field: { ox: number; oy: number; k: number }) {
+function paintGround(ctx: CanvasRenderingContext2D, w: number, h: number, field: { ox: number; oy: number; k: number }, theme: MapTheme['battle']) {
   const rnd = seeded(99)
   const g = ctx.createLinearGradient(0, 0, 0, h)
-  g.addColorStop(0, '#5f8a36')
-  g.addColorStop(1, '#6f9a3c')
+  g.addColorStop(0, theme.base[0])
+  g.addColorStop(1, theme.base[1])
   ctx.fillStyle = g
   ctx.fillRect(0, 0, w, h)
   const blob = (color: string, n: number, size: number, alpha: number) => {
@@ -66,37 +69,35 @@ function paintGround(ctx: CanvasRenderingContext2D, w: number, h: number, field:
     ctx.globalAlpha = 1
   }
   const k = field.k
-  blob('#7fa84a', 26, k * 6, 0.5)
-  blob('#4f7a2e', 22, k * 5, 0.35)
-  blob('#a3865a', 12, k * 5, 0.55) // terre
-  blob('#b8955c', 10, k * 3, 0.45)
-  // marais : deux nappes au milieu, qui ne gênent personne
-  for (const [mx, my] of [[FIELD_W * 0.42, FIELD_H * 0.2], [FIELD_W * 0.6, FIELD_H * 0.8]] as const) {
+  for (const [color, n, size, alpha] of theme.blobs) blob(color, n, k * size, alpha)
+  // mares (ou plaques de glace) : deux nappes au milieu, qui ne gênent personne
+  for (const [mx, my] of theme.pools ? [[FIELD_W * 0.42, FIELD_H * 0.2], [FIELD_W * 0.6, FIELD_H * 0.8]] as const : []) {
+    const [water, shine, reeds] = theme.pools!
     const cx = field.ox + mx * k, cy = field.oy + my * k * TILT
-    ctx.fillStyle = 'rgba(70, 110, 90, 0.55)'
+    ctx.fillStyle = water
     ctx.beginPath(); ctx.ellipse(cx, cy, k * 4.5, k * 1.6, 0.1, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = 'rgba(120, 170, 170, 0.45)'
+    ctx.fillStyle = shine
     ctx.beginPath(); ctx.ellipse(cx - k * 0.6, cy - k * 0.3, k * 2.8, k * 0.8, 0.1, 0, Math.PI * 2); ctx.fill()
-    ctx.strokeStyle = '#3f5f2a'; ctx.lineWidth = 1.2
+    ctx.strokeStyle = reeds; ctx.lineWidth = 1.2
     for (let i = 0; i < 18; i++) {
       const rx = cx + (rnd() - 0.5) * k * 8, ry = cy + (rnd() - 0.5) * k * 2.6
       ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx + (rnd() - 0.5) * 3, ry - 6 - rnd() * 5); ctx.stroke()
     }
   }
   // brins d'herbe, cailloux, fleurs
-  for (let i = 0; i < 900; i++) {
+  for (let i = 0; i < (theme.blades ? 900 : 0); i++) {
     const x = rnd() * w, y = rnd() * h
-    ctx.strokeStyle = rnd() < 0.5 ? 'rgba(40, 70, 25, 0.5)' : 'rgba(140, 180, 80, 0.5)'
+    ctx.strokeStyle = rnd() < 0.5 ? theme.blades![0] : theme.blades![1]
     ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (rnd() - 0.5) * 3, y - 3 - rnd() * 3); ctx.stroke()
   }
   for (let i = 0; i < 40; i++) {
-    ctx.fillStyle = rnd() < 0.7 ? '#8d8f8c' : '#f3e37c'
+    ctx.fillStyle = theme.pebbles[Math.floor(rnd() * theme.pebbles.length)]
     ctx.beginPath(); ctx.arc(rnd() * w, rnd() * h, 1 + rnd() * 2, 0, Math.PI * 2); ctx.fill()
   }
 }
 
-export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
+export function BattleCanvas({ feed, colors, onTick, onEvents, themeId }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tickRef = useRef(onTick)
   tickRef.current = onTick
@@ -119,7 +120,8 @@ export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
     ground = document.createElement('canvas')
     ground.width = (FIELD_W + 2 * PAD) * GROUND_RES
     ground.height = Math.round((FIELD_H * TILT + 2 * PAD) * GROUND_RES)
-    paintGround(ground.getContext('2d')!, ground.width, ground.height, { ox: PAD * GROUND_RES, oy: PAD * GROUND_RES, k: GROUND_RES })
+    const theme = themeOf(themeId).battle
+    paintGround(ground.getContext('2d')!, ground.width, ground.height, { ox: PAD * GROUND_RES, oy: PAD * GROUND_RES, k: GROUND_RES }, theme)
     // caméra : centre (m, y déjà écrasé) et zoom (px par m)
     const cam = { x: FIELD_W / 2, y: (FIELD_H * TILT) / 2, zoom: 0 }
     let fitZoom = 10
@@ -177,7 +179,7 @@ export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
       shake = Math.max(0, shake - dt)
       const sh = shake > 0 ? shake * 9 : 0
       ctx.setTransform(dpr, 0, 0, dpr, (Math.random() - 0.5) * sh * dpr, (Math.random() - 0.5) * sh * dpr)
-      ctx.fillStyle = '#4f7a2e'
+      ctx.fillStyle = theme.clear
       ctx.fillRect(0, 0, W, H)
       if (ground) {
         const gx = sx(-PAD), gy = H / 2 + (-PAD - cam.y) * cam.zoom
@@ -283,8 +285,19 @@ export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
           const r2 = Math.min(1, r + 0.04)
           const X2 = sx(p.x0 + (p.x1 - p.x0) * r2), Y2 = sy(p.y0 + (p.y1 - p.y0) * r2) - k * 1.2 - Math.sin(r2 * Math.PI) * 1.6 * k
           const ang = Math.atan2(Y2 - Y, X2 - X)
-          ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.4
-          ctx.beginPath(); ctx.moveTo(X - Math.cos(ang) * 7, Y - Math.sin(ang) * 7); ctx.lineTo(X, Y); ctx.stroke()
+          // flèche : liseré clair pour ressortir sur l'herbe, hampe sombre, pointe et empennage
+          const L = Math.max(10, k * 0.62), cx = Math.cos(ang), cy = Math.sin(ang)
+          const tx = X - cx * L, ty = Y - cy * L
+          ctx.lineCap = 'round'
+          ctx.strokeStyle = 'rgba(255, 245, 220, 0.55)'; ctx.lineWidth = 4
+          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(X, Y); ctx.stroke()
+          ctx.strokeStyle = '#2a1708'; ctx.lineWidth = 2
+          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(X, Y); ctx.stroke()
+          ctx.fillStyle = '#1c130c'
+          ctx.beginPath(); ctx.moveTo(X + cx * 3.5, Y + cy * 3.5); ctx.lineTo(X - cy * 2.4, Y + cx * 2.4); ctx.lineTo(X + cy * 2.4, Y - cx * 2.4); ctx.closePath(); ctx.fill()
+          ctx.strokeStyle = '#e8e0cc'; ctx.lineWidth = 1.6
+          ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx - cx * 2 - cy * 2.5, ty - cy * 2 + cx * 2.5); ctx.moveTo(tx, ty); ctx.lineTo(tx - cx * 2 + cy * 2.5, ty - cy * 2 - cx * 2.5); ctx.stroke()
+          ctx.lineCap = 'butt'
         } else {
           // boulet : ombre au sol, traînée de fumée, pierre enflammée
           const R = Math.max(4, k * 0.34)
@@ -355,7 +368,7 @@ export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
       cancelAnimationFrame(raf)
       ro.disconnect()
     }
-  }, [feed, colors])
+  }, [feed, colors, themeId])
 
   return <canvas ref={canvasRef} className="battle-canvas" />
 }

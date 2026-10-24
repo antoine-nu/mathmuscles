@@ -11,6 +11,7 @@ import { PrepScreen } from './PrepScreen'
 import { audio } from '../audio/engine'
 import { DurationPicker, SetupFrame } from './DuelSetup'
 import { TrainingScreen } from './TrainingScreen'
+import { randomTheme, type ThemeId } from '../game/themes'
 
 type Role = 'host' | 'guest'
 
@@ -63,11 +64,11 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   const send = useCallback((m: Msg) => transport.current?.send(m), [])
 
   // ── Démarrage de l'entraînement (les deux côtés) ──
-  const beginTraining = useCallback((minutes: number, ms: number, startIn: number) => {
+  const beginTraining = useCallback((minutes: number, ms: number, startIn: number, theme?: ThemeId) => {
     setDuration(minutes)
     oppArmy.current = null
     oppFinal.current = false
-    setPlayer(emptyPlayer(level.id))
+    setPlayer(emptyPlayer(level.id, theme))
     setOppStatus({ age: 0, pop: 0 })
     setNotice(null)
     const startsAt = Date.now() + startIn
@@ -93,7 +94,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         setPeerReady(true)
         break
       case 'start':
-        beginTraining(m.duration, m.ms, m.startIn)
+        beginTraining(m.duration, m.ms, m.startIn, m.theme)
         break
       case 'status':
         setOppStatus({ age: m.age, pop: m.pop })
@@ -104,8 +105,9 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         break
       case 'battle': {
         // invité : on reconstruit le déploiement pour connaître les unités, l'hôte envoie le reste
-        const meta = metaOf(new Battle(m.armies, m.seed))
-        setPhase({ name: 'battle', feed: new RemoteFeed(meta), armies: m.armies, startAt: Date.now() + m.startIn })
+        // (le déploiement est déterministe : on l'affiche tout de suite, comme chez l'hôte)
+        const local = new Battle(m.armies, m.seed)
+        setPhase({ name: 'battle', feed: new RemoteFeed(metaOf(local), frameOf(local)), armies: m.armies, startAt: Date.now() + m.startIn })
         break
       }
       case 'snap': {
@@ -239,8 +241,10 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
     if (role !== 'host' || phase.name !== 'prep' || !meReady || !peerReady) return
     const override = Number(new URLSearchParams(location.search).get('chrono'))
     const ms = override > 0 ? override * 1000 : duration * 60_000
-    send({ t: 'start', duration, ms, startIn: START_COUNTDOWN })
-    beginTraining(duration, ms, START_COUNTDOWN)
+    // l'hôte tire le décor : les deux villages et la bataille le partagent
+    const theme = randomTheme()
+    send({ t: 'start', duration, ms, startIn: START_COUNTDOWN, theme })
+    beginTraining(duration, ms, START_COUNTDOWN, theme)
   }, [role, phase.name, meReady, peerReady, duration, send, beginTraining])
 
   const quit = () => {
@@ -302,6 +306,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         endHint={role === 'guest' ? (peerOnline ? 'L’hôte peut lancer une revanche : reste sur cet écran, la partie redémarrera toute seule.' : undefined) : undefined}
         onMenu={quit}
         villages={mySide === 0 ? [player, null] : [null, player]}
+        themeId={player.mapTheme}
       />
     )
   }

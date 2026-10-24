@@ -203,6 +203,7 @@ function Village({ army, village, color, reports }: { side: Side; army: ArmySpec
           nextAgeAt={army.age < 3 ? thresholds[army.age] : null}
           teamColor={color}
           onTownCenter={() => {}}
+          themeId={village.mapTheme}
         />
         <div className="map-hint">Clic sur un camp pour voir son détail</div>
       </div>

@@ -11,7 +11,7 @@ export const DT = 0.05
 export const MAX_DURATION = 150
 const SPLASH_MAX = 3
 export const HORN_DURATION = 5
-export const HORN_MAX = 3
+export const HORN_MAX = 5
 
 export type Side = 0 | 1
 
