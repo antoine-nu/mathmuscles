@@ -121,8 +121,9 @@ L'artillerie avance jusqu'à 20 m de sa cible puis bombarde : elle tire dès le 
 
 ## Contenu
 
-821 modèles d'exercices générés aléatoirement (395 d'entraînement, 211 problèmes d'amélioration, 215 problèmes de
-l'hôtel de ville), dont 117 avec figure de géométrie. Réponses ouvertes autant que possible : nombres, fractions,
+782 modèles d'exercices générés aléatoirement (356 d'entraînement, 211 problèmes d'amélioration, 215 problèmes de
+l'hôtel de ville), dont beaucoup avec figure de géométrie. Chaque modèle d'entraînement varie ses énoncés (3 à 6 contextes ou configurations de la même mécanique) et
+ne donne pas la réponse dans l'énoncé : `npm run check:exercises` le vérifie (section « Monotonie »). Réponses ouvertes autant que possible : nombres, fractions,
 expressions en x (contrôle « développé » / « factorisé »), a√b, couples, intervalles, ensembles de solutions.
 
 ## Organisation du code

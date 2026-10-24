@@ -100,9 +100,10 @@ export function triangleFigure(opts: {
   marks?: Partial<Record<'AB' | 'BC' | 'CA', 'tick' | 'tick2'>>
 }): Figure {
   const [nA, nB, nC] = opts.names ?? ['A', 'B', 'C']
+  // forme par défaut 60° / 50° ; avec un angle droit, l'autre angle donné est respecté (40° ou 50° par défaut)
   let shape = opts.shape ?? [60, 50]
-  if (opts.right === 'A') shape = [90, shape[1] === 50 ? 40 : shape[1]]
-  if (opts.right === 'B') shape = [shape[0] === 60 ? 50 : shape[0], 90]
+  if (opts.right === 'A') shape = [90, opts.shape ? opts.shape[1] : 40]
+  if (opts.right === 'B') shape = [opts.shape ? opts.shape[0] : 50, 90]
   let raw = triangleFromAngles(shape[0], shape[1])
   if (opts.right === 'C') {
     raw = { A: [0, 0], B: [6, 0], C: [6 * 0.36, 6 * 0.48] } // angle droit en C (cercle de diamètre AB)
