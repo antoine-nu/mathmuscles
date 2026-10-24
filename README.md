@@ -37,7 +37,9 @@ joueur clique sur « Je suis prêt », puis un compte à rebours lance le chrono
 l'entraînement (bouton 📜).
 
 **Musique** (synthétisée, sans fichier) : ambiance calme mais tendue pendant l'entraînement, cornes de guerre puis
-musique de combat pendant la bataille, fanfare finale. Bouton 🔊 pour couper le son.
+musique de combat pendant la bataille, fanfare finale. Bouton 🔊 pour couper le son. Bruitages très discrets à chaque
+clic, ouverture ou fermeture de fenêtre, bonne ou mauvaise réponse ; le cor de guerre retentit à chaque calcul mental
+réussi (celui de l'adversaire sonne plus grave et plus lointain).
 
 Une partie en duel : **compte à rebours d'entraînement** (chacun forme la plus grande armée possible, améliorations et
 âges compris ; on voit l'âge et la population de l'adversaire, pas sa composition) → **bataille** (les armées se
@@ -51,6 +53,11 @@ Pas de serveur à héberger : les deux navigateurs se parlent directement (WebRT
 [Trystero](https://github.com/dmotz/trystero), qui passe par des relais publics Nostr. L'hôte calcule la bataille et en
 envoie dix images par seconde à l'invité. Certains réseaux (établissements, pare-feu stricts) bloquent ces connexions :
 en cas d'échec, essayer depuis un autre réseau (partage de connexion d'un téléphone par exemple).
+
+**Sur deux ordinateurs, sans installation** : copier `dist-usb/MathMuscles.html` (produit par `npm run build:usb`)
+sur une clé USB, puis sur chaque ordinateur, l'ouvrir d'un double-clic (Chrome, Edge ou Firefox). Les deux ordinateurs
+doivent avoir accès à Internet (les relais servent à se trouver). Le premier joueur choisit « Défier un camarade » →
+« Créer une partie » et lit le code à l'autre, qui le saisit puis clique sur « Rejoindre ».
 
 Pour tester seul : ouvrir deux onglets sur `/?reseau=local` (les onglets se parlent sans Internet) ; ajouter
 `&chrono=30` pour un entraînement de 30 secondes.

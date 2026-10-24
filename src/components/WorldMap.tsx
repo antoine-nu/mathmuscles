@@ -1,3 +1,4 @@
+import { audio } from '../audio/engine'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   AGES, MAX_LEVEL, ROMAN, TIER_PER_LEVEL, armySize, levelFromPoints, unitName,
@@ -308,7 +309,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
       {objects.map((o) => o.node)}
 
       {/* hôtel de ville : clic → âges */}
-      <g className="camp-hit" onClick={() => { if (!drag.current?.moved) onTownCenter() }}>
+      <g className="camp-hit" onClick={() => { if (!drag.current?.moved) { audio.ui('open'); onTownCenter() } }}>
         <ellipse cx={tcx} cy={tcy - 40} rx={TILE_W * 1.7} ry={TILE_H * 2.4} fill="transparent" />
         <g transform={`translate(${tcx} ${tcy + 92})`} filter="url(#labelShadow)">
           <rect x={-104} y={-30} width={208} height={50} rx={4} fill="#3a2410" stroke="#f2d27a" strokeWidth={2} opacity={0.95} />
@@ -329,7 +330,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
         return (
           <g key={`lbl-${chapter.id}`} className="camp-hit"
             onPointerEnter={() => setHover(chapter.id)} onPointerLeave={() => setHover(null)}
-            onClick={() => { if (!drag.current?.moved) onSelect(chapter.id) }}>
+            onClick={() => { if (!drag.current?.moved) { audio.ui('select'); onSelect(chapter.id) } }}>
             <ellipse cx={hx} cy={hy - 20} rx={TILE_W * 1.6} ry={TILE_H * 2.2} fill="transparent" />
             <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} soldiers={armySize(progress.points, ppc)} />
             <g transform={`translate(${lx} ${ly - 112})`} filter="url(#labelShadow)">

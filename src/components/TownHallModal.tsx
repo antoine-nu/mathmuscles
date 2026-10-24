@@ -1,3 +1,4 @@
+import { audio } from '../audio/engine'
 import { AGES, AGE_BONUS, AGE_PROBLEM_CRAN, levelFromPoints } from '../data/curriculum'
 import { ageOf, ageProblemAvailability, houseOf, levelOf, type PlayerState } from '../game/state'
 import { useRules } from '../game/rules'
@@ -22,7 +23,7 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
   const level = levelOf(player)
 
   return (
-    <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>
+    <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') { audio.ui('close'); onClose() } }}>
       <div className="townhall" role="dialog" aria-label="Hôtel de ville">
         <header className="th-head">
           <div>

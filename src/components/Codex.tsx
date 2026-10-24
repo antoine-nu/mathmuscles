@@ -1,3 +1,4 @@
+import { audio } from '../audio/engine'
 import { AGE_BONUS, LEVELS, type Chapter, type UnitKind } from '../data/curriculum'
 import { COUNTERS, SPECIALS, UNIT_STATS, kindName } from '../battle/units'
 import { Portrait } from './Portrait'
@@ -109,7 +110,7 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
 /** Le codex dans une fenêtre, consultable pendant l'entraînement. */
 export function CodexModal({ levelId, teamColor, onClose }: { levelId: string; teamColor?: string; onClose: () => void }) {
   return (
-    <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>
+    <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') { audio.ui('close'); onClose() } }}>
       <div className="townhall codex-modal" role="dialog" aria-label="Codex des armées">
         <header className="th-head">
           <div>

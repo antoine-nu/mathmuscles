@@ -3,9 +3,11 @@
 //                doux pour se concentrer, avec une tension sourde (la guerre approche).
 // - « battle » : tambours de guerre, basse obstinée et cuivres en ré mineur.
 // - cornes de guerre, cor de bataille, fanfares de victoire et de défaite, impacts.
+// - bruitages d'interface très discrets (clics, fermetures, bonne / mauvaise réponse), comme dans Age of Empires.
 import { useEffect, useState } from 'react'
 
 type Track = 'calm' | 'battle'
+export type UiSound = 'click' | 'key' | 'select' | 'open' | 'close'
 const MUTE_KEY = 'mathmuscles:muted'
 
 const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12)
@@ -340,11 +342,96 @@ class AudioEngine {
     this.drum(t + 3.1, { from: 70, to: 34, gain: 0.6, decay: 0.6, noise: 0.3, dest: this.sfxBus })
   }
 
-  /** Cor de guerre (bonus pendant la bataille). */
-  battleHorn() {
+  /** Cor de guerre (bonus pendant la bataille) : le sien, bien net, ou celui de l'adversaire, plus lointain. */
+  battleHorn(mine = true) {
+    this.unlock()
     if (!this.ctx) return
     const t = this.ctx.currentTime + 0.02
-    this.hornCall(t, 1.2, [D3 + 7, D3 + 14], 0.07)
+    this.duck(1.6)
+    if (mine) {
+      this.hornCall(t, 0.45, [D3 + 7, D3 + 14], 0.11)
+      this.hornCall(t + 0.5, 1.3, [D3 + 12, D3 + 19], 0.11)
+    } else {
+      this.hornCall(t, 1.4, [D3 + 2, D3 + 9], 0.06)
+    }
+  }
+
+  /** Baisse brièvement la musique pour laisser passer un son important. */
+  private duck(len: number) {
+    const ctx = this.ctx!, g = this.musicBus.gain
+    g.cancelScheduledValues(ctx.currentTime)
+    g.setTargetAtTime(0.2, ctx.currentTime, 0.05)
+    g.setTargetAtTime(0.55, ctx.currentTime + len, 0.4)
+  }
+
+  /** Petit bruit d'interface, à peine audible : confirme que le clic a été pris en compte. */
+  ui(kind: UiSound) {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.005
+    const to = this.sfxBus
+    if (kind === 'click') this.tap(t, 1900, 0.05, 0.035)
+    else if (kind === 'key') this.tap(t, 2600, 0.03, 0.022)
+    else if (kind === 'select') {
+      this.tap(t, 1500, 0.06, 0.035)
+      this.tone(midi(D4 + 7), t, 0.12, { type: 'triangle', gain: 0.018, attack: 0.004, release: 0.1, to })
+    } else if (kind === 'open') {
+      this.tap(t, 1300, 0.08, 0.035)
+      this.tone(midi(D4), t, 0.1, { type: 'triangle', gain: 0.016, attack: 0.004, release: 0.08, to })
+      this.tone(midi(D4 + 7), t + 0.05, 0.12, { type: 'triangle', gain: 0.016, attack: 0.004, release: 0.1, to })
+    } else {
+      this.tap(t, 1100, 0.07, 0.03)
+      this.tone(midi(D4 + 7), t, 0.08, { type: 'triangle', gain: 0.014, attack: 0.004, release: 0.07, to })
+      this.tone(midi(D4), t + 0.04, 0.1, { type: 'triangle', gain: 0.014, attack: 0.004, release: 0.08, to })
+    }
+  }
+
+  /** Bonne réponse : deux notes claires, comme une pièce qui tombe dans la bourse. */
+  correct() {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.01, to = this.sfxBus
+    this.tone(midi(D4 + 12), t, 0.16, { type: 'triangle', gain: 0.05, attack: 0.003, release: 0.14, to, reverb: 0.3 })
+    this.tone(midi(D4 + 19), t + 0.08, 0.35, { type: 'triangle', gain: 0.05, attack: 0.003, release: 0.3, to, reverb: 0.3 })
+  }
+
+  /** Mauvaise réponse : un petit bruit sourd, sans dramatiser. */
+  wrong() {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.01, to = this.sfxBus
+    this.tone(midi(D3 + 3), t, 0.22, { type: 'triangle', gain: 0.05, attack: 0.005, release: 0.18, filter: 700, to })
+    this.tone(midi(D3 + 1), t + 0.1, 0.28, { type: 'triangle', gain: 0.045, attack: 0.005, release: 0.22, filter: 600, to })
+  }
+
+  /** Série terminée, amélioration acquise : petit arpège. Passage d'âge : arpège plus ample. */
+  success(big = false) {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.02, to = this.sfxBus
+    const seq = big ? [D3, D3 + 7, D3 + 12, D3 + 16, D3 + 19, D3 + 24] : [D4, D4 + 4, D4 + 7, D4 + 12]
+    seq.forEach((n, i) => {
+      const last = i === seq.length - 1
+      this.tone(midi(n), t + i * 0.09, last ? 0.9 : 0.25, { type: big ? 'sawtooth' : 'triangle', gain: big ? 0.035 : 0.04, attack: 0.005, release: last ? 0.7 : 0.2, filter: big ? 2400 : undefined, to, reverb: 0.4 })
+    })
+    if (big) this.drum(t, { from: 70, to: 34, gain: 0.35, decay: 0.5, noise: 0.15, dest: to })
+  }
+
+  /** Clic : petit souffle de bruit filtré, très court. */
+  private tap(t: number, freq: number, dur: number, gain: number) {
+    const ctx = this.ctx!
+    const n = ctx.createBufferSource()
+    n.buffer = this.noise
+    const f = ctx.createBiquadFilter()
+    f.type = 'bandpass'
+    f.frequency.value = freq
+    f.Q.value = 3
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(gain, t)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    n.connect(f).connect(g).connect(this.sfxBus)
+    n.start(t, Math.random() * 0.5)
+    n.stop(t + dur + 0.01)
   }
 
   /** Coup de tambour (compte à rebours). */
@@ -385,4 +472,19 @@ export function useMuted(): [boolean, () => void] {
   const [m, setM] = useState(audio.muted)
   useEffect(() => audio.subscribe(setM), [])
   return [m, () => audio.toggleMuted()]
+}
+
+/** Bruitage discret pour chaque clic de l'interface. Un élément peut préciser le sien avec data-sfx
+ *  (click, key, select, open, close) ou le désactiver (data-sfx="none") quand le code joue un son plus parlant. */
+export function useUiSounds() {
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as Element | null)?.closest?.('[data-sfx], button, a[href], [role="button"], input[type="checkbox"], input[type="radio"], select, summary')
+      if (!el || (el as HTMLButtonElement).disabled) return
+      const kind = el.getAttribute('data-sfx') ?? (el.matches('.close, [aria-label="Fermer"]') ? 'close' : 'click')
+      if (kind !== 'none') audio.ui(kind as UiSound)
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [])
 }

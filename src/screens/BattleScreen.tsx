@@ -114,14 +114,19 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
   const submitHorn = () => {
     if (!question) return
     if (question.ex.check(answer)) {
+      audio.battleHorn(true)
       onHorn()
       setQuestion(null)
     } else {
+      audio.wrong()
       setQuestion(null)
       setHornCd(Date.now() + 4000)
     }
     setAnswer('')
   }
+
+  // Outil de test en développement uniquement : réponse attendue de la question du cor.
+  if (import.meta.env.DEV && question) (window as unknown as { __mmAnswer?: string }).__mmAnswer = question.ex.answer
 
   const countdown = Math.ceil((startAt - now) / 1000)
   const pct = (s: Side) => Math.round((hud.alive[s] / Math.max(1, initial[s])) * 100)
@@ -154,7 +159,8 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
           onTick={local ? (dt) => local.advance(dt) : undefined}
           onEvents={(evs) => {
             for (const ev of evs) {
-              if (ev.type === 'horn') audio.battleHorn()
+              // son propre cor sonne dès la bonne réponse ; ici, celui de l'adversaire
+              if (ev.type === 'horn') { if (ev.side !== mySide) audio.battleHorn(false) }
               else if (ev.type === 'impact') audio.impact()
             }
           }}
@@ -232,7 +238,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
             <form className="horn-q" onSubmit={(e) => { e.preventDefault(); submitHorn() }}>
               <span className="horn-text"><MathText text={question.ex.prompt} /></span>
               <input ref={inputRef} value={answer} onChange={(e) => setAnswer(e.target.value)} inputMode="decimal" autoComplete="off" aria-label="Réponse" />
-              <button className="btn gold" type="submit">Sonner !</button>
+              <button className="btn gold" type="submit" data-sfx="none">Sonner !</button>
               <span className="horn-timer">{Math.max(0, Math.ceil((question.until - now) / 1000))} s</span>
             </form>
           )}

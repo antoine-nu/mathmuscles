@@ -7,7 +7,7 @@ import { TrainingScreen } from './screens/TrainingScreen'
 import { BotDuel } from './screens/BotDuel'
 import { DemoBattle } from './screens/DemoBattle'
 import { FriendDuel } from './screens/FriendDuel'
-import { audio } from './audio/engine'
+import { audio, useUiSounds } from './audio/engine'
 
 type Screen =
   | { name: 'home' }
@@ -25,6 +25,7 @@ function loadName(): string {
 
 export default function App() {
   const solo = useSoloPlayers()
+  useUiSounds()
   const [screen, setScreen] = useState<Screen>(() => (new URLSearchParams(location.search).has('bataille') ? { name: 'demo' } : { name: 'home' }))
   const [name, setName] = useState(loadName)
   const saveName = (n: string) => {

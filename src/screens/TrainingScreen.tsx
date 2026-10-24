@@ -14,6 +14,7 @@ import { TownHallModal } from '../components/TownHallModal'
 import { WorldMap } from '../components/WorldMap'
 import { CodexModal } from '../components/Codex'
 import { MuteButton } from '../components/MuteButton'
+import { audio } from '../audio/engine'
 import { StartCountdown } from './PrepScreen'
 
 export interface OpponentStatus {
@@ -109,6 +110,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
       const afterAge = ageOf({ ...player, agePoints: player.agePoints + s.n }, rules)
       if (afterAge > before) {
         setAgeUp(afterAge)
+        audio.success(true)
         window.setTimeout(() => setAgeUp(null), 3200)
       } else flash(`+${s.n} point${s.n > 1 ? 's' : ''} d’âge pour l’hôtel de ville.`)
     } else if (result.answered > 0) {

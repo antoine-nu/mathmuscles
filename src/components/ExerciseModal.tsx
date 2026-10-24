@@ -3,6 +3,7 @@ import { TIER_PER_LEVEL, armySize, levelFromPoints, maxPoints, pointsToNextRecru
 import type { Exercise } from '../exercises/utils'
 import { FigureView } from './FigureView'
 import { MathText } from './MathText'
+import { audio } from '../audio/engine'
 
 export { MathText }
 
@@ -55,13 +56,17 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
   const submit = (answer: string) => {
     if (phase !== 'question' || !answer.trim()) return
     if (ex.isValid && !ex.isValid(answer)) {
+      audio.ui('click')
       setWarning(`Je n'arrive pas à lire cette réponse. Écris ${ex.format ?? 'ta réponse autrement'}.`)
       inputRef.current?.focus()
       return
     }
     setWarning(null)
     setValue(answer)
-    setResults((r) => [...r, ex.check(answer)])
+    const ok = ex.check(answer)
+    if (ok) audio.correct()
+    else audio.wrong()
+    setResults((r) => [...r, ok])
     setPhase('feedback')
   }
 
@@ -72,6 +77,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
       setWarning(null)
       setPhase('question')
     } else {
+      if (correct > 0) audio.success()
       setPhase('done')
     }
   }
@@ -137,13 +143,13 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
                     autoComplete="off"
                     aria-label="Ta réponse"
                   />
-                  {phase === 'question' && <button className="btn gold" type="submit">Valider</button>}
+                  {phase === 'question' && <button className="btn gold" type="submit" data-sfx="none">Valider</button>}
                 </form>
               )}
               {ex.kind === 'input' && phase === 'question' && ex.keypad && (
                 <div className="keypad" aria-label="Symboles">
                   {ex.keypad.map((k) => (
-                    <button key={k} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(k)}>{k}</button>
+                    <button key={k} type="button" data-sfx="key" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(k)}>{k}</button>
                   ))}
                 </div>
               )}
@@ -153,7 +159,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
                   {ex.choices!.map((c) => {
                     const state = phase === 'feedback' ? (c === ex.answer ? 'right' : c === value ? 'wrong' : 'dim') : ''
                     return (
-                      <button key={c} className={`choice ${state}`} disabled={phase !== 'question'} onClick={() => submit(c)}>
+                      <button key={c} data-sfx="none" className={`choice ${state}`} disabled={phase !== 'question'} onClick={() => submit(c)}>
                         <MathText text={c} />
                       </button>
                     )
@@ -180,7 +186,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
               {!single && <div className="score">{correct}<small>/{exercises.length}</small></div>}
               {summary(correct, exercises.length)}
               <div className="summary-actions">
-                <button className="btn gold" onClick={() => onClose({ correct, answered: results.length })} autoFocus>Retour au camp</button>
+                <button className="btn gold" data-sfx="close" onClick={() => onClose({ correct, answered: results.length })} autoFocus>Retour au camp</button>
               </div>
             </div>
           )}
