@@ -64,7 +64,8 @@ function inspect(where: string, make: Maker, training = false) {
   if (prompts.size < Math.min(8, RUNS / 4)) variety.push(`${where} : seulement ${prompts.size} énoncés différents sur ${RUNS}`)
   if (training) {
     if (skeletons.size < 3) monotony.push(`${where} : ${skeletons.size} formulation(s) — ${[...skeletons][0].slice(0, 110)}`)
-    if (answerInPrompt > RUNS * 0.3) monotony.push(`${where} : réponse écrite dans l'énoncé (${Math.round((answerInPrompt / RUNS) * 100)} %) — ${[...prompts][0].slice(0, 110)}`)
+    // (seuil 40 % : une médiane est souvent une valeur de la série, une borne peut coïncider avec le résultat…)
+    if (answerInPrompt > RUNS * 0.4) monotony.push(`${where} : réponse écrite dans l'énoncé (${Math.round((answerInPrompt / RUNS) * 100)} %) — ${[...prompts][0].slice(0, 110)}`)
   }
 }
 
