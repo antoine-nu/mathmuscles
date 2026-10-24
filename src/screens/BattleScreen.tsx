@@ -3,7 +3,7 @@ import { LEVELS, type Chapter } from '../data/curriculum'
 import { BattleCanvas } from '../battle/BattleCanvas'
 import type { Feed, LocalFeed } from '../battle/feed'
 import { hornQuestion } from '../battle/hornQuestions'
-import { HORN_MAX, MAX_DURATION, type BattleResult, type Side } from '../battle/sim'
+import { HORN_DURATION, HORN_MAX, MAX_DURATION, type BattleResult, type Side } from '../battle/sim'
 import { UNIT_STATS } from '../battle/units'
 import type { ArmySpec } from '../game/state'
 import type { Exercise } from '../exercises/utils'
@@ -38,14 +38,16 @@ interface Hud {
   alive: [number, number]
   hornsUsed: [number, number]
   hornOn: [boolean, boolean]
+  /** Secondes d'effet restantes pour chaque cor. */
+  hornLeft: [number, number]
 }
 
 export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint }: Props) {
-  const [hud, setHud] = useState<Hud>({ t: 0, alive: [0, 0], hornsUsed: [0, 0], hornOn: [false, false] })
+  const [hud, setHud] = useState<Hud>({ t: 0, alive: [0, 0], hornsUsed: [0, 0], hornOn: [false, false], hornLeft: [0, 0] })
   const [now, setNow] = useState(Date.now())
   const [result, setResult] = useState<BattleResult | null>(null)
   const [showEnd, setShowEnd] = useState(false)
-  const [question, setQuestion] = useState<{ ex: Exercise; until: number } | null>(null)
+  const [question, setQuestion] = useState<{ ex: Exercise } | null>(null)
   const [answer, setAnswer] = useState('')
   const [hornCd, setHornCd] = useState(0)
   const [speed, setSpeed] = useState(1)
@@ -63,7 +65,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
       const f = feed.frame()
       const alive: [number, number] = [0, 0]
       for (const u of f.units) if (u.state !== 2) alive[u.side]++
-      setHud({ t: f.t, alive, hornsUsed: f.hornsUsed, hornOn: [f.horn[0] > f.t, f.horn[1] > f.t] })
+      setHud({ t: f.t, alive, hornsUsed: f.hornsUsed, hornOn: [f.horn[0] > f.t, f.horn[1] > f.t], hornLeft: [Math.max(0, f.horn[0] - f.t), Math.max(0, f.horn[1] - f.t)] })
       const r = feed.result()
       if (r) setResult((old) => old ?? r)
     }, 200)
@@ -99,14 +101,6 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
   useEffect(() => {
     if (question) inputRef.current?.focus()
   }, [question])
-
-  // La question du cor expire au bout de 10 secondes.
-  useEffect(() => {
-    if (question && now > question.until) {
-      setQuestion(null)
-      setHornCd(Date.now() + 4000)
-    }
-  }, [now, question])
 
   const hornsLeft = HORN_MAX - hud.hornsUsed[mySide]
   const canHorn = started && !result && hornsLeft > 0 && !hud.hornOn[mySide] && now > hornCd && !question
@@ -166,6 +160,20 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
           }}
         />
 
+        {/* bandeau du cor de guerre : visible tant que son effet dure */}
+        <div className="horn-banners" aria-live="polite">
+          {([0, 1] as const).filter((s) => hud.hornOn[s]).map((s) => (
+            <div key={s} className={`horn-banner ${s === mySide ? 'mine' : 'theirs'}`} style={{ borderColor: colors[s] }}>
+              <span className="hb-icon">📯</span>
+              <span className="hb-text">
+                <b>{s === mySide ? 'Ton cor de guerre retentit !' : `Cor de guerre de ${names[s]}`}</b>
+                <small>+25 % d’attaque</small>
+              </span>
+              <span className="hb-bar"><span style={{ width: `${(hud.hornLeft[s] / HORN_DURATION) * 100}%`, background: colors[s] }} /></span>
+            </div>
+          ))}
+        </div>
+
         {!started && (
           <div className="battle-intro">
             <div className="bi-armies">
@@ -173,7 +181,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
                 <div key={s} className="bi-army" style={{ borderColor: colors[s] }}>
                   <b style={{ color: colors[s] }}>{names[s]}</b>
                   <ul>
-                    {armies[s].regiments.filter((r) => r.figures > 0 && r.tier > 0).sort((a, b) => b.soldiers - a.soldiers).map((r) => (
+                    {armies[s].regiments.filter((r) => r.figures > 0 && r.tier > 0).sort((a, b) => b.figures - a.figures).map((r) => (
                       <li key={r.chapterId}>
                         <span>{CHAPTERS.get(r.chapterId)?.corpsName}</span>
                         <span>{r.figures}{r.upgrades ? ` · ${'★'.repeat(r.upgrades)}` : ''}</span>
@@ -227,11 +235,11 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
 
       <footer className="battle-bar">
         <div className="horn">
-          <button className="horn-btn" disabled={!canHorn} onClick={() => { setAnswer(''); setQuestion({ ex: hornQuestion(myLevel), until: Date.now() + 10_000 }) }}>
+          <button className="horn-btn" disabled={!canHorn} onClick={() => { setAnswer(''); setQuestion({ ex: hornQuestion(myLevel) }) }}>
             <span className="horn-icon">📯</span>
             <span>
               <b>Cor de guerre</b>
-              <small>{hud.hornOn[mySide] ? 'Tes troupes chargent !' : `Réponds juste : +25 % d’attaque pendant 5 s · ${hornsLeft} restant${hornsLeft > 1 ? 's' : ''}`}</small>
+              <small>{hud.hornOn[mySide] ? 'Tes troupes chargent !' : `Calcul mental juste : +25 % d’attaque pendant ${HORN_DURATION} s · ${hornsLeft} restant${hornsLeft > 1 ? 's' : ''}`}</small>
             </span>
           </button>
           {question && (
@@ -239,7 +247,6 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
               <span className="horn-text"><MathText text={question.ex.prompt} /></span>
               <input ref={inputRef} value={answer} onChange={(e) => setAnswer(e.target.value)} inputMode="decimal" autoComplete="off" aria-label="Réponse" />
               <button className="btn gold" type="submit" data-sfx="none">Sonner !</button>
-              <span className="horn-timer">{Math.max(0, Math.ceil((question.until - now) / 1000))} s</span>
             </form>
           )}
         </div>

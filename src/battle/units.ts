@@ -1,13 +1,13 @@
 // Grille des unités : caractéristiques de base, rangs, améliorations, âges.
 // Les valeurs ont été ajustées par le tournoi automatique (scripts/balance.ts).
-import { AGE_BONUS, type UnitKind } from '../data/curriculum'
+import { AGE_BONUS, TIER_PER_LEVEL, levelFromPoints, type UnitKind } from '../data/curriculum'
 
 export type BattleKind = UnitKind | 'villager'
 export type UnitClass = 'infantry' | 'cavalry' | 'archer' | 'siege' | 'monk' | 'villager'
 
 export interface UnitStats {
   label: string
-  /** Part d'effectif consommée par une unité (1 = un soldat à pied). */
+  /** Bonnes réponses nécessaires pour former une unité. */
   cost: number
   hp: number
   attack: number
@@ -38,13 +38,13 @@ export interface UnitStats {
 
 export const UNIT_STATS: Record<BattleKind, UnitStats> = {
   villager: { label: 'Villageois', cost: 1, hp: 25, attack: 3, armor: 0, pierce: 0, dmg: 'melee', range: 0.9, speed: 1.0, reload: 1.5, cls: 'villager', radius: 0.45 },
-  infantry: { label: 'Infanterie', cost: 1, hp: 55, attack: 7, armor: 1, pierce: 0, dmg: 'melee', range: 0.9, speed: 1.0, reload: 1.5, cls: 'infantry', bonus: { siege: 5, monk: 3 }, radius: 0.45 },
-  spear: { label: 'Lanciers', cost: 1, hp: 45, attack: 4, armor: 0, pierce: 0, dmg: 'melee', range: 1.3, speed: 1.0, reload: 1.5, cls: 'infantry', bonus: { cavalry: 12, siege: 6, monk: 4 }, radius: 0.45 },
-  archer: { label: 'Archers', cost: 1, hp: 30, attack: 5, armor: 0, pierce: 0, dmg: 'pierce', range: 9, speed: 0.95, reload: 1.8, cls: 'archer', bonus: { infantry: 3, monk: 3 }, radius: 0.42 },
-  scout: { label: 'Éclaireurs', cost: 1.25, hp: 92, attack: 8, armor: 1, pierce: 2, dmg: 'melee', range: 1.0, speed: 1.8, reload: 1.8, cls: 'cavalry', bonus: { archer: 6, siege: 12, monk: 16 }, radius: 0.7 },
-  knight: { label: 'Chevaliers', cost: 2, hp: 140, attack: 11, armor: 2, pierce: 2, dmg: 'melee', range: 1.0, speed: 1.4, reload: 1.8, cls: 'cavalry', radius: 0.75 },
-  siege: { label: 'Engins de siège', cost: 3, hp: 70, attack: 15, armor: 1, pierce: 6, dmg: 'siege', range: 20, minRange: 3, speed: 0.6, reload: 6, splash: 1.8, cls: 'siege', bonus: { archer: 6, infantry: 4, cavalry: 2 }, radius: 0.9 },
-  monk: { label: 'Moines', cost: 2, hp: 48, attack: 0, armor: 0, pierce: 0, dmg: 'melee', range: 6, speed: 0.8, reload: 0, cls: 'monk', convert: { chance: 0.4, channel: 3.5, cooldown: 7, heal: 1.8 }, radius: 0.42 },
+  infantry: { label: 'Infanterie', cost: 1, hp: 50, attack: 7, armor: 1, pierce: 0, dmg: 'melee', range: 0.9, speed: 1.0, reload: 1.5, cls: 'infantry', bonus: { siege: 5, monk: 3 }, radius: 0.45 },
+  spear: { label: 'Lanciers', cost: 1, hp: 38, attack: 4, armor: 0, pierce: 0, dmg: 'melee', range: 1.3, speed: 1.0, reload: 1.5, cls: 'infantry', bonus: { cavalry: 12, siege: 6, monk: 4 }, radius: 0.45 },
+  archer: { label: 'Archers', cost: 1, hp: 33, attack: 5, armor: 0, pierce: 0, dmg: 'pierce', range: 9, speed: 0.95, reload: 1.8, cls: 'archer', bonus: { infantry: 3, monk: 3 }, radius: 0.42 },
+  scout: { label: 'Éclaireurs', cost: 1, hp: 76, attack: 7, armor: 1, pierce: 2, dmg: 'melee', range: 1.0, speed: 1.8, reload: 1.8, cls: 'cavalry', bonus: { archer: 5, siege: 10, monk: 13 }, radius: 0.7 },
+  knight: { label: 'Chevaliers', cost: 2, hp: 145, attack: 11, armor: 2, pierce: 2, dmg: 'melee', range: 1.0, speed: 1.4, reload: 1.8, cls: 'cavalry', radius: 0.75 },
+  siege: { label: 'Engins de siège', cost: 3, hp: 70, attack: 16, armor: 1, pierce: 6, dmg: 'siege', range: 20, minRange: 3, speed: 0.6, reload: 6, splash: 1.8, cls: 'siege', bonus: { archer: 6, infantry: 4, cavalry: 2 }, radius: 0.9 },
+  monk: { label: 'Moines', cost: 2, hp: 48, attack: 0, armor: 0, pierce: 0, dmg: 'melee', range: 6, speed: 0.8, reload: 0, cls: 'monk', convert: { chance: 0.37, channel: 3.5, cooldown: 7, heal: 1.8 }, radius: 0.42 },
 }
 
 /** Rangs (1 = recrue, 2 = vétéran, 3 = élite) : multiplicateur de PV, bonus d'attaque et d'armure. */
@@ -107,20 +107,30 @@ function applyUpgrades(s: Combatant, kind: BattleKind, n: number) {
   }
 }
 
-/** Nombre de figurines pour un effectif donné (les unités coûteuses viennent en moins grand nombre). */
-export function figuresFor(kind: UnitKind, tier: number, soldiers: number): number {
-  if (tier === 0) return soldiers
-  return Math.max(1, Math.round(soldiers / UNIT_STATS[kind].cost))
+/** Bonnes réponses par unité pour une maison : tant qu'elle est au cran 0, elle forme des villageois (1 chacun). */
+export function unitCost(kind: UnitKind, points: number): number {
+  return TIER_PER_LEVEL[levelFromPoints(points)] === 0 ? 1 : UNIT_STATS[kind].cost
+}
+
+/** Nombre d'unités formées par une maison : une unité toutes les « coût » bonnes réponses. */
+export function figuresFor(kind: UnitKind, points: number): number {
+  return Math.floor(points / unitCost(kind, points))
+}
+
+/** Bonnes réponses manquantes avant la prochaine unité. */
+export function pointsToNextUnit(kind: UnitKind, points: number): number {
+  const cost = unitCost(kind, points)
+  return cost - (points % cost)
 }
 
 /** Forces et faiblesses (issues du tournoi d'équilibrage, à coût égal). */
 export const COUNTERS: Record<UnitKind, { strong: UnitKind[]; weak: UnitKind[] }> = {
-  infantry: { strong: ['spear', 'scout', 'siege'], weak: ['archer', 'knight', 'monk'] },
+  infantry: { strong: ['spear', 'siege'], weak: ['archer', 'scout', 'knight', 'monk'] },
   spear: { strong: ['knight', 'scout', 'siege'], weak: ['infantry', 'archer', 'monk'] },
   archer: { strong: ['infantry', 'spear', 'monk'], weak: ['scout', 'knight', 'siege'] },
-  scout: { strong: ['archer', 'siege', 'monk'], weak: ['infantry', 'spear', 'knight'] },
+  scout: { strong: ['infantry', 'archer', 'siege', 'monk'], weak: ['spear', 'knight'] },
   knight: { strong: ['infantry', 'archer', 'scout', 'siege'], weak: ['spear', 'monk'] },
-  siege: { strong: ['spear', 'archer', 'monk'], weak: ['infantry', 'scout', 'knight'] },
+  siege: { strong: ['archer', 'monk'], weak: ['infantry', 'spear', 'scout', 'knight'] },
   monk: { strong: ['infantry', 'spear', 'knight'], weak: ['archer', 'scout', 'siege'] },
 }
 
@@ -139,8 +149,8 @@ export const SPECIALS: Record<UnitKind, string> = {
   infantry: 'Solide et polyvalente ; +5 contre les engins de siège.',
   spear: '+12 contre la cavalerie : le cauchemar des chevaliers.',
   archer: 'Tire de loin (9 m) ; +3 contre les fantassins.',
-  scout: 'La plus rapide ; +6 contre les archers, +12 contre le siège, +16 contre les moines.',
+  scout: 'La plus rapide ; +5 contre les archers, +10 contre le siège, +13 contre les moines.',
   knight: 'Charge lourde : beaucoup de points de vie et d’attaque.',
-  siege: 'Artillerie : tire à 20 m, dégâts de zone, mais très lente et fragile au contact.',
-  monk: 'Ne frappe pas : convertit l’ennemi (40 % par prière) et soigne ses alliés.',
+  siege: 'Artillerie : tire à 20 m, dégâts de zone (3 ennemis au plus), mais très lente et fragile au contact.',
+  monk: 'Ne frappe pas : convertit l’ennemi (37 % par prière) et soigne ses alliés.',
 }

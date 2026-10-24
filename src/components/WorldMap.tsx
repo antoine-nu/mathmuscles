@@ -1,7 +1,7 @@
 import { audio } from '../audio/engine'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  AGES, MAX_LEVEL, ROMAN, TIER_PER_LEVEL, armySize, levelFromPoints, unitName,
+  AGES, MAX_LEVEL, ROMAN, TIER_PER_LEVEL, levelFromPoints, unitName,
   type Chapter,
 } from '../data/curriculum'
 import type { HouseState } from '../game/state'
@@ -34,11 +34,8 @@ function campTiles(n: number): Pt[] {
   })
 }
 
-/** Nombre de figurines affichées : les unités coûteuses (cavalerie, siège, moines) viennent en moins grand nombre. */
-export function displayedUnits(chapter: Chapter, points: number, ppc: number) {
-  const tier = TIER_PER_LEVEL[levelFromPoints(points, ppc)]
-  return figuresFor(chapter.unit, tier, armySize(points, ppc))
-}
+/** Au-delà, le camp n'affiche pas toutes ses unités (l'écusson donne l'effectif exact). */
+const MAX_CAMP_FIGURES = 20
 
 export function lookFor(chapter: Chapter, progress: HouseState, ppc: number, teamColor?: string): UnitLook {
   const level = levelFromPoints(progress.points, ppc)
@@ -56,7 +53,7 @@ export function lookFor(chapter: Chapter, progress: HouseState, ppc: number, tea
 function formation(camp: Camp, ppc: number, teamColor?: string): { pos: Pt; look: UnitLook; key: string }[] {
   const { chapter, tile, progress } = camp
   const look = lookFor(chapter, progress, ppc, teamColor)
-  const count = displayedUnits(chapter, progress.points, ppc)
+  const count = Math.min(MAX_CAMP_FIGURES, figuresFor(chapter.unit, progress.points))
   const cav = look.tier > 0 && (chapter.unit === 'knight' || chapter.unit === 'scout')
   const siege = look.tier > 0 && chapter.unit === 'siege'
   const sp = siege ? 1.05 : cav ? 0.72 : 0.5
@@ -332,7 +329,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
             onPointerEnter={() => setHover(chapter.id)} onPointerLeave={() => setHover(null)}
             onClick={() => { if (!drag.current?.moved) { audio.ui('select'); onSelect(chapter.id) } }}>
             <ellipse cx={hx} cy={hy - 20} rx={TILE_W * 1.6} ry={TILE_H * 2.2} fill="transparent" />
-            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} soldiers={armySize(progress.points, ppc)} />
+            <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} units={figuresFor(chapter.unit, progress.points)} />
             <g transform={`translate(${lx} ${ly - 112})`} filter="url(#labelShadow)">
               <rect x={-112} y={-36} width={224} height={58} rx={4} fill={isSel ? '#3a2410' : '#2a1a0c'} stroke={isSel ? '#f2d27a' : '#b8913a'} strokeWidth={isSel ? 2.4 : 1.4} opacity={0.94} />
               <text x={0} y={-16} textAnchor="middle" className="lbl-title">{chapter.corpsName}</text>
@@ -358,7 +355,7 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
 }
 
 /** Écusson posé sur le bâtiment : cran (chiffres romains), anneau de progression vers le cran suivant, effectif. */
-function CampBadge({ x, y, level, points, ppc, color, soldiers }: { x: number; y: number; level: number; points: number; ppc: number; color: string; soldiers: number }) {
+function CampBadge({ x, y, level, points, ppc, color, units }: { x: number; y: number; level: number; points: number; ppc: number; color: string; units: number }) {
   const maxed = level >= MAX_LEVEL
   const within = maxed ? 1 : (points % ppc) / ppc
   const r = 15
@@ -372,7 +369,7 @@ function CampBadge({ x, y, level, points, ppc, color, soldiers }: { x: number; y
         <text y={5} textAnchor="middle" className="badge-lvl">{ROMAN[level]}</text>
         <g transform="translate(0 24)">
           <rect x={-24} y={-8} width={48} height={16} rx={8} fill="#24150a" stroke="#b8913a" strokeWidth={1} />
-          <text y={4.5} textAnchor="middle" className="badge-count">⚔ {soldiers}</text>
+          <text y={4.5} textAnchor="middle" className="badge-count">⚔ {units}</text>
         </g>
       </g>
     </g>

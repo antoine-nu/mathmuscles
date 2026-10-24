@@ -12,18 +12,19 @@ import { BATTLE_INTRO, BLUE, RED } from './BotDuel'
 
 /** Bataille de démonstration entre deux armées d'ordinateurs (/?bataille) : pour voir le combat sans attendre. */
 function makeArmy(levelId: string, grade: number): ArmySpec {
-  const rules = duelRules(15)
+  // une partie de 45 minutes : des armées de bonne taille pour la démonstration
+  const rules = duelRules(45)
   const bot = new Bot(levelId, grade, rules)
-  for (let t = 0; t <= 15 * 60_000; t += 500) bot.tick(t)
+  for (let t = 0; t <= 45 * 60_000; t += 500) bot.tick(t)
   return armyOf(bot.state, rules)
 }
 
 /** Armée fixe pour la démonstration d'artillerie (/?bataille=artillerie). */
 function siegeArmy(levelId: string): ArmySpec {
   const level = LEVELS.find((l) => l.id === levelId)!
-  const want: Partial<Record<UnitKind, number>> = { siege: 11, infantry: 11, archer: 8, spear: 8 }
+  const want: Partial<Record<UnitKind, number>> = { siege: 15, infantry: 12, archer: 9, spear: 9 }
   const regiments: Regiment[] = level.chapters.filter((c) => want[c.unit]).map((c) => ({
-    chapterId: c.id, kind: c.unit, tier: 2, upgrades: 1, soldiers: want[c.unit]!, figures: figuresFor(c.unit, 2, want[c.unit]!),
+    chapterId: c.id, kind: c.unit, tier: 2, upgrades: 1, points: want[c.unit]!, figures: figuresFor(c.unit, want[c.unit]!),
   }))
   return { levelId, age: 1, regiments }
 }

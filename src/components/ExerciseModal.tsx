@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { TIER_PER_LEVEL, armySize, levelFromPoints, maxPoints, pointsToNextRecruit, unitName, type Chapter } from '../data/curriculum'
+import { TIER_PER_LEVEL, levelFromPoints, maxPoints, unitName, type Chapter } from '../data/curriculum'
+import { figuresFor, pointsToNextUnit } from '../battle/units'
 import type { Exercise } from '../exercises/utils'
 import { FigureView } from './FigureView'
 import { MathText } from './MathText'
@@ -200,12 +201,15 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
 /** Bilan de recrutement : nouvelles recrues, cran atteint, nouveau rang. */
 export function Recruits({ chapter, before, after, ppc }: { chapter: Chapter; before: number; after: number; ppc: number }) {
   const capped = Math.min(maxPoints(ppc), after)
-  const recruits = armySize(capped, ppc) - armySize(before, ppc)
+  const units = figuresFor(chapter.unit, capped)
+  const recruits = units - figuresFor(chapter.unit, before)
   const levelBefore = levelFromPoints(before, ppc)
   const levelAfter = levelFromPoints(capped, ppc)
   const tierAfter = TIER_PER_LEVEL[levelAfter]
   const promoted = tierAfter > TIER_PER_LEVEL[levelBefore]
-  const next = pointsToNextRecruit(capped, ppc)
+  // une fois le cran 1 terminé, les villageois (1 bonne réponse chacun) deviennent des soldats de la maison (coût propre)
+  const graduated = TIER_PER_LEVEL[levelBefore] === 0 && tierAfter > 0
+  const next = capped >= maxPoints(ppc) ? 0 : pointsToNextUnit(chapter.unit, capped)
   if (capped === before) {
     return <p>{before >= maxPoints(ppc) ? 'Ton corps est déjà au complet : place aux améliorations !' : 'Aucune recrue cette fois… les forgerons t’attendent pour une revanche.'}</p>
   }
@@ -213,14 +217,16 @@ export function Recruits({ chapter, before, after, ppc }: { chapter: Chapter; be
     <div className="recruits">
       <p>
         <b>+{capped - before} point{capped - before > 1 ? 's' : ''}</b> d’entraînement.{' '}
-        {recruits > 0
-          ? <>Le corps « {chapter.corpsName} » accueille <b>{recruits} recrue{recruits > 1 ? 's' : ''}</b> : il compte maintenant <b>{armySize(capped, ppc)} soldats</b>.</>
-          : next > 0 ? <>Encore {next} bonne{next > 1 ? 's' : ''} réponse{next > 1 ? 's' : ''} pour la prochaine recrue.</> : null}
+        {graduated
+          ? <>Fin de l’apprentissage : tes villageois deviennent <b>{units} unité{units > 1 ? 's' : ''}</b> au rang de <b>{unitName(chapter, tierAfter)}</b>.</>
+          : recruits > 0
+          ? <>Le corps « {chapter.corpsName} » accueille <b>{recruits} nouvelle{recruits > 1 ? 's' : ''} unité{recruits > 1 ? 's' : ''}</b> : il en compte maintenant <b>{units}</b>.</>
+          : next > 0 ? <>Encore {next} bonne{next > 1 ? 's' : ''} réponse{next > 1 ? 's' : ''} pour la prochaine unité.</> : null}
       </p>
       {levelAfter > levelBefore && (
         <p className="levelup">
-          Cran {levelAfter} atteint ! {promoted && <>Tes soldats passent au rang de <b>{unitName(chapter, tierAfter)}</b>. </>}
-          Les prochains exercices seront plus difficiles.
+          Cran {levelAfter} terminé ! {promoted && !graduated && <>Tes soldats passent au rang de <b>{unitName(chapter, tierAfter)}</b>. </>}
+          Nouveau type d’exercice, un peu plus difficile.
         </p>
       )}
     </div>

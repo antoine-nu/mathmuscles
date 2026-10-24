@@ -43,7 +43,7 @@ export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
         <div className="logo">
           <span className="logo-math">Math</span><span className="logo-muscles">Muscles</span>
         </div>
-        <p className="ls-tag">Chaque exercice réussi entraîne un soldat. Chaque chapitre forge un corps d’armée.</p>
+        <p className="ls-tag">Chaque bonne réponse forme tes troupes. Chaque chapitre forge un corps d’armée.</p>
 
         <h2 className="ls-h">1 · Choisis ta classe</h2>
         <div className="ls-cards">

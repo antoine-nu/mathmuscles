@@ -9,6 +9,7 @@ export const FIELD_W = 64
 export const FIELD_H = 40
 export const DT = 0.05
 export const MAX_DURATION = 150
+const SPLASH_MAX = 3
 export const HORN_DURATION = 5
 export const HORN_MAX = 3
 
@@ -372,10 +373,16 @@ export class Battle {
         }
       } else {
         this.events.push({ t: this.t, type: 'impact', x: p.x1, y: p.y1, big: true })
+        // la zone touche au plus SPLASH_MAX ennemis (les plus proches du point d'impact) : sinon l'artillerie
+        // devient écrasante contre les très grandes armées serrées
+        const hits: { e: BUnit; d: number }[] = []
         for (const e of this.neighbors(p.x1, p.y1, p.splash + 1)) {
           if (e.side === p.side || e.state === 2) continue
           const d = Math.hypot(e.x - p.x1, e.y - p.y1)
-          if (d > p.splash + e.s.radius) continue
+          if (d <= p.splash + e.s.radius) hits.push({ e, d })
+        }
+        hits.sort((a, b) => a.d - b.d)
+        for (const { e, d } of hits.slice(0, SPLASH_MAX)) {
           const fall = d <= 0.8 ? 1 : 0.6
           this.hit(e, this.damageOf(p, p.damage, p.bonus, e, p.dmg) * fall, p.from)
         }

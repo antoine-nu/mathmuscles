@@ -125,7 +125,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
           mode="duel"
           teamColor={BLUE}
           playerName={me}
-          opponent={{ name: them, color: RED, age: ageOf(botState, rules), population: populationOf(botState, rules), online: true }}
+          opponent={{ name: them, color: RED, age: ageOf(botState, rules), population: populationOf(botState), online: true }}
           startsAt={phase.startsAt}
           deadline={phase.deadline}
           onQuit={onQuit}

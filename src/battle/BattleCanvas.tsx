@@ -4,7 +4,7 @@ import type { UnitLook } from '../components/UnitSprite'
 import { seeded } from '../game/color'
 import type { Feed, UnitMeta } from './feed'
 import type { BattleEvent } from './sim'
-import { FIELD_H, FIELD_W, HORN_DURATION, type Side } from './sim'
+import { FIELD_H, FIELD_W, type Side } from './sim'
 import { SPRITE_BOX, preloadSprites, spriteImage } from './sprites'
 
 /** Écrasement vertical de la vue « trois-quarts ». */
@@ -215,9 +215,26 @@ export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
         const movedDist = prev ? Math.hypot(u.x - prev.x, u.y - prev.y) : 0
         const moving = prev ? prev.moving * 0.8 + (movedDist > 0.004 ? 0.2 : 0) : 0
         lastPos.set(u.id, { x: u.x, y: u.y, moving })
-        // anneau de couleur du camp
-        ctx.fillStyle = hornOn[u.side] ? 'rgba(255, 215, 90, 0.55)' : u.side === 0 ? 'rgba(80, 140, 255, 0.35)' : 'rgba(255, 90, 80, 0.35)'
-        ctx.beginPath(); ctx.ellipse(x, y, k * 0.55, k * 0.22, 0, 0, Math.PI * 2); ctx.fill()
+        // anneau de couleur du camp ; sous l'effet du cor, aura dorée pulsante et étincelles qui montent
+        if (hornOn[u.side]) {
+          const pulse = 0.5 + 0.5 * Math.sin(f.t * 9 + u.id)
+          const glow = ctx.createRadialGradient(x, y - k * 0.6, 0, x, y - k * 0.6, k * 1.5)
+          glow.addColorStop(0, `rgba(255, 220, 100, ${0.35 + 0.2 * pulse})`)
+          glow.addColorStop(1, 'rgba(255, 200, 60, 0)')
+          ctx.fillStyle = glow
+          ctx.beginPath(); ctx.ellipse(x, y - k * 0.6, k * 1.5, k * 1.5, 0, 0, Math.PI * 2); ctx.fill()
+          ctx.strokeStyle = `rgba(255, 225, 120, ${0.7 + 0.3 * pulse})`
+          ctx.lineWidth = 2
+          ctx.beginPath(); ctx.ellipse(x, y, k * (0.6 + 0.12 * pulse), k * (0.24 + 0.05 * pulse), 0, 0, Math.PI * 2); ctx.stroke()
+          for (let j = 0; j < 2; j++) {
+            const ph = (f.t * 0.9 + u.id * 0.37 + j * 0.5) % 1
+            ctx.fillStyle = `rgba(255, 230, 140, ${1 - ph})`
+            ctx.fillRect(x + Math.sin(u.id * 7 + j * 3) * k * 0.5, y - k * (0.4 + ph * 2.4), 2.5, 2.5)
+          }
+        } else {
+          ctx.fillStyle = u.side === 0 ? 'rgba(80, 140, 255, 0.35)' : 'rgba(255, 90, 80, 0.35)'
+          ctx.beginPath(); ctx.ellipse(x, y, k * 0.55, k * 0.22, 0, 0, Math.PI * 2); ctx.fill()
+        }
 
         const img = spriteImage(lookOf(m, colors[u.side]))
         const bob = moving > 0.5 ? Math.abs(Math.sin(f.t * 10 + u.id)) * 2.2 : 0
@@ -326,13 +343,6 @@ export function BattleCanvas({ feed, colors, onTick, onEvents }: Props) {
         }
       }
 
-      // halo doré sur le camp qui sonne le cor
-      for (const side of [0, 1] as const) {
-        if (!hornOn[side]) continue
-        const left = f.horn[side] - f.t
-        ctx.fillStyle = `rgba(255, 210, 90, ${0.12 * Math.min(1, left / HORN_DURATION + 0.3)})`
-        ctx.fillRect(side === 0 ? 0 : W / 2, 0, W / 2, H)
-      }
       const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.75)
       vg.addColorStop(0, 'rgba(0,0,0,0)')
       vg.addColorStop(1, 'rgba(0,0,0,0.4)')

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AGES, MAX_LEVEL, UNITS_PER_LEVEL, levelFromPoints, maxPoints, type Chapter } from '../data/curriculum'
-import { difficultyForLevel, makeAgeProblem, makeSeries, makeUpgradeProblem } from '../exercises'
+import { AGES, levelFromPoints, maxPoints, type Chapter } from '../data/curriculum'
+import { figuresFor } from '../battle/units'
+import { difficultyForLevel, makeAgeProblem, makeSeries, makeUpgradeProblem, pickDrill } from '../exercises'
 import type { Exercise } from '../exercises/utils'
 import {
-  addSeries, addUpgrade, ageOf, houseOf, levelOf, populationOf, setCooldown, solveAgeProblem, type PlayerState,
+  addSeries, addUpgrade, ageOf, drillKey, houseOf, levelOf, maxPopulationOf, populationOf, setCooldown, setDrill, solveAgeProblem,
+  type PlayerState,
 } from '../game/state'
 import { useRules } from '../game/rules'
 import { useNow } from '../game/useNow'
@@ -74,7 +76,15 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
 
   const startSeries = (c: Chapter) => {
     const cran = levelFromPoints(houseOf(player, c.id).points, rules.ppc)
-    setSession({ kind: 'series', chapter: c, pointsBefore: houseOf(player, c.id).points, exercises: makeSeries(c.id, cran), tier: difficultyForLevel(cran), nonce: Date.now() })
+    // un seul type d'exercice par cran : tiré la première fois, puis répété jusqu'au cran suivant
+    const key = drillKey(c.id, cran)
+    let model = player.drills?.[key]
+    if (model === undefined) {
+      const picked = pickDrill(c.id, cran)
+      model = picked
+      update((p) => setDrill(p, key, picked))
+    }
+    setSession({ kind: 'series', chapter: c, pointsBefore: houseOf(player, c.id).points, exercises: makeSeries(c.id, cran, model), tier: difficultyForLevel(cran), nonce: Date.now() })
   }
   const startUpgrade = (c: Chapter, n: 1 | 2 | 3) => setSession({ kind: 'upgrade', chapter: c, n, exercises: [makeUpgradeProblem(c.id, n)], nonce: Date.now() })
   const startAge = (c: Chapter, n: 1 | 2 | 3) => {
@@ -91,7 +101,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
       update((p) => addSeries(p, c.id, result.correct, result.answered, rules))
       const after = Math.min(maxPoints(rules.ppc), s.pointsBefore + result.correct)
       const lvlBefore = levelFromPoints(s.pointsBefore, rules.ppc), lvlAfter = levelFromPoints(after, rules.ppc)
-      if (lvlAfter > lvlBefore) flash(`${c.corpsName} : cran ${lvlAfter} atteint ! ${UNITS_PER_LEVEL[lvlAfter]} soldats sous ta bannière.`)
+      if (lvlAfter > lvlBefore) flash(`${c.corpsName} : cran ${lvlAfter} terminé ! ${figuresFor(c.unit, after)} unités sous ta bannière.`)
       return
     }
     const ok = result.correct > 0
@@ -120,8 +130,8 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
 
   const totalPoints = chapters.reduce((s, c) => s + houseOf(player, c.id).points, 0)
   const totalUpgrades = chapters.reduce((s, c) => s + houseOf(player, c.id).upgrades.length, 0)
-  const population = populationOf(player, rules)
-  const maxPopulation = chapters.length * UNITS_PER_LEVEL[MAX_LEVEL]
+  const population = populationOf(player)
+  const maxPopulation = maxPopulationOf(player, rules)
 
   return (
     <div className={`game ${mode}`}>
@@ -151,7 +161,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
             <div className="hud-opponent" title="Ton adversaire">
               <span className="opp-chip" style={{ background: opponent.color }} />
               <span className="opp-name">{opponent.name}{!opponent.online && ' (hors ligne)'}</span>
-              <span className="opp-info">{AGES[opponent.age]} · {opponent.population} soldats</span>
+              <span className="opp-info">{AGES[opponent.age]} · {opponent.population} unités</span>
             </div>
           )}
           {mode === 'solo' && (

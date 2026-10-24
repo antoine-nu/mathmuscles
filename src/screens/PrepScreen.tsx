@@ -35,7 +35,7 @@ export function PrepScreen({ level, durationMin, me, opponent, onReady, onBack }
       <main className="prep-body">
         <p className="prep-intro">
           Chaque maison de ton royaume forme un type de soldat. Pendant le chrono, entraîne celles que tu veux :
-          un grand nombre de soldats, des améliorations, des âges… Les forces et faiblesses ci-dessous t’aident à
+          beaucoup d’unités (chacune coûte quelques bonnes réponses), des améliorations, des âges… Les forces et faiblesses ci-dessous t’aident à
           composer une armée qui résiste à tout.
         </p>
         <Codex levelId={level.id} teamColor={me.color} />

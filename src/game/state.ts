@@ -1,7 +1,7 @@
 // État d'un joueur : maisons (jauges, améliorations), points d'âge, problèmes résolus, temps de recharge.
 import { useCallback, useEffect, useState } from 'react'
 import {
-  AGE_PROBLEM_CRAN, LEVELS, MAX_LEVEL, TIER_PER_LEVEL, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints, armySize,
+  AGE_PROBLEM_CRAN, LEVELS, MAX_LEVEL, TIER_PER_LEVEL, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints,
   levelFromPoints, maxPoints, type Chapter, type Level,
 } from '../data/curriculum'
 import { figuresFor } from '../battle/units'
@@ -23,6 +23,9 @@ export interface PlayerState {
   cooldowns: Record<string, number>
   answered: number
   correct: number
+  /** Type d'exercice tiré pour chaque cran d'une maison (« chapitre:cran » → n° du modèle) : on s'entraîne
+   *  par répétition sur le même type jusqu'au cran suivant. */
+  drills?: Record<string, number>
 }
 
 export const EMPTY_HOUSE: HouseState = { points: 0, series: 0, upgrades: [] }
@@ -58,6 +61,9 @@ export function solveAgeProblem(p: PlayerState, chapterId: string, n: number): P
 
 export const setCooldown = (p: PlayerState, key: string, until: number): PlayerState => ({ ...p, cooldowns: { ...p.cooldowns, [key]: until } })
 
+export const drillKey = (chapterId: string, cran: number) => `${chapterId}:${cran}`
+export const setDrill = (p: PlayerState, key: string, model: number): PlayerState => ({ ...p, drills: { ...p.drills, [key]: model } })
+
 // ── Disponibilités ─────────────────────────────────────────────────────
 export type Availability =
   | { state: 'owned' }
@@ -74,7 +80,7 @@ export function upgradeAvailability(p: PlayerState, chapter: Chapter, n: 1 | 2 |
   const cran = levelFromPoints(h.points, rules.ppc)
   const age = ageOf(p, rules)
   const needs: string[] = []
-  if (cran < UPGRADE_CRAN[n]) needs.push(`cran ${UPGRADE_CRAN[n]}`)
+  if (cran < UPGRADE_CRAN[n]) needs.push(`cran ${UPGRADE_CRAN[n]} terminé`)
   if (age < UPGRADE_AGE[n]) needs.push(AGE_NAMES_SHORT[UPGRADE_AGE[n]])
   if (needs.length) return { state: 'locked', reason: `Requis : ${needs.join(' et ')}` }
   const until = p.cooldowns[`u:${chapter.id}:${n}`] ?? 0
@@ -85,7 +91,7 @@ export function upgradeAvailability(p: PlayerState, chapter: Chapter, n: 1 | 2 |
 export function ageProblemAvailability(p: PlayerState, chapter: Chapter, n: 1 | 2 | 3, rules: Rules, now: number): Availability {
   if (p.solved.includes(`${chapter.id}:${n}`)) return { state: 'owned' }
   const cran = levelFromPoints(houseOf(p, chapter.id).points, rules.ppc)
-  if (cran < AGE_PROBLEM_CRAN[n]) return { state: 'locked', reason: `Cran ${AGE_PROBLEM_CRAN[n]} requis` }
+  if (cran < AGE_PROBLEM_CRAN[n]) return { state: 'locked', reason: `Termine le cran ${AGE_PROBLEM_CRAN[n]}` }
   const until = p.cooldowns[`a:${chapter.id}:${n}`] ?? 0
   if (until > now) return { state: 'cooldown', until }
   return { state: 'available' }
@@ -97,9 +103,9 @@ export interface Regiment {
   kind: Chapter['unit']
   tier: number
   upgrades: number
-  /** Effectif (en soldats). */
-  soldiers: number
-  /** Nombre de figurines (unités sur le champ de bataille). */
+  /** Bonnes réponses accumulées par la maison. */
+  points: number
+  /** Nombre d'unités sur le champ de bataille (points ÷ coût de l'unité). */
   figures: number
 }
 
@@ -113,16 +119,20 @@ export function regimentOf(p: PlayerState, chapter: Chapter, rules: Rules): Regi
   const h = houseOf(p, chapter.id)
   const cran = levelFromPoints(h.points, rules.ppc)
   const tier = TIER_PER_LEVEL[Math.min(MAX_LEVEL, cran)]
-  const soldiers = armySize(h.points, rules.ppc)
-  return { chapterId: chapter.id, kind: chapter.unit, tier, upgrades: h.upgrades.length, soldiers, figures: figuresFor(chapter.unit, tier, soldiers) }
+  return { chapterId: chapter.id, kind: chapter.unit, tier, upgrades: h.upgrades.length, points: h.points, figures: figuresFor(chapter.unit, h.points) }
 }
 
 export function armyOf(p: PlayerState, rules: Rules): ArmySpec {
   return { levelId: p.levelId, age: ageOf(p, rules), regiments: levelOf(p).chapters.map((c) => regimentOf(p, c, rules)) }
 }
 
-export const populationOf = (p: PlayerState, rules: Rules) =>
-  levelOf(p).chapters.reduce((s, c) => s + armySize(houseOf(p, c.id).points, rules.ppc), 0)
+/** Nombre total d'unités de l'armée. */
+export const populationOf = (p: PlayerState) =>
+  levelOf(p).chapters.reduce((s, c) => s + figuresFor(c.unit, houseOf(p, c.id).points), 0)
+
+/** Population maximale (toutes les maisons au complet). */
+export const maxPopulationOf = (p: PlayerState, rules: Rules) =>
+  levelOf(p).chapters.reduce((s, c) => s + figuresFor(c.unit, maxPoints(rules.ppc)), 0)
 
 // ── Sauvegarde de l'entraînement libre ─────────────────────────────────
 const STORE_KEY = 'mathmuscles:v2'

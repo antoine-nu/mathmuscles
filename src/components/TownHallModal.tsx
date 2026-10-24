@@ -68,7 +68,7 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
                   <Portrait look={lookFor(c, h, rules.ppc, teamColor)} size={40} />
                   <span>
                     <b>{c.corpsName}</b>
-                    <small>{c.title} · cran {cran}</small>
+                    <small>{c.title} · {cran === 0 ? 'aucun cran terminé' : `${cran} cran${cran > 1 ? 's' : ''} terminé${cran > 1 ? 's' : ''}`}</small>
                   </span>
                 </span>
                 {([1, 2, 3] as const).map((n) => {
@@ -76,11 +76,11 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
                   return (
                     <span key={n} role="cell">
                       <button className={`th-cell ${av.state}`} disabled={av.state !== 'available'} onClick={() => onPick(c.id, n)}
-                        title={av.state === 'locked' ? `Atteins le cran ${AGE_PROBLEM_CRAN[n]} de cette maison` : undefined}>
+                        title={av.state === 'locked' ? `Termine le cran ${AGE_PROBLEM_CRAN[n]} de cette maison` : undefined}>
                         {av.state === 'owned' && <>✓ Résolu</>}
                         {av.state === 'available' && <>{'★'.repeat(n)} Problème</>}
                         {av.state === 'cooldown' && <>⏳ {formatWait(av.until - now)}</>}
-                        {av.state === 'locked' && <>🔒 cran {AGE_PROBLEM_CRAN[n]}</>}
+                        {av.state === 'locked' && <>🔒 cran {AGE_PROBLEM_CRAN[n]} à terminer</>}
                       </button>
                     </span>
                   )

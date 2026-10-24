@@ -168,7 +168,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
     const t = window.setInterval(() => {
       const p = playerRef.current
       const r = rulesRef.current
-      send({ t: 'status', age: ageOf(p, r), pop: populationOf(p, r) })
+      send({ t: 'status', age: ageOf(p, r), pop: populationOf(p) })
       const now = Date.now()
       if (now >= deadline && !sentFinal) {
         sentFinal = true

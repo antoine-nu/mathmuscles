@@ -273,39 +273,21 @@ export const LEVELS: Level[] = [
 export const UPCOMING_LEVELS = ['6e', '4e', '3e', '1re', 'Tle']
 
 // ── Règles de progression ──────────────────────────────────────────────
-// « ppc » = points (bonnes réponses) par cran : 10 en entraînement libre, moins en duel chronométré.
+// 1 bonne réponse = 1 point, quelle que soit la partie ; 10 points font un cran ; 5 crans par maison.
+// Chaque unité coûte un certain nombre de bonnes réponses (voir UNIT_STATS) : la maison forme une unité
+// à chaque fois que ce nombre est atteint, et toutes les unités formées partent au combat.
 export const SERIES_SIZE = 5
 export const POINTS_PER_LEVEL = 10
 export const MAX_LEVEL = 5 // 5 crans par maison
 export const MAX_POINTS = POINTS_PER_LEVEL * MAX_LEVEL
 
-/** Effectif du corps (en « soldats ») selon le cran de jauge. */
-export const UNITS_PER_LEVEL = [1, 3, 5, 8, 11, 15]
-/** Rang visuel du soldat selon le cran de jauge (0 = villageois). */
+/** Rang du soldat selon le cran de jauge (0 = villageois). */
 export const TIER_PER_LEVEL = [0, 1, 1, 2, 2, 3]
 
 export const maxPoints = (ppc = POINTS_PER_LEVEL) => ppc * MAX_LEVEL
 
 export function levelFromPoints(points: number, ppc = POINTS_PER_LEVEL): number {
   return Math.min(MAX_LEVEL, Math.floor(points / ppc))
-}
-
-/** Effectif du corps : grandit à chaque bonne réponse, entre deux crans. */
-export function armySize(points: number, ppc = POINTS_PER_LEVEL): number {
-  const level = levelFromPoints(points, ppc)
-  if (level >= MAX_LEVEL) return UNITS_PER_LEVEL[MAX_LEVEL]
-  const within = (points - level * ppc) / ppc
-  return UNITS_PER_LEVEL[level] + Math.floor((UNITS_PER_LEVEL[level + 1] - UNITS_PER_LEVEL[level]) * within)
-}
-
-/** Nombre de bonnes réponses avant la prochaine recrue (0 si l'armée est complète). */
-export function pointsToNextRecruit(points: number, ppc = POINTS_PER_LEVEL): number {
-  const max = maxPoints(ppc)
-  if (points >= max) return 0
-  const size = armySize(points, ppc)
-  let p = points
-  while (p < max && armySize(p, ppc) === size) p++
-  return p - points
 }
 
 export const ROMAN = ['0', 'I', 'II', 'III', 'IV', 'V']
@@ -319,8 +301,9 @@ export const AGES = ['Âge sombre', 'Âge féodal', 'Âge des châteaux', 'Âge 
 export const AGE_SHORT = ['Sombre', 'Féodal', 'Châteaux', 'Impérial'] as const
 /** Bonus de points de vie et d'attaque par âge atteint (sur toute l'armée). */
 export const AGE_BONUS = 0.08
-/** Cran de la maison requis pour un problème de l'hôtel de ville de niveau n (1 → cran 2, 2 → 3, 3 → 4). */
-export const AGE_PROBLEM_CRAN = [0, 2, 3, 4]
+// Les crans sont numérotés de 1 à 5 ; levelFromPoints donne le nombre de crans terminés.
+/** Crans terminés requis pour un problème de l'hôtel de ville à n points : le cran n. */
+export const AGE_PROBLEM_CRAN = [0, 1, 2, 3]
 /** Améliorations n = 1, 2, 3 : âge et cran requis. */
 export const UPGRADE_AGE = [0, 1, 2, 3]
 export const UPGRADE_CRAN = [0, 2, 3, 4]

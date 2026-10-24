@@ -1,10 +1,10 @@
-import { MAX_LEVEL, TIER_PER_LEVEL, UNITS_PER_LEVEL, armySize, levelFromPoints, maxPoints, pointsToNextRecruit, unitName, type Chapter } from '../data/curriculum'
-import { MATCHUPS, UNIT_STATS } from '../battle/units'
+import { MAX_LEVEL, TIER_PER_LEVEL, levelFromPoints, maxPoints, unitName, type Chapter } from '../data/curriculum'
+import { MATCHUPS, UNIT_STATS, figuresFor, pointsToNextUnit, unitCost } from '../battle/units'
 import { upgradeAvailability, type HouseState, type PlayerState } from '../game/state'
 import { useRules } from '../game/rules'
 import { difficultyForLevel } from '../exercises'
 import { Portrait } from './Portrait'
-import { displayedUnits, lookFor } from './WorldMap'
+import { lookFor } from './WorldMap'
 
 interface Props {
   chapter: Chapter
@@ -34,9 +34,10 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
   const maxed = level >= MAX_LEVEL
   const inLevel = maxed ? ppc : house.points % ppc
   const nextTier = TIER_PER_LEVEL.findIndex((t) => t > look.tier)
-  const soldiers = armySize(house.points, ppc)
-  const figures = displayedUnits(chapter, house.points, ppc)
+  const figures = figuresFor(chapter.unit, house.points)
   const stats = UNIT_STATS[chapter.unit]
+  const noun = chapter.unit === 'siege' && look.tier > 0 ? 'engin' : 'unité'
+  const cost = unitCost(chapter.unit, house.points)
   const role = MATCHUPS[chapter.unit]
 
   return (
@@ -47,7 +48,7 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
         </div>
         <div className="portrait-name">{look.name}</div>
         <div className="portrait-count">
-          {soldiers} soldat{soldiers > 1 ? 's' : ''}{figures !== soldiers ? ` · ${figures} ${chapter.unit === 'siege' ? 'engin' : 'unité'}${figures > 1 ? 's' : ''}` : ''}
+          {figures} {noun}{figures > 1 ? 's' : ''}
         </div>
       </div>
 
@@ -62,7 +63,7 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
             return (
               <div key={i} className={`gauge-seg ${i < level ? 'full' : ''}`}>
                 <div className="gauge-fill" style={{ width: `${fill * 100}%`, background: chapter.color }} />
-                <span className="gauge-lbl">{UNITS_PER_LEVEL[i + 1]}</span>
+                <span className="gauge-lbl" title={`Unités à la fin du cran ${i + 1}`}>{figuresFor(chapter.unit, (i + 1) * ppc)}</span>
               </div>
             )
           })}
@@ -70,7 +71,7 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
         <div className="gauge-caption">
           {maxed
             ? 'Corps d’armée au complet ! Il reste les améliorations →'
-            : `${house.points}/${maxPoints(ppc)} bonnes réponses · prochaine recrue dans ${pointsToNextRecruit(house.points, ppc)} · cran ${level + 1} dans ${ppc - inLevel}`}
+            : `${house.points}/${maxPoints(ppc)} bonnes réponses · ${cost === 1 ? `1 ${noun} par bonne réponse` : `1 ${noun} toutes les ${cost} · prochain${noun === 'unité' ? 'e' : ''} dans ${pointsToNextUnit(chapter.unit, house.points)}`} · cran ${level + 1} terminé dans ${ppc - inLevel}`}
         </div>
 
         <div className="ranks">
@@ -84,11 +85,11 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
             )
           })}
           <div className="unit-role">
-            {nextTier > 0 && !maxed && <div className="rank-hint">Prochain rang au cran {nextTier}</div>}
+            {nextTier > 0 && !maxed && <div className="rank-hint">Prochain rang après le cran {nextTier}</div>}
             <div><b>Fort contre</b> {role.strong}</div>
             <div><b>Faible contre</b> {role.weak}</div>
             <div className="unit-stats">
-              ❤ {stats.hp} · ⚔ {stats.attack || '—'} · 🛡 {stats.armor} · {stats.range > 2 ? `🎯 ${stats.range} m · ` : ''}🐎 {stats.speed} m/s{stats.cost !== 1 ? ` · coût ${String(stats.cost).replace('.', ',')}` : ''}
+              ❤ {stats.hp} · ⚔ {stats.attack || '—'} · 🛡 {stats.armor} · {stats.range > 2 ? `🎯 ${stats.range} m · ` : ''}🐎 {stats.speed} m/s{` · coût ${stats.cost} bonne${stats.cost > 1 ? 's' : ''} réponse${stats.cost > 1 ? 's' : ''}`}
             </div>
           </div>
         </div>

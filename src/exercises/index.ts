@@ -14,8 +14,8 @@ export const UPGRADE_PROBLEMS: Registry = { ...reg(U5, 'UPGRADES_5E'), ...reg(U2
 export const AGE_PROBLEMS: Registry = { ...reg(A5, 'AGE_5E'), ...reg(A2, 'AGE_2NDE') }
 
 /** Le palier suit la jauge : cran 0 → palier 1, …, cran 4 et plus → palier 5. */
-export function difficultyForLevel(level: number, elite = false): Difficulty {
-  return (elite ? MAX_LEVEL : Math.min(MAX_LEVEL, level + 1)) as Difficulty
+export function difficultyForLevel(level: number): Difficulty {
+  return Math.min(MAX_LEVEL, level + 1) as Difficulty
 }
 
 // ── Mémoire des modèles déjà vus ───────────────────────────────────────
@@ -51,26 +51,34 @@ function freshOrder(prefix: string, pool: Maker[]): number[] {
     .map((o) => o.i)
 }
 
-/** Série de 5 exercices du palier courant, en privilégiant les modèles les moins récemment vus. */
-export function makeSeries(chapterId: string, level: number, elite = false): Exercise[] {
-  const d = difficultyForLevel(level, elite)
+/** Type d'exercice (modèle) d'un cran : le moins récemment vu du palier, pour varier d'une partie à l'autre. */
+export function pickDrill(chapterId: string, level: number): number {
+  const d = difficultyForLevel(level)
+  return freshOrder(`t:${chapterId}:${d}`, TIERS[chapterId][d - 1])[0]
+}
+
+/** Série de 5 exercices d'un même type (entraînement par répétition), avec des nombres différents à chaque fois. */
+export function makeSeries(chapterId: string, level: number, model: number): Exercise[] {
+  const d = difficultyForLevel(level)
   const pool = TIERS[chapterId][d - 1]
-  const prefix = `t:${chapterId}:${d}`
+  const i = model % pool.length
+  const key = `t:${chapterId}:${d}#${i}`
+  remember(key)
   const series: Exercise[] = []
-  const seen = new Set<string>()
-  let order = freshOrder(prefix, pool)
+  // on évite de reposer les énoncés de la série précédente du même type, et les doublons dans la série
+  // (sauf si le modèle offre trop peu de variantes)
+  const seen = new Set<string>(lastPrompts.get(key))
   let guard = 0
-  while (series.length < SERIES_SIZE && guard++ < 100) {
-    if (order.length === 0) order = freshOrder(prefix, pool)
-    const i = order.shift()!
+  while (series.length < SERIES_SIZE) {
     const ex = pool[i]()
-    if (seen.has(ex.prompt)) continue
+    if (seen.has(ex.prompt) && guard++ < 80) continue
     seen.add(ex.prompt)
-    remember(`${prefix}#${i}`)
     series.push(ex)
   }
+  lastPrompts.set(key, series.map((e) => e.prompt))
   return series
 }
+const lastPrompts = new Map<string, string[]>()
 
 function fromLadder(kind: 'u' | 'a', ladders: Record<string, Ladder>, chapterId: string, n: 1 | 2 | 3): Exercise {
   const pool = ladders[chapterId]?.[n - 1]

@@ -1,8 +1,11 @@
 import { createContext, useContext } from 'react'
+import { POINTS_PER_LEVEL } from '../data/curriculum'
 
-/** Paramètres d'une partie : entraînement libre (sans limite) ou duel chronométré. */
+/** Paramètres d'une partie : entraînement libre (sans limite) ou duel chronométré.
+ *  La progression est la même partout : 1 bonne réponse = 1 point, 10 points par cran, mêmes seuils d'âge.
+ *  Une partie courte donne donc une petite armée ; il faut du temps pour bâtir un grand empire. */
 export interface Rules {
-  /** Bonnes réponses par cran de jauge. */
+  /** Bonnes réponses par cran de jauge (toujours 10). */
   ppc: number
   /** Points d'âge cumulés pour atteindre l'Âge féodal, des châteaux, impérial. */
   ageThresholds: [number, number, number]
@@ -15,7 +18,7 @@ export interface Rules {
 }
 
 export const SOLO_RULES: Rules = {
-  ppc: 10,
+  ppc: POINTS_PER_LEVEL,
   ageThresholds: [3, 8, 14],
   problemCooldown: 60_000,
   upgradeCooldown: 30_000,
@@ -23,16 +26,11 @@ export const SOLO_RULES: Rules = {
 
 export const DUEL_DURATIONS = [15, 30, 45, 60] as const
 
-/**
- * Règles d'un duel, proportionnées à la durée : un cran coûte plus cher dans une longue partie, et les âges
- * demandent davantage de points. En 15 min, un très bon élève atteint l'Âge féodal ou des châteaux ;
- * l'Âge impérial reste un exploit, même en une heure.
- */
+/** Règles d'un duel : la même progression qu'en entraînement libre, seules les attentes après un échec sont
+ *  plus courtes (le temps est compté). */
 export function duelRules(durationMin: number): Rules {
-  const k = Math.pow(durationMin / 15, 0.75)
   return {
-    ppc: Math.max(2, Math.round(durationMin / 12)),
-    ageThresholds: [1, Math.max(2, Math.round(3 * k)), Math.max(4, Math.round(6 * k))],
+    ...SOLO_RULES,
     problemCooldown: 45_000,
     upgradeCooldown: 25_000,
     durationMin,

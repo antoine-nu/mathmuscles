@@ -39,7 +39,7 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
         <span><StatIcon kind="pierce" size={16} /> armure contre les flèches</span>
         <span><StatIcon kind="range" size={16} /> portée</span>
         <span><StatIcon kind="speed" size={16} /> vitesse</span>
-        <span><StatIcon kind="cost" size={16} /> coût en soldats</span>
+        <span><StatIcon kind="cost" size={16} /> coût : bonnes réponses pour former une unité</span>
       </div>
 
       <div className="cx-grid">
@@ -65,7 +65,7 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
                 <Stat icon="pierce" label="Anti-flèches" value={String(st.pierce)} ratio={st.pierce / MAX.armor} />
                 <Stat icon="range" label="Portée" value={st.range > 2 ? `${st.range} m` : 'contact'} ratio={st.range / MAX.range} />
                 <Stat icon="speed" label="Vitesse" value={String(st.speed).replace('.', ',')} ratio={st.speed / MAX.speed} />
-                <Stat icon="cost" label="Coût" value={String(st.cost).replace('.', ',')} ratio={st.cost / 3} text={st.cost > 1 ? '(moins nombreux)' : ''} />
+                <Stat icon="cost" label="Coût" value={String(st.cost)} ratio={st.cost / 3} text={st.cost > 1 ? 'bonnes réponses' : 'bonne réponse'} />
               </div>
               <p className="cx-special">{SPECIALS[c.unit]}</p>
               <div className="cx-vs">
@@ -97,9 +97,11 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
       </div>
 
       <div className="cx-rules">
-        <div><b>Rangs.</b> Vétéran (crans 3-4) : ×1,3 vie, +2 attaque, +1 armure. Élite (cran 5) : ×1,6 vie, +4 attaque, +2 armure.</div>
+        <div><b>Rangs.</b> Villageois pendant le cran 1, recrue une fois le cran 1 terminé, vétéran après le cran 3 (×1,3 vie, +2 attaque, +1 armure), élite après le cran 5 (×1,6 vie, +4 attaque, +2 armure).</div>
         <div><b>Âges.</b> Chaque âge donne +{Math.round(AGE_BONUS * 100)} % de vie et d’attaque à toute l’armée.</div>
-        <div><b>Coût.</b> Une maison de chevaliers (coût 2) aligne deux fois moins d’unités qu’une maison de lanciers (coût 1).</div>
+        <div><b>Coût.</b> Nombre de bonnes réponses pour former une unité : 1 lancier par bonne réponse, 1 chevalier toutes les 2, 1 engin de siège toutes les 3. Pendant le cran 1, chaque maison forme des villageois (1 par bonne réponse). À la fin du chrono, toutes les unités formées partent au combat.</div>
+        <div><b>Taille des armées.</b> Dans les petites batailles, l’infanterie, les lanciers et les éclaireurs brillent ; dans les grandes, l’artillerie, les chevaliers et les moines prennent l’avantage.</div>
+        <div><b>Crans.</b> 10 bonnes réponses par cran, quelle que soit la durée de la partie. À chaque cran, un nouveau type d’exercice, plus difficile, et l’on s’y entraîne jusqu’au cran suivant. Hôtel de ville : le problème à 1 point s’ouvre une fois le cran 1 de la maison terminé, celui à 2 points après le cran 2, celui à 3 points après le cran 3.</div>
         <div><b>Bataille.</b> Fantassins devant, tireurs derrière, artillerie et moines au fond, cavalerie sur les ailes. Le cor de guerre (+25 % d’attaque, 5 s) s’obtient par le calcul mental.</div>
         <div><b>Duel.</b> Ton adversaire dispose des mêmes 7 types d’unités, quelle que soit sa classe.</div>
       </div>
