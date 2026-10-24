@@ -247,9 +247,12 @@ export interface GraphWindow {
 export function graphFigure(win: GraphWindow) {
   const w = win.w ?? FIG_W, h = win.h ?? FIG_H
   const m = 22
-  const ux = (w - 2 * m) / (win.xMax - win.xMin)
+  // marge gauche élargie pour les nombres longs de l'axe des ordonnées
+  const ylabels = [win.yMin, win.yMax].map((v) => String(Math.round(v * 100) / 100).length)
+  const left = win.xMin < 0 ? m : Math.max(m, 10 + 6.5 * Math.max(...ylabels))
+  const ux = (w - left - m) / (win.xMax - win.xMin)
   const uy = (h - 2 * m) / (win.yMax - win.yMin)
-  const ox = m - win.xMin * ux, oy = h - m + win.yMin * uy
+  const ox = left - win.xMin * ux, oy = h - m + win.yMin * uy
   const at = (x: number, y: number): [number, number] => [ox + x * ux, oy - y * uy]
   const figure: Figure = {
     w, h, points: {}, segments: [], curves: [], notes: [],
@@ -267,8 +270,10 @@ export function graphFigure(win: GraphWindow) {
       for (let i = 0; i <= 160; i++) {
         const x = a + ((b - a) * i) / 160
         const y = f(x)
-        if (!Number.isFinite(y) || y < win.yMin - 0.5 || y > win.yMax + 0.5) { flush(); continue }
-        run.push(at(x, Math.max(win.yMin, Math.min(win.yMax, y))))
+        // hors de la fenêtre (avec une petite marge) : on coupe la courbe plutôt que de l'écraser contre le bord
+        const pad = (win.yMax - win.yMin) * 0.04
+        if (!Number.isFinite(y) || y < win.yMin - pad || y > win.yMax + pad) { flush(); continue }
+        run.push(at(x, y))
       }
       flush()
     },
