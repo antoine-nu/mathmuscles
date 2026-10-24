@@ -18,6 +18,7 @@ import { CodexModal } from '../components/Codex'
 import { MuteButton } from '../components/MuteButton'
 import { audio } from '../audio/engine'
 import { StartCountdown } from './PrepScreen'
+import { TEST_DURATION } from './DuelSetup'
 
 export interface OpponentStatus {
   name: string
@@ -140,7 +141,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
           ◀ {mode === 'duel' ? 'Quitter' : level.short}
         </button>
         <div className="hud-era">
-          <span className="hud-title">{playerName ?? 'MathMuscles'}</span>
+          <span className="hud-title">{playerName ?? 'Age of Equations'}</span>
           <span className="hud-age">{AGES[age]} · {level.label}</span>
         </div>
         <div className="resources">
@@ -164,7 +165,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
               <span className="opp-info">{AGES[opponent.age]} · {opponent.population} unités</span>
             </div>
           )}
-          {mode === 'solo' && (
+          {(mode === 'solo' || rules.durationMin === TEST_DURATION) && (
             <label className="demo-toggle" title="Pour tester : simuler la progression">
               <input type="checkbox" checked={demo} onChange={(e) => setDemo(e.target.checked)} />
               Mode démo

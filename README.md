@@ -1,4 +1,4 @@
-# MathMuscles
+# Age of Equations
 
 Muscle-toi en maths en bâtissant une armée façon *Age of Empires* : chaque chapitre du programme est une maison qui
 forme un corps d'armée, chaque bonne réponse forme des troupes… et on peut défier un camarade en direct.
@@ -13,7 +13,7 @@ npm run dev        # http://localhost:5173
 | Commande | Rôle |
 | --- | --- |
 | `npm run build` | build de production dans `dist/` (vérifie aussi les types) |
-| `npm run build:usb` | fichier unique `dist-usb/MathMuscles.html`, à ouvrir d'un double-clic (clé USB) |
+| `npm run build:usb` | fichier unique `dist-usb/AgeOfEquations.html`, à ouvrir d'un double-clic (clé USB) |
 | `npm run preview` | sert le build localement |
 | `npm run typecheck` | vérification TypeScript seule |
 | `npm run check:exercises` | vérifie tous les modèles d'exercices (justesse, écriture, variété). `-- samples 5e-geo` affiche des exemples |
@@ -61,10 +61,14 @@ Pas de serveur à héberger : les deux navigateurs se parlent directement (WebRT
 envoie dix images par seconde à l'invité. Certains réseaux (établissements, pare-feu stricts) bloquent ces connexions :
 en cas d'échec, essayer depuis un autre réseau (partage de connexion d'un téléphone par exemple).
 
-**Sur deux ordinateurs, sans installation** : copier `dist-usb/MathMuscles.html` (produit par `npm run build:usb`)
+**Sur deux ordinateurs, sans installation** : copier `dist-usb/AgeOfEquations.html` (produit par `npm run build:usb`)
 sur une clé USB, puis sur chaque ordinateur, l'ouvrir d'un double-clic (Chrome, Edge ou Firefox). Les deux ordinateurs
 doivent avoir accès à Internet (les relais servent à se trouver). Le premier joueur choisit « Défier un camarade » →
 « Créer une partie » et lit le code à l'autre, qui le saisit puis clique sur « Rejoindre ».
+
+**Partie de test (développeur)** : sous les durées, le petit bouton « 🛠 test 5 min » lance une partie de 5 minutes
+où le « Mode démo » est disponible (+1 cran, améliorations, points d'âge) pour former vite une armée et voir une
+bataille.
 
 Pour tester seul : ouvrir deux onglets sur `/?reseau=local` (les onglets se parlent sans Internet) ; ajouter
 `&chrono=30` pour un entraînement de 30 secondes.

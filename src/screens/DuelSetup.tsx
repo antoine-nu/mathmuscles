@@ -7,6 +7,9 @@ export const DURATIONS: { min: number; label: string; hint: string }[] = [
   { min: 60, label: '1 heure', hint: 'Épopée' },
 ]
 
+/** Partie express réservée aux tests du développeur : chrono de 5 min et outils de démonstration (+1 cran…). */
+export const TEST_DURATION = 5
+
 /** Cadre commun des écrans de préparation de partie. */
 export function SetupFrame({ title, subtitle, onBack, children }: { title: string; subtitle: string; onBack: () => void; children: ReactNode }) {
   return (
@@ -34,6 +37,10 @@ export function DurationPicker({ value, onChange, disabled }: { value: number; o
         ))}
       </div>
       <p className="setup-note">Pendant ce temps, chacun forme la plus grande armée possible. Puis les armées s’affrontent.</p>
+      <button className={`dev-test ${value === TEST_DURATION ? 'on' : ''}`} disabled={disabled} onClick={() => onChange(TEST_DURATION)}
+        title="Pour le développeur : partie de 5 minutes, avec les outils de démonstration pour former une armée rapidement">
+        🛠 test 5 min
+      </button>
     </div>
   )
 }

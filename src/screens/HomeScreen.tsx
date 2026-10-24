@@ -41,7 +41,8 @@ export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
     <div className="level-select">
       <div className="ls-inner">
         <div className="logo">
-          <span className="logo-math">Math</span><span className="logo-muscles">Muscles</span>
+          <span className="logo-of">Age of</span>
+          <span className="logo-main">Equations</span>
         </div>
         <p className="ls-tag">Chaque bonne réponse forme tes troupes. Chaque chapitre forge un corps d’armée.</p>
 

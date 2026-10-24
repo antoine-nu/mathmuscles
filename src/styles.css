@@ -325,8 +325,9 @@ button { font-family: inherit; cursor: pointer; }
 }
 .ls-inner { width: min(1000px, 100%); text-align: center; }
 .logo { font-family: var(--font-title); font-weight: 900; font-size: clamp(42px, 8vw, 84px); letter-spacing: 2px; text-shadow: 0 4px 0 #000, 0 0 30px rgba(217, 180, 90, 0.35); }
-.logo-math { color: #9fc0ff; }
-.logo-muscles { color: var(--gold-bright); }
+.logo { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.logo-of { font-size: 0.36em; letter-spacing: 0.4em; color: #9fc0ff; text-transform: uppercase; margin-bottom: 0.08em; }
+.logo-main { color: var(--gold-bright); }
 .ls-tag { color: var(--muted); font-size: 19px; margin: 4px 0 26px; font-style: italic; }
 .ls-h { font-family: var(--font-title); color: var(--text-light); letter-spacing: 3px; text-transform: uppercase; font-size: 16px; }
 .ls-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
@@ -606,6 +607,8 @@ button { font-family: inherit; cursor: pointer; }
 .setup-tabs button { padding: 10px; font-family: var(--font-title); font-size: 15px; color: var(--text-light); background: #1f140a; border: 1px solid #7a5a2c; border-radius: 4px; }
 .setup-tabs button.on { border-color: var(--gold-bright); color: var(--gold-bright); background: linear-gradient(180deg, #6b4524, #3a2410); }
 @media (max-width: 520px) { .durations { grid-template-columns: repeat(2, 1fr); } }
+.dev-test { display: block; margin: 6px 0 0 auto; padding: 2px 8px; font-size: 11px; color: var(--muted); background: none; border: 1px dashed #5a4024; border-radius: 3px; opacity: 0.55; }
+.dev-test:hover, .dev-test.on { opacity: 1; color: var(--gold-bright); border-color: var(--gold); }
 .setup-note.small { font-size: 13px; color: var(--muted); margin-top: 16px; }
 .setup-note.error { color: #ff9a8a; }
 .mvec { position: relative; display: inline-block; padding-top: 0.25em; }

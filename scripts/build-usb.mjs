@@ -18,5 +18,5 @@ const html = readFileSync('dist/index.html', 'utf8')
   .replace('</body>', () => `  <script type="module">${js}</script>\n  </body>`)
 
 mkdirSync('dist-usb', { recursive: true })
-writeFileSync('dist-usb/MathMuscles.html', html)
-console.log(`dist-usb/MathMuscles.html (${Math.round(html.length / 1024)} Ko)`)
+writeFileSync('dist-usb/AgeOfEquations.html', html)
+console.log(`dist-usb/AgeOfEquations.html (${Math.round(html.length / 1024)} Ko)`)
