@@ -1,16 +1,15 @@
 // Bilan d'après-bataille : comparaison des deux armées, conseils pour la prochaine fois, et visite des deux
 // villages tels qu'ils étaient à la fin de l'entraînement.
 import { useState } from 'react'
-import { AGES, LEVELS, levelFromPoints, unitName, type Chapter, type UnitKind } from '../data/curriculum'
+import { AGES, chapterOf, levelFromPoints, unitName, type Chapter, type UnitKind } from '../data/curriculum'
 import { COUNTERS, garrison, kindName } from '../battle/units'
 import type { BattleResult, RegimentReport, Side } from '../battle/sim'
-import { houseOf, type ArmySpec, type PlayerState } from '../game/state'
+import { chaptersOf, houseOf, type ArmySpec, type PlayerState } from '../game/state'
 import { SOLO_RULES } from '../game/rules'
 import { Portrait } from '../components/Portrait'
 import { WorldMap, lookFor } from '../components/WorldMap'
 import { MuteButton } from '../components/MuteButton'
 
-const CHAPTERS = new Map<string, Chapter>(LEVELS.flatMap((l) => l.chapters.map((c) => [c.id, c] as const)))
 
 interface Props {
   armies: [ArmySpec, ArmySpec]
@@ -37,15 +36,21 @@ interface Row {
   nemesisCount: number
 }
 
-function rowsOf(army: ArmySpec, reports: RegimentReport[] | undefined): Row[] {
+/** Maison d'un régiment d'une armée (nom du corps selon le niveau du joueur, sujet choisi). */
+function regChapter(army: ArmySpec, id: string): Chapter | null {
+  const r = army.regiments.find((x) => x.chapterId === id)
+  return r ? chapterOf(army.levelId, id, r.kind) : null
+}
+
+function rowsOf(army: ArmySpec, reports: RegimentReport[] | undefined, enemy: ArmySpec): Row[] {
   return army.regiments
     .filter((r) => r.figures > 0)
     .map((r) => {
       const rep = reports?.find((x) => x.id === r.chapterId)
       return {
-        chapter: CHAPTERS.get(r.chapterId)!, kind: r.kind, tier: r.tier, upgrades: r.upgrades, points: r.points,
+        chapter: chapterOf(army.levelId, r.chapterId, r.kind), kind: r.kind, tier: r.tier, upgrades: r.upgrades, points: r.points,
         deployed: rep?.deployed ?? r.figures, survived: rep?.survived ?? 0, kills: rep?.kills ?? 0,
-        nemesis: rep?.nemesis ? CHAPTERS.get(rep.nemesis) ?? null : null, nemesisCount: rep?.nemesisCount ?? 0,
+        nemesis: rep?.nemesis ? regChapter(enemy, rep.nemesis) : null, nemesisCount: rep?.nemesisCount ?? 0,
       }
     })
     .sort((a, b) => b.deployed - a.deployed)
@@ -75,8 +80,7 @@ function advice(me: Side, armies: [ArmySpec, ArmySpec], rows: [Row[], Row[]], na
   const top = [...byKind].sort((a, b) => b[1] - a[1])[0]
   if (top) {
     const counters = (Object.keys(COUNTERS) as UnitKind[]).filter((k) => COUNTERS[k].strong.includes(top[0]))
-    const myLevel = LEVELS.find((l) => l.id === armies[me].levelId)
-    const houses = myLevel?.chapters.filter((c) => counters.includes(c.unit)).map((c) => c.corpsName) ?? []
+    const houses = armies[me].regiments.filter((r) => counters.includes(r.kind)).map((r) => chapterOf(armies[me].levelId, r.chapterId, r.kind).corpsName)
     tips.push(`L’armée adverse comptait surtout des ${kindName(top[0])} (${top[1]}). Pour les contrer : ${counters.map(kindName).join(', ')}${houses.length ? ` — chez toi, ${houses.join(', ')}` : ''}.`)
   }
 
@@ -106,7 +110,7 @@ function advice(me: Side, armies: [ArmySpec, ArmySpec], rows: [Row[], Row[]], na
 
 export function Debrief({ armies, villages, names, colors, mySide, result, onClose, onRematch, onMenu }: Props) {
   const [tab, setTab] = useState<'bilan' | Side>('bilan')
-  const rows: [Row[], Row[]] = [rowsOf(armies[0], result.regiments?.[0]), rowsOf(armies[1], result.regiments?.[1])]
+  const rows: [Row[], Row[]] = [rowsOf(armies[0], result.regiments?.[0], armies[1]), rowsOf(armies[1], result.regiments?.[1], armies[0])]
   const order: Side[] = mySide === 0 ? [0, 1] : [1, 0]
   const tips = advice(mySide, armies, rows, names)
 
@@ -173,28 +177,28 @@ export function Debrief({ armies, villages, names, colors, mySide, result, onClo
           </div>
         </main>
       ) : (
-        <Village side={tab} army={armies[tab]} village={villages[tab]} color={colors[tab]} reports={result.regiments?.[tab]} />
+        <Village side={tab} army={armies[tab]} village={villages[tab]} color={colors[tab]} reports={result.regiments?.[tab]} enemy={armies[1 - tab]} />
       )}
     </div>
   )
 }
 
 /** Le village d'un camp, tel qu'il était à la fin de l'entraînement, avec la fiche du camp choisi. */
-function Village({ army, village, color, reports }: { side: Side; army: ArmySpec; village: PlayerState; color: string; reports?: RegimentReport[] }) {
-  const level = LEVELS.find((l) => l.id === army.levelId) ?? LEVELS[0]
-  const [selected, setSelected] = useState(level.chapters[0].id)
-  const chapter = level.chapters.find((c) => c.id === selected) ?? level.chapters[0]
+function Village({ army, village, color, reports, enemy }: { side: Side; army: ArmySpec; village: PlayerState; color: string; reports?: RegimentReport[]; enemy?: ArmySpec }) {
+  const chapters = chaptersOf(village)
+  const [selected, setSelected] = useState(chapters[0].id)
+  const chapter = chapters.find((c) => c.id === selected) ?? chapters[0]
   const house = houseOf(village, chapter.id)
   const g = garrison(chapter.unit, house.points)
   const rep = reports?.find((r) => r.id === chapter.id)
-  const nemesis = rep?.nemesis ? CHAPTERS.get(rep.nemesis) : null
+  const nemesis = rep?.nemesis && enemy ? regChapter(enemy, rep.nemesis) : null
   const thresholds = SOLO_RULES.ageThresholds
   const crans = levelFromPoints(house.points)
   return (
     <main className="db-village">
       <div className="map-wrap">
         <WorldMap
-          chapters={level.chapters}
+          chapters={chapters}
           getProgress={(id) => houseOf(village, id)}
           selected={chapter.id}
           onSelect={setSelected}

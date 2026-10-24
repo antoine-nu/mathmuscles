@@ -130,6 +130,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
                 {tierLabel && <span className="q-tier">{tierLabel}</span>}
               </div>
               <p className="q-text"><MathText text={ex.prompt} /></p>
+              {ex.code && <pre className="q-code"><code>{ex.code}</code></pre>}
               {ex.figure && <FigureView figure={ex.figure} />}
 
               {ex.kind === 'input' && (

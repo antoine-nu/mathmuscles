@@ -1,11 +1,12 @@
 // Adversaire ordinateur : simule un élève dont on choisit la note sur 20.
 // Il s'entraîne, tente des améliorations et des problèmes de l'hôtel de ville, avec une vitesse et une
 // réussite qui dépendent de sa note et de la difficulté, en respectant exactement les mêmes règles que le joueur.
-import { LEVELS, levelFromPoints } from '../data/curriculum'
+import { levelFromPoints } from '../data/curriculum'
+import { randomSelection } from '../game/selection'
 import { difficultyForLevel } from '../exercises'
 import type { Rules } from '../game/rules'
 import {
-  addSeries, addUpgrade, ageProblemAvailability, emptyPlayer, houseOf, setCooldown, solveAgeProblem, upgradeAvailability,
+  addSeries, addUpgrade, ageProblemAvailability, chaptersOf, emptyPlayer, houseOf, setCooldown, solveAgeProblem, upgradeAvailability,
   type PlayerState,
 } from '../game/state'
 
@@ -23,8 +24,9 @@ export class Bot {
   private readonly pace: number
 
   constructor(levelId: string, public grade: number, private rules: Rules) {
-    this.state = emptyPlayer(levelId)
-    const chapters = LEVELS.find((l) => l.id === levelId)!.chapters.map((c) => c.id)
+    // l'ordinateur choisit ses 7 sujets au hasard parmi ceux du niveau
+    this.state = emptyPlayer(levelId, undefined, randomSelection(levelId))
+    const chapters = chaptersOf(this.state).map((c) => c.id)
     // chaque partie, l'ordinateur privilégie 3 à 5 maisons différentes
     const n = 3 + Math.floor(Math.random() * 3)
     this.focus = [...chapters].sort(() => Math.random() - 0.5).slice(0, n)
@@ -40,7 +42,7 @@ export class Bot {
   tick(now: number): PlayerState {
     if (this.action && now >= this.action.ends) {
       const a = this.action
-      const chapter = LEVELS.flatMap((l) => l.chapters).find((c) => c.id === a.chapterId)!
+      const chapter = chaptersOf(this.state).find((c) => c.id === a.chapterId)!
       if (a.kind === 'series') {
         this.state = addSeries(this.state, a.chapterId, a.correct, 5, this.rules)
       } else if (a.kind === 'upgrade') {
@@ -55,9 +57,8 @@ export class Bot {
   }
 
   private choose(now: number): Action {
-    const level = LEVELS.find((l) => l.id === this.state.levelId)!
     // ordre mélangé : l'ordinateur ne favorise pas les premières maisons de la liste
-    const chapters = [...level.chapters].sort(() => Math.random() - 0.5)
+    const chapters = [...chaptersOf(this.state)].sort(() => Math.random() - 0.5)
     // 1. un problème de l'hôtel de ville disponible ? (le plus rentable d'abord)
     if (Math.random() < 0.55) {
       for (const n of [3, 2, 1] as const) {
@@ -82,7 +83,7 @@ export class Bot {
     // 3. une série d'entraînement, dans la maison de prédilection la moins avancée (parfois une autre)
     const pool = Math.random() < 0.85 ? this.focus : chapters.map((c) => c.id)
     const chapterId = [...pool].sort((a, b) => houseOf(this.state, a).points - houseOf(this.state, b).points + (Math.random() - 0.5) * this.rules.ppc)[0]
-    const tier = difficultyForLevel(levelFromPoints(houseOf(this.state, chapterId).points, this.rules.ppc))
+    const tier = difficultyForLevel(levelFromPoints(houseOf(this.state, chapterId).points, this.rules.ppc), this.state.levelId)
     const p = this.chance(this.skill - 0.035 * (tier - 1))
     let correct = 0
     for (let i = 0; i < 5; i++) if (Math.random() < p) correct++

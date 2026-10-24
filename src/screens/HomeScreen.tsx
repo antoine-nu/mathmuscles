@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LEVELS, UPCOMING_LEVELS, maxPoints, type Level } from '../data/curriculum'
-import { houseOf, type PlayerState } from '../game/state'
+import { chaptersOf, houseOf, type PlayerState } from '../game/state'
+import { levelPlayable } from '../game/selection'
 import { SOLO_RULES } from '../game/rules'
 import { Portrait } from '../components/Portrait'
 
@@ -27,7 +28,7 @@ export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
       return LEVELS[0].id
     }
   })
-  const level = LEVELS.find((l) => l.id === levelId) ?? LEVELS[0]
+  const level = LEVELS.find((l) => l.id === levelId && levelPlayable(l.id)) ?? LEVELS[0]
   const choose = (id: string) => {
     setLevelId(id)
     try {
@@ -46,14 +47,17 @@ export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
         </div>
         <p className="ls-tag">Chaque bonne réponse forme tes troupes. Chaque chapitre forge un corps d’armée.</p>
 
-        <h2 className="ls-h">1 · Choisis ta classe</h2>
+        <h2 className="ls-h">1 · Choisis ton niveau</h2>
         <div className="ls-cards">
           {LEVELS.map((lvl) => {
             const p = getSolo(lvl.id)
-            const pts = lvl.chapters.reduce((s, c) => s + houseOf(p, c.id).points, 0)
-            const ratio = pts / (maxPoints(SOLO_RULES.ppc) * lvl.chapters.length)
+            const mine = chaptersOf(p)
+            const pts = mine.reduce((s, c) => s + houseOf(p, c.id).points, 0)
+            const ratio = pts / (maxPoints(SOLO_RULES.ppc) * mine.length)
+            const playable = levelPlayable(lvl.id)
             return (
-              <button key={lvl.id} className={`ls-card ${lvl.id === level.id ? 'selected' : ''}`} onClick={() => choose(lvl.id)} aria-pressed={lvl.id === level.id}>
+              <button key={lvl.id} className={`ls-card ${lvl.id === level.id ? 'selected' : ''} ${playable ? '' : 'locked'}`} disabled={!playable}
+                onClick={() => choose(lvl.id)} aria-pressed={lvl.id === level.id}>
                 <div className="ls-short">{lvl.short}</div>
                 <div className="ls-label">{lvl.label}</div>
                 <div className="ls-army">
@@ -63,7 +67,7 @@ export function HomeScreen({ getSolo, name, onName, onPick }: Props) {
                 </div>
                 <p>{lvl.tagline}</p>
                 <div className="ls-progress"><div style={{ width: `${Math.round(ratio * 100)}%` }} /></div>
-                <div className="ls-pct">Entraînement libre : {Math.round(ratio * 100)} % de l’armée formée</div>
+                <div className="ls-pct">{playable ? <>Entraînement libre : {Math.round(ratio * 100)} % de l’armée formée</> : 'Exercices en préparation'}</div>
               </button>
             )
           })}

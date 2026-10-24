@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { Level } from '../data/curriculum'
+import { chaptersFor, type Level } from '../data/curriculum'
+import { normalizeSelection } from '../game/selection'
+import { SubjectPicker } from '../components/SubjectPicker'
 import { audio } from '../audio/engine'
 import { Codex } from '../components/Codex'
 import { MuteButton } from '../components/MuteButton'
@@ -16,12 +18,16 @@ interface Props {
   durationMin: number
   me: Side
   opponent: Side
+  /** Sujets choisis pour les 7 maisons. */
+  selection: string[]
+  onSelection: (selection: string[]) => void
   onReady: () => void
   onBack: () => void
 }
 
 /** Avant la partie : on consulte le codex des armées, puis chacun déclare « Je suis prêt ». */
-export function PrepScreen({ level, durationMin, me, opponent, onReady, onBack }: Props) {
+export function PrepScreen({ level, durationMin, me, opponent, selection, onSelection, onReady, onBack }: Props) {
+  const sel = normalizeSelection(level.id, selection)
   return (
     <div className="prep">
       <header className="prep-head">
@@ -34,11 +40,13 @@ export function PrepScreen({ level, durationMin, me, opponent, onReady, onBack }
       </header>
       <main className="prep-body">
         <p className="prep-intro">
-          Chaque maison de ton royaume forme un type de soldat. Pendant le chrono, entraîne celles que tu veux :
-          beaucoup d’unités (chacune coûte quelques bonnes réponses), des améliorations, des âges… Les forces et faiblesses ci-dessous t’aident à
-          composer une armée qui résiste à tout.
+          Chaque maison de ton royaume forme un type de soldat. Choisis d’abord le chapitre qui entraîne chaque maison,
+          puis, pendant le chrono, entraîne celles que tu veux : beaucoup d’unités (chacune coûte quelques bonnes
+          réponses), des améliorations, des âges… Les forces et faiblesses ci-dessous t’aident à composer une armée qui
+          résiste à tout.
         </p>
-        <Codex levelId={level.id} teamColor={me.color} />
+        <SubjectPicker levelId={level.id} selection={sel} onChange={onSelection} teamColor={me.color} disabled={me.ready} />
+        <Codex chapters={chaptersFor(level.id, sel)} teamColor={me.color} />
       </main>
       <footer className="prep-bar">
         <div className="prep-players">
@@ -50,7 +58,7 @@ export function PrepScreen({ level, durationMin, me, opponent, onReady, onBack }
             </div>
           ))}
         </div>
-        <button className="btn gold ready-btn" disabled={me.ready} onClick={() => { audio.unlock(); audio.play('calm'); onReady() }}>
+        <button className="btn gold ready-btn" disabled={me.ready} onClick={() => { audio.unlock(); audio.play('calm'); onSelection(sel); onReady() }}>
           {me.ready ? `Prêt ✓ — en attente de ${opponent.name}` : 'Je suis prêt ⚔'}
         </button>
       </footer>

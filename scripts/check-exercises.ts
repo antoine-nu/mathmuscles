@@ -8,7 +8,7 @@ import { FIG_H, FIG_W } from '../src/exercises/figure'
 
 const RUNS = Number(process.env.RUNS ?? 400)
 const showSamples = process.argv.includes('samples')
-const only = process.argv.find((a) => /^(5e|2)-/.test(a))
+const only = process.argv.find((a) => /^(5e|2|T)-/.test(a))
 const problems: string[] = []
 const samples: string[] = []
 const variety: string[] = []

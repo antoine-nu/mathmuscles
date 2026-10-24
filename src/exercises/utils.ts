@@ -5,6 +5,8 @@ export interface Exercise {
   title?: string
   /** Figure de géométrie accompagnant l'énoncé. */
   figure?: Figure
+  /** Programme (Python) affiché sous l'énoncé, en police à chasse fixe, lignes et indentation conservées. */
+  code?: string
   /** Énoncé. Mini-syntaxe : {a/b} → fraction empilée, ^n ou ^{…} → exposant, √{…} → racine, x_B → indice. */
   prompt: string
   kind: 'input' | 'choice'
@@ -32,6 +34,12 @@ export type Maker = () => Exercise
 export type Tiers = [Maker[], Maker[], Maker[], Maker[], Maker[]]
 /** Trois niveaux croissants (améliorations 1-2-3, ou problèmes de l'hôtel de ville à 1-2-3 points). */
 export type Ladder = [Maker[], Maker[], Maker[]]
+/** Contenu complet d'un sujet : entraînement (5 paliers), problèmes d'amélioration et de l'hôtel de ville (3 niveaux). */
+export interface SubjectContent {
+  tiers: Tiers
+  upgrades: Ladder
+  age: Ladder
+}
 
 /** Ajoute un titre et/ou une figure à un exercice existant. */
 export const withMeta = (ex: Exercise, meta: { title?: string; figure?: Figure }): Exercise => ({ ...ex, ...meta })
@@ -476,3 +484,34 @@ export function poly(...terms: [number, string][]): string {
 
 /** (x + a) avec le bon signe : bin(−3) → « x − 3 » */
 export const xPlus = (a: number, k = 1) => poly([k, 'x'], [a, ''])
+
+/**
+ * Modèle d'entraînement à plusieurs variantes (contexte, configuration, forme de l'expression…).
+ * Les variantes sont tirées dans un « sac » mélangé, sans remise : une série de 5 exercices les parcourt
+ * sans jamais servir deux fois de suite la même. Pour peser plus lourd, une variante peut figurer deux fois.
+ */
+export function variants(...makers: Maker[]): Maker {
+  let bag: number[] = []
+  let last = -1
+  return () => {
+    if (!bag.length) {
+      bag = shuffle(makers.map((_, i) => i))
+      const n = bag.length
+      if (n > 1 && makers[bag[n - 1]] === makers[last]) [bag[0], bag[n - 1]] = [bag[n - 1], bag[0]]
+    }
+    last = bag.pop()!
+    return makers[last]()
+  }
+}
+
+/** La réponse (nombre) est-elle déjà écrite telle quelle dans l'énoncé ? */
+const echoes = (ex: Exercise) => (ex.prompt.match(/−?\d+(?:,\d+)?/g) ?? ([] as string[])).includes(ex.answer.trim())
+
+/** Retire les tirages où la réponse se lit dans l'énoncé (on ne la « donne » pas à l'élève). */
+export function fresh(make: Maker): Maker {
+  return () => {
+    let ex = make()
+    for (let i = 0; i < 40 && echoes(ex); i++) ex = make()
+    return ex
+  }
+}

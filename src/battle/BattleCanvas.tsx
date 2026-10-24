@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { LEVELS, unitName, type Chapter } from '../data/curriculum'
+import { SUBJECTS } from '../data/curriculum'
 import type { UnitLook } from '../components/UnitSprite'
 import { seeded } from '../game/color'
 import type { Feed, UnitMeta } from './feed'
@@ -11,16 +11,14 @@ import { SPRITE_BOX, preloadSprites, spriteImage } from './sprites'
 /** Écrasement vertical de la vue « trois-quarts ». */
 const TILT = 0.62
 
-const CHAPTERS = new Map<string, Chapter>(LEVELS.flatMap((l) => l.chapters.map((c) => [c.id, c] as const)))
-
 export function lookOf(m: UnitMeta, color: string): UnitLook {
-  const c = CHAPTERS.get(m.regiment)
+  // (le rang 0 dessine un villageois, quel que soit le type d'unité de sa maison)
   return {
-    kind: m.kind === 'villager' ? (c?.unit ?? 'infantry') : m.kind,
+    kind: m.kind === 'villager' ? 'infantry' : m.kind,
     tier: m.tier,
     color,
-    emblem: c?.emblem ?? '',
-    name: c ? unitName(c, m.tier) : '',
+    emblem: SUBJECTS.get(m.regiment)?.emblem ?? '',
+    name: '',
     upgrades: m.upgrades,
   }
 }

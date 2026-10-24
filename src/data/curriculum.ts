@@ -10,10 +10,8 @@ export interface Upgrade {
   description: string
 }
 
-export interface Chapter {
-  id: string
-  title: string
-  topics: string[]
+/** Maison du village : forme un type d'unité (bâtiment, nom du corps, rangs, couleur, améliorations). */
+export interface HouseDef {
   unit: UnitKind
   building: BuildingKind
   buildingName: string
@@ -21,10 +19,22 @@ export interface Chapter {
   /** Noms des soldats aux rangs 1, 2 et 3 (le rang 0 est toujours le Villageois). */
   tierNames: [string, string, string]
   color: string
-  /** Symbole peint sur les boucliers et bannières. */
-  emblem: string
   upgrades: [Upgrade, Upgrade, Upgrade]
 }
+
+/** Sujet (chapitre du programme) : le joueur en choisit un par maison. */
+export interface Subject {
+  id: string
+  title: string
+  topics: string[]
+  /** Grande partie du programme (« Nombres et calculs », « Géométrie »…), pour regrouper les choix. */
+  domain: string
+  /** Symbole peint sur les boucliers et bannières. */
+  emblem: string
+}
+
+/** Une maison du village avec le sujet qui l'entraîne. L'identifiant est celui du sujet. */
+export interface Chapter extends HouseDef, Subject {}
 
 export interface Level {
   id: string
@@ -32,6 +42,15 @@ export interface Level {
   short: string
   era: string
   tagline: string
+  /** Les 7 maisons, dans l'ordre des types d'unités. */
+  houses: HouseDef[]
+  /** Catalogue des sujets du niveau. */
+  subjects: Subject[]
+  /** Sujets proposés par défaut, un par maison (même ordre que houses). */
+  defaults: string[]
+  /** Palier de difficulté des exercices selon le nombre de crans terminés (0 à 5). */
+  difficulty: number[]
+  /** Maisons avec les sujets par défaut. */
   chapters: Chapter[]
 }
 
@@ -67,210 +86,147 @@ const MONK_UPGRADES: Chapter['upgrades'] = [
   { id: 'illumination', name: 'Illumination', description: 'Conversion plus rapide et soins doublés.' },
 ]
 
-export const LEVELS: Level[] = [
-  {
-    id: '5e',
-    label: 'Cinquième',
-    short: '5e',
-    era: 'Âge féodal',
-    tagline: 'Bâtis ton premier royaume : relatifs, fractions, premières lettres…',
-    chapters: [
-      {
-        id: '5e-prio',
-        title: 'Enchaînements d’opérations',
-        topics: ['Priorités opératoires', 'Parenthèses', 'Calcul mental'],
-        unit: 'infantry',
-        building: 'barracks',
-        buildingName: 'Caserne',
-        corpsName: 'Infanterie',
-        tierNames: ['Milicien', 'Homme d’armes', 'Champion'],
-        color: '#2f5fb3',
-        emblem: '×',
-        upgrades: INFANTRY_UPGRADES,
-      },
-      {
-        id: '5e-rel',
-        title: 'Nombres relatifs',
-        topics: ['Repérage', 'Addition', 'Soustraction'],
-        unit: 'spear',
-        building: 'barracks',
-        buildingName: 'Caserne des piquiers',
-        corpsName: 'Lanciers',
-        tierNames: ['Lancier', 'Piquier', 'Hallebardier'],
-        color: '#b8362f',
-        emblem: '±',
-        upgrades: SPEAR_UPGRADES,
-      },
-      {
-        id: '5e-frac',
-        title: 'Fractions',
-        topics: ['Simplifier', 'Comparer', 'Additionner', 'Fraction d’une quantité'],
-        unit: 'archer',
-        building: 'range',
-        buildingName: 'Camp de tir',
-        corpsName: 'Archers',
-        tierNames: ['Archer', 'Arbalétrier', 'Arbalétrier d’élite'],
-        color: '#2f8f4e',
-        emblem: '½',
-        upgrades: ARCHER_UPGRADES,
-      },
-      {
-        id: '5e-lit',
-        title: 'Calcul littéral',
-        topics: ['Substituer', 'Réduire', 'Développer k(a+b)', 'Tester une égalité'],
-        unit: 'knight',
-        building: 'stable',
-        buildingName: 'Écurie royale',
-        corpsName: 'Chevaliers',
-        tierNames: ['Écuyer', 'Chevalier', 'Paladin'],
-        color: '#7a3fa8',
-        emblem: 'x',
-        upgrades: CAVALRY_UPGRADES,
-      },
-      {
-        id: '5e-prop',
-        title: 'Proportionnalité',
-        topics: ['Quatrième proportionnelle', 'Pourcentages', 'Vitesses'],
-        unit: 'scout',
-        building: 'stable',
-        buildingName: 'Écurie',
-        corpsName: 'Éclaireurs',
-        tierNames: ['Éclaireur', 'Cavalier léger', 'Hussard'],
-        color: '#d9862b',
-        emblem: '%',
-        upgrades: CAVALRY_UPGRADES,
-      },
-      {
-        id: '5e-geo',
-        title: 'Angles & triangles',
-        topics: ['Somme des angles', 'Inégalité triangulaire', 'Parallélogrammes'],
-        unit: 'siege',
-        building: 'workshop',
-        buildingName: 'Atelier de siège',
-        corpsName: 'Engins de siège',
-        tierNames: ['Bélier', 'Mangonneau', 'Trébuchet'],
-        color: '#8a6a3c',
-        emblem: '△',
-        upgrades: SIEGE_UPGRADES,
-      },
-      {
-        id: '5e-stat',
-        title: 'Statistiques & probabilités',
-        topics: ['Moyenne', 'Fréquences', 'Probabilités simples'],
-        unit: 'monk',
-        building: 'monastery',
-        buildingName: 'Monastère',
-        corpsName: 'Moines',
-        tierNames: ['Novice', 'Moine', 'Abbé'],
-        color: '#1f8a8a',
-        emblem: 'σ',
-        upgrades: MONK_UPGRADES,
-      },
-    ],
-  },
-  {
-    id: '2nde',
-    label: 'Seconde',
-    short: '2nde',
-    era: 'Âge des châteaux',
-    tagline: 'Fortifie ton empire : fonctions, vecteurs, équations…',
-    chapters: [
-      {
-        id: '2-nombres',
-        title: 'Nombres & calculs',
-        topics: ['Puissances', 'Racines carrées', 'Intervalles'],
-        unit: 'infantry',
-        building: 'barracks',
-        buildingName: 'Caserne',
-        corpsName: 'Infanterie lourde',
-        tierNames: ['Homme d’armes', 'Épéiste', 'Champion'],
-        color: '#2f5fb3',
-        emblem: '√',
-        upgrades: INFANTRY_UPGRADES,
-      },
-      {
-        id: '2-lit',
-        title: 'Calcul littéral',
-        topics: ['Développer', 'Identités remarquables', 'Factoriser'],
-        unit: 'knight',
-        building: 'stable',
-        buildingName: 'Écurie royale',
-        corpsName: 'Chevaliers',
-        tierNames: ['Chevalier', 'Cavalier', 'Paladin'],
-        color: '#7a3fa8',
-        emblem: 'x²',
-        upgrades: CAVALRY_UPGRADES,
-      },
-      {
-        id: '2-eq',
-        title: 'Équations & inéquations',
-        topics: ['Premier degré', 'Équation produit', 'Inéquations'],
-        unit: 'spear',
-        building: 'barracks',
-        buildingName: 'Caserne des piquiers',
-        corpsName: 'Piquiers',
-        tierNames: ['Piquier', 'Hallebardier', 'Garde royale'],
-        color: '#b8362f',
-        emblem: '=',
-        upgrades: SPEAR_UPGRADES,
-      },
-      {
-        id: '2-fct',
-        title: 'Fonctions',
-        topics: ['Images', 'Antécédents', 'Fonctions de référence'],
-        unit: 'archer',
-        building: 'range',
-        buildingName: 'Camp de tir',
-        corpsName: 'Arbalétriers',
-        tierNames: ['Arbalétrier', 'Archer long', 'Archer long d’élite'],
-        color: '#2f8f4e',
-        emblem: 'ƒ',
-        upgrades: ARCHER_UPGRADES,
-      },
-      {
-        id: '2-vect',
-        title: 'Vecteurs & repérage',
-        topics: ['Coordonnées', 'Milieu', 'Distance', 'Colinéarité'],
-        unit: 'siege',
-        building: 'workshop',
-        buildingName: 'Atelier de siège',
-        corpsName: 'Artillerie',
-        tierNames: ['Mangonneau', 'Onagre', 'Trébuchet'],
-        color: '#8a6a3c',
-        emblem: '→',
-        upgrades: SIEGE_UPGRADES,
-      },
-      {
-        id: '2-droites',
-        title: 'Droites & systèmes',
-        topics: ['Coefficient directeur', 'Équation de droite', 'Systèmes 2×2'],
-        unit: 'scout',
-        building: 'stable',
-        buildingName: 'Écurie',
-        corpsName: 'Cavalerie légère',
-        tierNames: ['Cavalier léger', 'Hussard', 'Hussard d’élite'],
-        color: '#d9862b',
-        emblem: 'y',
-        upgrades: CAVALRY_UPGRADES,
-      },
-      {
-        id: '2-stat',
-        title: 'Statistiques & probabilités',
-        topics: ['Moyenne pondérée', 'Évolutions en %', 'Probabilités'],
-        unit: 'monk',
-        building: 'monastery',
-        buildingName: 'Monastère',
-        corpsName: 'Moines',
-        tierNames: ['Moine', 'Prieur', 'Abbé'],
-        color: '#1f8a8a',
-        emblem: 'σ',
-        upgrades: MONK_UPGRADES,
-      },
-    ],
-  },
+// ── Maisons ─────────────────────────────────────────────────────────────
+const house = (unit: UnitKind, building: BuildingKind, buildingName: string, corpsName: string, tierNames: [string, string, string], color: string, upgrades: HouseDef['upgrades']): HouseDef =>
+  ({ unit, building, buildingName, corpsName, tierNames, color, upgrades })
+
+const HOUSES_5E: HouseDef[] = [
+  house('infantry', 'barracks', 'Caserne', 'Infanterie', ['Milicien', 'Homme d’armes', 'Champion'], '#2f5fb3', INFANTRY_UPGRADES),
+  house('spear', 'barracks', 'Caserne des piquiers', 'Lanciers', ['Lancier', 'Piquier', 'Hallebardier'], '#b8362f', SPEAR_UPGRADES),
+  house('archer', 'range', 'Camp de tir', 'Archers', ['Archer', 'Arbalétrier', 'Arbalétrier d’élite'], '#2f8f4e', ARCHER_UPGRADES),
+  house('knight', 'stable', 'Écurie royale', 'Chevaliers', ['Écuyer', 'Chevalier', 'Paladin'], '#7a3fa8', CAVALRY_UPGRADES),
+  house('scout', 'stable', 'Écurie', 'Éclaireurs', ['Éclaireur', 'Cavalier léger', 'Hussard'], '#d9862b', CAVALRY_UPGRADES),
+  house('siege', 'workshop', 'Atelier de siège', 'Engins de siège', ['Bélier', 'Mangonneau', 'Trébuchet'], '#8a6a3c', SIEGE_UPGRADES),
+  house('monk', 'monastery', 'Monastère', 'Moines', ['Novice', 'Moine', 'Abbé'], '#1f8a8a', MONK_UPGRADES),
+]
+const HOUSES_2NDE: HouseDef[] = [
+  house('infantry', 'barracks', 'Caserne', 'Infanterie lourde', ['Homme d’armes', 'Épéiste', 'Champion'], '#2f5fb3', INFANTRY_UPGRADES),
+  house('spear', 'barracks', 'Caserne des piquiers', 'Piquiers', ['Piquier', 'Hallebardier', 'Garde royale'], '#b8362f', SPEAR_UPGRADES),
+  house('archer', 'range', 'Camp de tir', 'Arbalétriers', ['Arbalétrier', 'Archer long', 'Archer long d’élite'], '#2f8f4e', ARCHER_UPGRADES),
+  house('knight', 'stable', 'Écurie royale', 'Chevaliers', ['Chevalier', 'Cavalier', 'Paladin'], '#7a3fa8', CAVALRY_UPGRADES),
+  house('scout', 'stable', 'Écurie', 'Cavalerie légère', ['Cavalier léger', 'Hussard', 'Hussard d’élite'], '#d9862b', CAVALRY_UPGRADES),
+  house('siege', 'workshop', 'Atelier de siège', 'Artillerie', ['Mangonneau', 'Onagre', 'Trébuchet'], '#8a6a3c', SIEGE_UPGRADES),
+  house('monk', 'monastery', 'Monastère', 'Moines', ['Moine', 'Prieur', 'Abbé'], '#1f8a8a', MONK_UPGRADES),
+]
+const HOUSES_ADULTES: HouseDef[] = [
+  house('infantry', 'barracks', 'Caserne impériale', 'Garde impériale', ['Épéiste', 'Champion', 'Garde impérial'], '#2f5fb3', INFANTRY_UPGRADES),
+  house('spear', 'barracks', 'Caserne des piquiers', 'Hallebardiers', ['Piquier', 'Hallebardier', 'Hallebardier d’élite'], '#b8362f', SPEAR_UPGRADES),
+  house('archer', 'range', 'Camp de tir', 'Archers longs', ['Archer long', 'Arbalétrier lourd', 'Maître archer'], '#2f8f4e', ARCHER_UPGRADES),
+  house('knight', 'stable', 'Écurie royale', 'Paladins', ['Chevalier', 'Paladin', 'Grand maître'], '#7a3fa8', CAVALRY_UPGRADES),
+  house('scout', 'stable', 'Écurie', 'Hussards', ['Cavalier léger', 'Hussard', 'Hussard ailé'], '#d9862b', CAVALRY_UPGRADES),
+  house('siege', 'workshop', 'Atelier de siège', 'Artillerie lourde', ['Onagre', 'Trébuchet', 'Bombarde'], '#8a6a3c', SIEGE_UPGRADES),
+  house('monk', 'monastery', 'Bibliothèque', 'Érudits', ['Copiste', 'Érudit', 'Grand savant'], '#1f8a8a', MONK_UPGRADES),
 ]
 
-export const UPCOMING_LEVELS = ['6e', '4e', '3e', '1re', 'Tle']
+// ── Sujets ──────────────────────────────────────────────────────────────
+const subject = (id: string, domain: string, title: string, emblem: string, topics: string[]): Subject => ({ id, domain, title, emblem, topics })
+
+const NC = 'Nombres et calculs', EG = 'Espace et géométrie', GM = 'Grandeurs et mesures', OD = 'Données et probabilités'
+const SUBJECTS_5E: Subject[] = [
+  subject('5e-prio', NC, 'Enchaînements d’opérations', '×', ['Priorités opératoires', 'Parenthèses', 'Calcul mental']),
+  subject('5e-rel', NC, 'Nombres relatifs', '±', ['Repérage', 'Comparaison', 'Addition et soustraction']),
+  subject('5e-arith', NC, 'Arithmétique', '÷', ['Multiples et diviseurs', 'Critères de divisibilité', 'Nombres premiers', 'Division euclidienne']),
+  subject('5e-frac', NC, 'Nombres en écriture fractionnaire', '½', ['Comparer', 'Simplifier', 'Additionner', 'Fraction d’une quantité']),
+  subject('5e-puiss', NC, 'Puissances', '²', ['Carrés', 'Cubes']),
+  subject('5e-lit', NC, 'Calcul littéral', 'x', ['Substituer', 'Réduire', 'Développer k(a + b)']),
+  subject('5e-equa', NC, 'Équations', '=', ['Tester une solution', 'Résoudre ax + b = c', 'Mettre en équation']),
+  subject('5e-geo', EG, 'Géométrie du triangle', '△', ['Somme des angles', 'Inégalité triangulaire', 'Droites remarquables']),
+  subject('5e-angles', EG, 'Angles et parallélisme', '∥', ['Alternes-internes', 'Correspondants', 'Droites parallèles']),
+  subject('5e-sym', EG, 'Symétries', '⇄', ['Symétrie axiale', 'Symétrie centrale']),
+  subject('5e-para', EG, 'Parallélogrammes', '▱', ['Propriétés', 'Rectangle, losange, carré']),
+  subject('5e-aires', GM, 'Périmètres, aires et volumes', 'π', ['Aires', 'Périmètres', 'Prismes et cylindres']),
+  subject('5e-prop', GM, 'Proportionnalité et pourcentages', '%', ['Tableaux', 'Échelles', 'Pourcentages', 'Vitesses']),
+  subject('5e-stat', OD, 'Statistiques', 'σ', ['Tableaux et graphiques', 'Moyenne', 'Fréquences']),
+  subject('5e-proba', OD, 'Probabilités', 'P', ['Issues', 'Probabilités simples']),
+]
+const AL = 'Nombres et calculs', FN = 'Fonctions', GE = 'Géométrie', SP = 'Statistiques et probabilités'
+const SUBJECTS_2NDE: Subject[] = [
+  subject('2-ens', AL, 'Ensembles et logique', 'ℝ', ['ℕ, ℤ, 𝔻, ℚ, ℝ', 'Intervalles', 'Valeur absolue']),
+  subject('2-nombres', AL, 'Nombres réels et arithmétique', '√', ['Puissances', 'Racines carrées', 'Multiples et diviseurs']),
+  subject('2-lit', AL, 'Calcul littéral', 'x²', ['Développer', 'Factoriser', 'Identités remarquables']),
+  subject('2-eq', AL, 'Équations et inéquations', '=', ['Premier degré', 'Produit nul', 'Tableaux de signes']),
+  subject('2-fct', FN, 'Généralités sur les fonctions', 'ƒ', ['Image', 'Antécédent', 'Courbe']),
+  subject('2-var', FN, 'Variations et extremums', '↗', ['Croissance', 'Tableau de variations', 'Maximum et minimum']),
+  subject('2-ref', FN, 'Fonctions de référence', '⅟', ['Affine', 'Carré', 'Inverse', 'Racine carrée']),
+  subject('2-vect', GE, 'Vecteurs', '→', ['Somme', 'Produit par un réel', 'Colinéarité']),
+  subject('2-droites', GE, 'Repérage et droites', 'y', ['Coordonnées', 'Équations de droites', 'Systèmes']),
+  subject('2-geo', GE, 'Problèmes de géométrie', '⊿', ['Pythagore', 'Thalès', 'Trigonométrie']),
+  subject('2-stat', SP, 'Statistique descriptive', 'σ', ['Information chiffrée', 'Moyenne, médiane, quartiles', 'Écart-type']),
+  subject('2-biv', SP, 'Statistiques bivariées', '⊞', ['Tableaux croisés', 'Fréquences conditionnelles']),
+  subject('2-proba', SP, 'Probabilités', 'P', ['Loi de probabilité', 'Échantillonnage', 'Probabilités conditionnelles']),
+]
+const AG = 'Algèbre et géométrie', AN = 'Analyse', PR = 'Probabilités', AP = 'Algorithmique et logique', EX = 'Options'
+const SUBJECTS_TERMINALE: Subject[] = [
+  subject('T-denomb', AG, 'Combinatoire et dénombrement', '!', ['Arrangements', 'Permutations', 'Combinaisons']),
+  subject('T-espace', AG, 'Géométrie dans l’espace', '⊥', ['Droites et plans', 'Orthogonalité', 'Produit scalaire']),
+  subject('T-param', AG, 'Représentations paramétriques', 't', ['Droites paramétrées', 'Équations cartésiennes de plans']),
+  subject('T-suites', AN, 'Suites', 'u', ['Récurrence', 'Limites de suites']),
+  subject('T-limites', AN, 'Limites et continuité', '∞', ['Limites de fonctions', 'Continuité', 'Valeurs intermédiaires']),
+  subject('T-derivee', AN, 'Dérivation et convexité', '′', ['Dérivées', 'Tangentes', 'Convexité']),
+  subject('T-lntrig', AN, 'Logarithme et trigonométrie', 'ln', ['Logarithme népérien', 'Cosinus et sinus']),
+  subject('T-primitives', AN, 'Primitives et équations différentielles', 'F', ['Primitives', 'y′ = ay + b']),
+  subject('T-integrales', AN, 'Calcul intégral', '∫', ['Intégrales et aires', 'Intégration par parties']),
+  subject('T-binom', PR, 'Loi binomiale', 'B', ['Schéma de Bernoulli', 'Loi binomiale']),
+  subject('T-sommesva', PR, 'Sommes de variables aléatoires', 'E', ['Espérance', 'Variance', 'Échantillons']),
+  subject('T-bienayme', PR, 'Concentration et grands nombres', '≈', ['Bienaymé-Tchebychev', 'Loi des grands nombres']),
+  subject('T-python', AP, 'Algorithmique et Python', '>', ['Boucles', 'Conditions', 'Listes']),
+  subject('T-logique', AP, 'Ensembles et logique', '∀', ['Quantificateurs', 'Implication', 'Ensembles']),
+  subject('T-complexes', EX, 'Nombres complexes (expertes)', 'i', ['Forme algébrique', 'Module et argument']),
+  subject('T-arith', EX, 'Arithmétique (expertes)', '≡', ['Congruences', 'PGCD', 'Nombres premiers']),
+  subject('T-matrices', EX, 'Matrices et graphes (expertes)', 'M', ['Matrices', 'Graphes']),
+  subject('T-complem', EX, 'Modèles (maths complémentaires)', 'e', ['Croissance exponentielle', 'Ajustements', 'Lois usuelles']),
+]
+
+function level(base: Omit<Level, 'chapters'>): Level {
+  return { ...base, chapters: base.defaults.map((id, i) => merge(base.houses[i], base.subjects.find((s) => s.id === id)!)) }
+}
+const merge = (h: HouseDef, s: Subject): Chapter => ({ ...h, ...s })
+
+export const LEVELS: Level[] = [
+  level({
+    id: '5e', label: 'Cinquième', short: '5e', era: 'Âge féodal',
+    tagline: 'Bâtis ton premier royaume : relatifs, fractions, premières lettres…',
+    houses: HOUSES_5E, subjects: SUBJECTS_5E, difficulty: [1, 2, 3, 4, 5, 5],
+    defaults: ['5e-prio', '5e-rel', '5e-frac', '5e-lit', '5e-prop', '5e-geo', '5e-stat'],
+  }),
+  level({
+    id: '2nde', label: 'Seconde', short: '2nde', era: 'Âge des châteaux',
+    tagline: 'Fortifie ton empire : fonctions, vecteurs, équations…',
+    houses: HOUSES_2NDE, subjects: SUBJECTS_2NDE, difficulty: [1, 2, 3, 4, 5, 5],
+    defaults: ['2-nombres', '2-eq', '2-fct', '2-lit', '2-droites', '2-vect', '2-stat'],
+  }),
+  level({
+    id: 'adulte', label: 'Adultes · remise en jambes', short: 'Adulte', era: 'Âge impérial',
+    tagline: 'Tout le programme de Terminale, en douceur : pour retrouver ses réflexes.',
+    houses: HOUSES_ADULTES, subjects: SUBJECTS_TERMINALE, difficulty: [1, 1, 2, 2, 3, 3],
+    defaults: ['T-suites', 'T-denomb', 'T-derivee', 'T-lntrig', 'T-binom', 'T-espace', 'T-logique'],
+  }),
+  level({
+    id: 'expert', label: 'Adultes · aguerris', short: 'Expert', era: 'Âge impérial',
+    tagline: 'Tout le programme de Terminale, options expertes comprises, à pleine difficulté.',
+    houses: HOUSES_ADULTES, subjects: SUBJECTS_TERMINALE, difficulty: [2, 3, 4, 5, 5, 5],
+    defaults: ['T-suites', 'T-denomb', 'T-integrales', 'T-derivee', 'T-binom', 'T-espace', 'T-complexes'],
+  }),
+]
+
+/** Tous les sujets, par identifiant (un sujet peut servir à plusieurs niveaux). */
+export const SUBJECTS = new Map<string, Subject>(LEVELS.flatMap((l) => l.subjects.map((s) => [s.id, s] as const)))
+export const levelById = (id: string): Level => LEVELS.find((l) => l.id === id) ?? LEVELS[0]
+
+/** Maisons d'un niveau avec les sujets choisis (selection[i] pour la maison i ; défaut sinon). */
+export function chaptersFor(levelId: string, selection?: readonly string[]): Chapter[] {
+  const lvl = levelById(levelId)
+  return lvl.houses.map((h, i) => merge(h, SUBJECTS.get(selection?.[i] ?? lvl.defaults[i]) ?? SUBJECTS.get(lvl.defaults[i])!))
+}
+
+/** Maison d'un régiment (armée d'un joueur, éventuellement d'un autre niveau). */
+export function chapterOf(levelId: string, subjectId: string, unit: UnitKind): Chapter {
+  const lvl = levelById(levelId)
+  const h = lvl.houses.find((x) => x.unit === unit) ?? lvl.houses[0]
+  return merge(h, SUBJECTS.get(subjectId) ?? lvl.subjects[0])
+}
+
+export const UPCOMING_LEVELS = ['6e', '4e', '3e', '1re']
 
 // ── Règles de progression ──────────────────────────────────────────────
 // 1 bonne réponse = 1 point, quelle que soit la partie ; 10 points font un cran ; 5 crans par maison.

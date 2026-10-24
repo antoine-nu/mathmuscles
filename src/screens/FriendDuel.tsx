@@ -12,6 +12,7 @@ import { audio } from '../audio/engine'
 import { DurationPicker, SetupFrame } from './DuelSetup'
 import { TrainingScreen } from './TrainingScreen'
 import { randomTheme, type ThemeId } from '../game/themes'
+import { loadSelection, normalizeSelection, saveSelection } from '../game/selection'
 
 type Role = 'host' | 'guest'
 
@@ -44,6 +45,10 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
   const [duration, setDuration] = useState(15)
   const [phase, setPhase] = useState<Phase>({ name: 'lobby' })
   const [player, setPlayer] = useState<PlayerState>(() => emptyPlayer(level.id))
+  const [selection, setSelection] = useState(() => loadSelection(level.id))
+  const selectionRef = useRef(selection)
+  selectionRef.current = selection
+  const chooseSubjects = (s: string[]) => { setSelection(s); saveSelection(level.id, s) }
   const [oppStatus, setOppStatus] = useState({ age: 0, pop: 0 })
   const [notice, setNotice] = useState<string | null>(null)
   const [meReady, setMeReady] = useState(false)
@@ -68,7 +73,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
     setDuration(minutes)
     oppArmy.current = null
     oppFinal.current = false
-    setPlayer(emptyPlayer(level.id, theme))
+    setPlayer(emptyPlayer(level.id, theme, normalizeSelection(level.id, selectionRef.current)))
     setOppStatus({ age: 0, pop: 0 })
     setNotice(null)
     const startsAt = Date.now() + startIn
@@ -260,6 +265,8 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         durationMin={duration}
         me={{ name: me, ready: meReady, color: mySide === 0 ? BLUE : RED }}
         opponent={{ name: peer?.name ?? 'Adversaire', ready: peerReady, color: mySide === 0 ? RED : BLUE, detail: peerOnline ? 'Consulte le codex…' : 'Déconnecté' }}
+        selection={selection}
+        onSelection={chooseSubjects}
         onReady={() => { setMeReady(true); send({ t: 'ready' }) }}
         onBack={quit}
       />

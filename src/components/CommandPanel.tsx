@@ -103,7 +103,7 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
           <span className="train-icon">⚔</span>
           <span>
             <b>Entraîner</b>
-            <small>Série de 5 · palier {difficultyForLevel(level)}/5 {'★'.repeat(difficultyForLevel(level))}</small>
+            <small>Série de 5 · palier {difficultyForLevel(level, player.levelId)}/5 {'★'.repeat(difficultyForLevel(level, player.levelId))}</small>
           </span>
         </button>
         <div className="upgrades">

@@ -4,7 +4,7 @@ import { garrison } from '../battle/units'
 import { difficultyForLevel, makeAgeProblem, makeSeries, makeUpgradeProblem, pickDrill } from '../exercises'
 import type { Exercise } from '../exercises/utils'
 import {
-  addSeries, addUpgrade, ageOf, drillKey, houseOf, levelOf, maxPopulationOf, populationOf, setCooldown, setDrill, solveAgeProblem,
+  addSeries, addUpgrade, ageOf, chaptersOf, drillKey, houseOf, levelOf, maxPopulationOf, populationOf, setCooldown, setDrill, solveAgeProblem,
   type PlayerState,
 } from '../game/state'
 import { useRules } from '../game/rules'
@@ -15,11 +15,12 @@ import { ResIcon } from '../components/ResIcon'
 import { TownHallModal } from '../components/TownHallModal'
 import { WorldMap } from '../components/WorldMap'
 import { CodexModal } from '../components/Codex'
+import { SubjectPicker } from '../components/SubjectPicker'
 import { MuteButton } from '../components/MuteButton'
 import { audio } from '../audio/engine'
 import { THEME_IDS, themeOf } from '../game/themes'
 import { StartCountdown } from './PrepScreen'
-import { TEST_DURATIONS } from './DuelSetup'
+import { DEMO_MAX_DURATION } from './DuelSetup'
 
 export interface OpponentStatus {
   name: string
@@ -52,7 +53,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
   const rules = useRules()
   const now = useNow(500)
   const level = levelOf(player)
-  const chapters = level.chapters
+  const chapters = chaptersOf(player)
   const [selected, setSelected] = useState(chapters[0].id)
   const [session, setSession] = useState<Session | null>(null)
   const [townHall, setTownHall] = useState(false)
@@ -60,6 +61,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
   const [toast, setToast] = useState<string | null>(null)
   const [ageUp, setAgeUp] = useState<number | null>(null)
   const [codex, setCodex] = useState(false)
+  const [subjects, setSubjects] = useState(false)
   const chapter = chapters.find((c) => c.id === selected) ?? chapters[0]
   const age = ageOf(player, rules)
   const thresholds = [0, ...rules.ageThresholds]
@@ -82,11 +84,11 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
     const key = drillKey(c.id, cran)
     let model = player.drills?.[key]
     if (model === undefined) {
-      const picked = pickDrill(c.id, cran)
+      const picked = pickDrill(c.id, cran, player.levelId)
       model = picked
       update((p) => setDrill(p, key, picked))
     }
-    setSession({ kind: 'series', chapter: c, pointsBefore: houseOf(player, c.id).points, exercises: makeSeries(c.id, cran, model), tier: difficultyForLevel(cran), nonce: Date.now() })
+    setSession({ kind: 'series', chapter: c, pointsBefore: houseOf(player, c.id).points, exercises: makeSeries(c.id, cran, model, player.levelId), tier: difficultyForLevel(cran, player.levelId), nonce: Date.now() })
   }
   const startUpgrade = (c: Chapter, n: 1 | 2 | 3) => setSession({ kind: 'upgrade', chapter: c, n, exercises: [makeUpgradeProblem(c.id, n)], nonce: Date.now() })
   const startAge = (c: Chapter, n: 1 | 2 | 3) => {
@@ -154,6 +156,9 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
         <div className="hud-right">
           <button className="hud-btn" onClick={() => setCodex(true)} title="Caractéristiques des unités">📜 Codex</button>
           {mode === 'solo' && (
+            <button className="hud-btn" onClick={() => setSubjects(true)} title="Choisir le chapitre de chaque maison">📚 Sujets</button>
+          )}
+          {mode === 'solo' && (
             <button className="hud-btn" title={`Décor : ${themeOf(player.mapTheme).name} (cliquer pour changer)`}
               onClick={() => update((p) => ({ ...p, mapTheme: THEME_IDS[(THEME_IDS.indexOf(themeOf(p.mapTheme).id) + 1) % THEME_IDS.length] }))}>
               🗺
@@ -172,7 +177,7 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
               <span className="opp-info">{AGES[opponent.age]} · {opponent.population} unités</span>
             </div>
           )}
-          {(mode === 'solo' || TEST_DURATIONS.includes(rules.durationMin ?? 0)) && (
+          {(mode === 'solo' || (rules.durationMin ?? 99) <= DEMO_MAX_DURATION) && (
             <label className="demo-toggle" title="Pour tester : simuler la progression">
               <input type="checkbox" checked={demo} onChange={(e) => setDemo(e.target.checked)} />
               Mode démo
@@ -233,7 +238,23 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
         })}
       />
 
-      {codex && <CodexModal levelId={player.levelId} teamColor={teamColor} onClose={() => setCodex(false)} />}
+      {codex && <CodexModal chapters={chapters} teamColor={teamColor} onClose={() => setCodex(false)} />}
+      {subjects && (
+        <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') setSubjects(false) }}>
+          <div className="townhall codex-modal" role="dialog" aria-label="Sujets des maisons">
+            <header className="th-head">
+              <div>
+                <div className="eyebrow">Programme</div>
+                <h2>Sujets des maisons</h2>
+              </div>
+              <button className="close light" onClick={() => setSubjects(false)} aria-label="Fermer" autoFocus>✕</button>
+            </header>
+            <SubjectPicker levelId={player.levelId} selection={player.selection ?? []} teamColor={teamColor}
+              onChange={(selection) => update((p) => ({ ...p, selection }))} />
+            <p className="setup-note">La progression de chaque chapitre est conservée quand tu changes de sujet.</p>
+          </div>
+        </div>
+      )}
       {startsAt && <StartCountdown startsAt={startsAt} />}
 
       {townHall && !timeUp && (

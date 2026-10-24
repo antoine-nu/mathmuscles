@@ -26,6 +26,8 @@ export interface FigSegment {
   /** Codage : 1 ou 2 petits traits (longueurs égales), ou une flèche (droites parallèles). */
   mark?: 'tick' | 'tick2' | 'arrow' | 'arrow2'
   color?: string
+  /** Pointe de flèche à l'extrémité b (vecteur). */
+  head?: boolean
 }
 
 export interface FigAngle {
@@ -53,6 +55,21 @@ export interface Figure {
   polygons?: { pts: string[]; fill: string }[]
   /** Textes libres (coordonnées du cadre). */
   notes?: { x: number; y: number; text: string }[]
+  /** Cercles : centre (nom d'un point) et rayon en unités du cadre. */
+  circles?: { c: string; r: number; dashed?: boolean; color?: string }[]
+  /** Courbes et lignes brisées, en coordonnées du cadre (voir graphFigure pour un repère). */
+  curves?: { pts: [number, number][]; color?: string; dashed?: boolean; width?: number }[]
+  /** Repère : axes gradués (et quadrillage), en coordonnées du cadre. */
+  axes?: {
+    /** Position de l'origine dans le cadre et taille d'une unité (px) sur chaque axe. */
+    ox: number; oy: number; ux: number; uy: number
+    /** Graduations visibles, en unités mathématiques. */
+    xMin: number; xMax: number; yMin: number; yMax: number
+    /** Pas des graduations (défaut 1) et des nombres écrits (défaut : pas des graduations). */
+    step?: number; labelStep?: number; ystep?: number; ylabelStep?: number
+    grid?: boolean
+    names?: [string, string]
+  }
   /** Légende sous la figure (par défaut « La figure n'est pas à l'échelle. »). */
   caption?: string
 }
@@ -210,4 +227,64 @@ export function thalesFigure(opts: {
         { a: n.M, b: n.B, label: L.MB, color: 'transparent' }, { a: n.N, b: n.C, label: L.NC, color: 'transparent' },
       ]
   return { points: pts, segments }
+}
+
+// ── Repères et courbes ─────────────────────────────────────────────────
+
+export interface GraphWindow {
+  xMin: number; xMax: number; yMin: number; yMax: number
+  /** Pas des graduations (défaut 1) et des nombres écrits sur l'axe des abscisses / ordonnées. */
+  step?: number; labelStep?: number; ystep?: number; ylabelStep?: number
+  grid?: boolean
+  w?: number; h?: number
+}
+
+/**
+ * Repère prêt à l'emploi : renvoie la figure (axes, quadrillage) et une fonction `at(x, y)` qui convertit des
+ * coordonnées mathématiques en coordonnées du cadre, pour y poser des points, des segments ou des courbes.
+ * Exemple : const g = graphFigure({ xMin: -3, xMax: 3, yMin: -2, yMax: 5 }); g.plot((x) => x * x); g.point('A', 1, 1)
+ */
+export function graphFigure(win: GraphWindow) {
+  const w = win.w ?? FIG_W, h = win.h ?? FIG_H
+  const m = 22
+  const ux = (w - 2 * m) / (win.xMax - win.xMin)
+  const uy = (h - 2 * m) / (win.yMax - win.yMin)
+  const ox = m - win.xMin * ux, oy = h - m + win.yMin * uy
+  const at = (x: number, y: number): [number, number] => [ox + x * ux, oy - y * uy]
+  const figure: Figure = {
+    w, h, points: {}, segments: [], curves: [], notes: [],
+    axes: { ox, oy, ux, uy, xMin: win.xMin, xMax: win.xMax, yMin: win.yMin, yMax: win.yMax, step: win.step, labelStep: win.labelStep, ystep: win.ystep, ylabelStep: win.ylabelStep, grid: win.grid ?? true },
+    caption: '',
+  }
+  return {
+    figure,
+    at,
+    /** Trace la courbe de f sur [a, b] (par défaut toute la fenêtre), en coupant hors du cadre. */
+    plot(f: (x: number) => number, opts: { a?: number; b?: number; color?: string; dashed?: boolean } = {}) {
+      const a = opts.a ?? win.xMin, b = opts.b ?? win.xMax
+      let run: [number, number][] = []
+      const flush = () => { if (run.length > 1) figure.curves!.push({ pts: run, color: opts.color ?? '#b8362f', dashed: opts.dashed }); run = [] }
+      for (let i = 0; i <= 160; i++) {
+        const x = a + ((b - a) * i) / 160
+        const y = f(x)
+        if (!Number.isFinite(y) || y < win.yMin - 0.5 || y > win.yMax + 0.5) { flush(); continue }
+        run.push(at(x, Math.max(win.yMin, Math.min(win.yMax, y))))
+      }
+      flush()
+    },
+    /** Point nommé en coordonnées mathématiques. */
+    point(name: string, x: number, y: number, label?: string, pos?: LabelPos) {
+      const [px, py] = at(x, y)
+      figure.points[name] = { x: px, y: py, label: label ?? name, pos }
+    },
+    /** Segment (ou vecteur avec head) entre deux points déjà posés. */
+    segment(a: string, b: string, opts: Omit<FigSegment, 'a' | 'b'> = {}) {
+      figure.segments!.push({ a, b, ...opts })
+    },
+    /** Texte libre en coordonnées mathématiques. */
+    note(x: number, y: number, text: string) {
+      const [px, py] = at(x, y)
+      figure.notes!.push({ x: px, y: py, text })
+    },
+  }
 }

@@ -22,6 +22,19 @@ npm run dev        # http://localhost:5173
 Pages utiles : `/?problemes` (relecture de tous les exercices et problèmes, avec figures), `/?galerie` (toutes les unités),
 `/?bataille` (bataille de démonstration immédiate), `/?bataille=artillerie` (démonstration avec engins de siège).
 
+## Niveaux et chapitres
+
+Quatre niveaux : **Cinquième**, **Seconde**, et deux niveaux **adultes** sur tout le programme de Terminale
+(spécialité, options maths expertes et complémentaires) : « remise en jambes » (paliers de difficulté 1 à 3, pour qui a
+un peu oublié) et « aguerris » (paliers 2 à 5).
+
+Le village a toujours **7 maisons**, une par type d'unité (infanterie, lanciers, archers, chevaliers, éclaireurs,
+siège, moines). Avant de jouer, chaque joueur choisit le **chapitre** qui entraîne chaque maison, parmi le programme
+complet de son niveau (15 chapitres en 5e, 13 en 2nde, 18 pour les adultes) : en entraînement libre à la première
+visite (puis bouton 📚 Sujets ; la progression de chaque chapitre est conservée), en duel sur l'écran de préparation
+(la dernière sélection est mémorisée). L'ordinateur tire ses chapitres au hasard. Un chapitre dont les exercices ne
+sont pas encore écrits n'est pas proposé ; un niveau sans assez de chapitres reste verrouillé.
+
 ## Modes de jeu
 
 - **Entraînement libre** : on fait grandir son royaume à son rythme ; la progression est sauvegardée dans le navigateur.
@@ -32,7 +45,7 @@ finale reprend le même thème. En duel, l'hôte tire le décor pour les deux jo
 `/?bataille&theme=desert` (plaine, cote, desert, hiver, automne).
 - **Défier l'ordinateur** : on choisit la durée et la **note sur 20** de l'adversaire (sa vitesse et sa réussite en dépendent).
 - **Défier un camarade** : l'un crée une partie et donne le **code à 4 caractères**, l'autre le saisit. L'hôte choisit la
-  durée (15, 30, 45 min ou 1 heure). Les deux classes peuvent être différentes (5e contre 2nde) : les unités sont les
+  durée (15, 30, 45 min, 1 heure ou une durée personnalisée de 1 à 180 min). Les deux classes peuvent être différentes (5e contre 2nde) : les unités sont les
   mêmes, seuls les exercices changent ; sur 1 200 batailles simulées entre élèves de même niveau (15 min à 1 h),
   chaque classe gagne entre 47 et 53 % du temps.
 
@@ -71,9 +84,8 @@ sur une clé USB, puis sur chaque ordinateur, l'ouvrir d'un double-clic (Chrome,
 doivent avoir accès à Internet (les relais servent à se trouver). Le premier joueur choisit « Défier un camarade » →
 « Créer une partie » et lit le code à l'autre, qui le saisit puis clique sur « Rejoindre ».
 
-**Partie de test (développeur)** : sous les durées, les petits boutons « 🛠 test 1 min » et « 🛠 test 5 min » lancent une
-partie de 1 ou 5 minutes où le « Mode démo » est disponible (+1 cran, améliorations, points d'âge) pour former vite une armée et voir une
-bataille.
+**Partie de test (développeur)** : durée « Autre » de 5 minutes ou moins : le « Mode démo » est alors disponible
+pendant l'entraînement (+1 cran, améliorations, points d'âge) pour former vite une armée et voir une bataille.
 
 Pour tester seul : ouvrir deux onglets sur `/?reseau=local` (les onglets se parlent sans Internet) ; ajouter
 `&chrono=30` pour un entraînement de 30 secondes.
@@ -130,9 +142,11 @@ expressions en x (contrôle « développé » / « factorisé »), a√b, couple
 
 ```
 src/
-  data/curriculum.ts      niveaux, chapitres (maisons), améliorations, crans, âges
-  exercises/              entraînement (cinquieme.ts, seconde.ts), améliorations (upgrades*.ts),
-                          hôtel de ville (age*.ts), moteur de correction (utils.ts), figures (figure.ts), contextes
+  data/curriculum.ts      niveaux, maisons (types d'unités), catalogue des chapitres, améliorations, crans, âges
+  exercises/              chapitres d'origine : entraînement (cinquieme.ts, seconde.ts), améliorations
+                          (upgrades*.ts), hôtel de ville (age*.ts) ; nouveaux chapitres : un fichier par chapitre dans
+                          subjects/ (guide de rédaction : subjects/README.md) ; moteur de correction (utils.ts),
+                          figures (figure.ts : triangles, parallèles, Thalès, repères et courbes), contextes
   game/                   état du joueur, règles (libre / duel), projection isométrique
   battle/                 grille des unités, simulation, rendu canvas, flux réseau, questions du cor
   bot/                    adversaire ordinateur

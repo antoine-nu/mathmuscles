@@ -7,6 +7,7 @@ import { TrainingScreen } from './screens/TrainingScreen'
 import { BotDuel } from './screens/BotDuel'
 import { DemoBattle } from './screens/DemoBattle'
 import { FriendDuel } from './screens/FriendDuel'
+import { SoloSubjects } from './screens/SoloSubjects'
 import { audio, useUiSounds } from './audio/engine'
 
 type Screen =
@@ -44,6 +45,10 @@ export default function App() {
 
   if (screen.name === 'solo') {
     const level = screen.level
+    const p = solo.get(level.id)
+    if (!p.selection) {
+      return <SoloSubjects level={level} onBack={home} onConfirm={(selection) => solo.update(level.id, (q) => ({ ...q, selection }))} />
+    }
     return (
       <RulesContext.Provider value={SOLO_RULES}>
         <TrainingScreen

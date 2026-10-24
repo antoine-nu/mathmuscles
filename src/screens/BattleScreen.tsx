@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LEVELS, type Chapter } from '../data/curriculum'
+import { chapterOf } from '../data/curriculum'
 import { BattleCanvas } from '../battle/BattleCanvas'
 import type { Feed, LocalFeed } from '../battle/feed'
 import { hornQuestion } from '../battle/hornQuestions'
@@ -15,7 +15,6 @@ import { formatWait } from '../components/CommandPanel'
 import { MuteButton } from '../components/MuteButton'
 import { audio } from '../audio/engine'
 
-const CHAPTERS = new Map<string, Chapter>(LEVELS.flatMap((l) => l.chapters.map((c) => [c.id, c] as const)))
 
 interface Props {
   feed: Feed
@@ -192,7 +191,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
                   <ul>
                     {armies[s].regiments.filter((r) => r.figures > 0 && r.tier > 0).sort((a, b) => b.figures - a.figures).map((r) => (
                       <li key={r.chapterId}>
-                        <span>{CHAPTERS.get(r.chapterId)?.corpsName}</span>
+                        <span>{chapterOf(armies[s].levelId, r.chapterId, r.kind).corpsName}</span>
                         <span>{r.figures}{r.upgrades ? ` · ${'★'.repeat(r.upgrades)}` : ''}</span>
                       </li>
                     ))}
@@ -234,7 +233,7 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
               <div className="be-stats">
                 {([0, 1] as Side[]).map((s) => {
                   const heroReg = armies[s].regiments.find((r) => r.chapterId === result.heroes[s])
-                  const heroName = heroReg ? (heroReg.tier === 0 ? 'Villageois' : CHAPTERS.get(heroReg.chapterId)?.corpsName) : null
+                  const heroName = heroReg ? (heroReg.tier === 0 ? 'Villageois' : chapterOf(armies[s].levelId, heroReg.chapterId, heroReg.kind).corpsName) : null
                   return (
                     <div key={s} className="be-col" style={{ borderColor: colors[s] }}>
                       <b style={{ color: colors[s] }}>{names[s]}</b>

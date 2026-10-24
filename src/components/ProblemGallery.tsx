@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LEVELS } from '../data/curriculum'
-import { AGE_PROBLEMS, TIERS, UPGRADE_PROBLEMS } from '../exercises'
+import { AGE_PROBLEMS, TIERS, UPGRADE_PROBLEMS, hasContent } from '../exercises'
 import type { Exercise, Maker } from '../exercises/utils'
 import { MathText } from './ExerciseModal'
 import { FigureView } from './FigureView'
@@ -27,9 +27,9 @@ export function ProblemGallery() {
       <h1>Relecture des exercices</h1>
       <div className="pg-controls">
         <select value={chapterId} onChange={(e) => setChapterId(e.target.value)} aria-label="Chapitre">
-          {LEVELS.map((l) => (
-            <optgroup key={l.id} label={l.label}>
-              {l.chapters.map((c) => <option key={c.id} value={c.id}>{l.short} · {c.title}</option>)}
+          {LEVELS.filter((l, i) => LEVELS.findIndex((m) => m.subjects === l.subjects) === i).map((l) => (
+            <optgroup key={l.id} label={l.subjects[0].id.startsWith('T-') ? 'Terminale (adultes)' : l.label}>
+              {l.subjects.map((c) => <option key={c.id} value={c.id} disabled={!hasContent(c.id)}>{c.title}{hasContent(c.id) ? '' : ' (à venir)'}</option>)}
             </optgroup>
           ))}
         </select>
@@ -68,6 +68,7 @@ function Card({ make, index }: { make: Maker; index: number }) {
         <>
           {ex.title && <h3>{ex.title}</h3>}
           <p><MathText text={ex.prompt} /></p>
+          {ex.code && <pre className="q-code"><code>{ex.code}</code></pre>}
           {ex.figure && <FigureView figure={ex.figure} />}
           {ex.choices && <p className="pg-choices">Choix : {ex.choices.join(' · ')}</p>}
           <p className="pg-answer">⇒ <MathText text={ex.answer} /></p>

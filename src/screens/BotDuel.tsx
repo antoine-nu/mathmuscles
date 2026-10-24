@@ -11,6 +11,7 @@ import { DurationPicker, SetupFrame } from './DuelSetup'
 import { PrepScreen } from './PrepScreen'
 import { audio } from '../audio/engine'
 import { randomTheme } from '../game/themes'
+import { loadSelection, normalizeSelection, saveSelection } from '../game/selection'
 
 export const BLUE = '#2f5fb3'
 export const RED = '#b8362f'
@@ -42,6 +43,8 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
   const [botName] = useState(() => BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)])
   const [phase, setPhase] = useState<Phase>({ name: 'setup' })
   const [player, setPlayer] = useState<PlayerState>(() => emptyPlayer(level.id))
+  const [selection, setSelection] = useState(() => loadSelection(level.id))
+  const chooseSubjects = (s: string[]) => { setSelection(s); saveSelection(level.id, s) }
   const [botState, setBotState] = useState<PlayerState>(() => emptyPlayer(level.id))
   const botRef = useRef<Bot | null>(null)
   const playerRef = useRef(player)
@@ -54,7 +57,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
     botRef.current = new Bot(level.id, grade, rules)
     const theme = randomTheme()
     botRef.current.state = { ...botRef.current.state, mapTheme: theme }
-    setPlayer(emptyPlayer(level.id, theme))
+    setPlayer(emptyPlayer(level.id, theme, normalizeSelection(level.id, selection)))
     setBotState(botRef.current.state)
     // ?chrono=30 : entraînement raccourci à 30 secondes (pour tester)
     const override = Number(new URLSearchParams(location.search).get('chrono'))
@@ -113,6 +116,8 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
         durationMin={duration}
         me={{ name: me, ready: false, color: BLUE }}
         opponent={{ name: them, ready: true, color: RED, detail: 'Prêt !' }}
+        selection={selection}
+        onSelection={chooseSubjects}
         onReady={start}
         onBack={onQuit}
       />

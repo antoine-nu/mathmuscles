@@ -1,5 +1,5 @@
 import { audio } from '../audio/engine'
-import { AGE_BONUS, LEVELS, type Chapter, type UnitKind } from '../data/curriculum'
+import { AGE_BONUS, type Chapter, type UnitKind } from '../data/curriculum'
 import { COUNTERS, SPECIALS, UNIT_STATS, kindName } from '../battle/units'
 import { Portrait } from './Portrait'
 import { StatIcon, type StatKind } from './StatIcon'
@@ -26,9 +26,8 @@ function Stat({ icon, label, value, ratio, text }: { icon: StatKind; label: stri
  * Codex des armées : caractéristiques, forces et faiblesses de chaque unité de la classe, avec la maison
  * (le thème mathématique) qui la forme. Pour préparer sa stratégie avant et pendant la partie.
  */
-export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: string }) {
-  const level = LEVELS.find((l) => l.id === levelId) ?? LEVELS[0]
-  const chapterOf = (k: UnitKind) => level.chapters.find((c) => c.unit === k)!
+export function Codex({ chapters, teamColor }: { chapters: Chapter[]; teamColor?: string }) {
+  const chapterOf = (k: UnitKind) => chapters.find((c) => c.unit === k)!
 
   return (
     <div className="codex">
@@ -43,7 +42,7 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
       </div>
 
       <div className="cx-grid">
-        {level.chapters.map((c) => {
+        {chapters.map((c) => {
           const st = UNIT_STATS[c.unit]
           const monk = c.unit === 'monk'
           return (
@@ -110,7 +109,7 @@ export function Codex({ levelId, teamColor }: { levelId: string; teamColor?: str
 }
 
 /** Le codex dans une fenêtre, consultable pendant l'entraînement. */
-export function CodexModal({ levelId, teamColor, onClose }: { levelId: string; teamColor?: string; onClose: () => void }) {
+export function CodexModal({ chapters, teamColor, onClose }: { chapters: Chapter[]; teamColor?: string; onClose: () => void }) {
   return (
     <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') { audio.ui('close'); onClose() } }}>
       <div className="townhall codex-modal" role="dialog" aria-label="Codex des armées">
@@ -121,7 +120,7 @@ export function CodexModal({ levelId, teamColor, onClose }: { levelId: string; t
           </div>
           <button className="close light" onClick={onClose} aria-label="Fermer" autoFocus>✕</button>
         </header>
-        <Codex levelId={levelId} teamColor={teamColor} />
+        <Codex chapters={chapters} teamColor={teamColor} />
       </div>
     </div>
   )

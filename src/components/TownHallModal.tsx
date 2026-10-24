@@ -1,6 +1,6 @@
 import { audio } from '../audio/engine'
 import { AGES, AGE_BONUS, AGE_PROBLEM_CRAN, levelFromPoints } from '../data/curriculum'
-import { ageOf, ageProblemAvailability, houseOf, levelOf, type PlayerState } from '../game/state'
+import { ageOf, ageProblemAvailability, chaptersOf, houseOf, type PlayerState } from '../game/state'
 import { useRules } from '../game/rules'
 import { formatWait } from './CommandPanel'
 import { Portrait } from './Portrait'
@@ -20,7 +20,6 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
   const age = ageOf(player, rules)
   const thresholds = [0, ...rules.ageThresholds]
   const next = age < 3 ? thresholds[age + 1] : null
-  const level = levelOf(player)
 
   return (
     <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Escape') { audio.ui('close'); onClose() } }}>
@@ -59,7 +58,7 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
             <span role="columnheader">2 points</span>
             <span role="columnheader">3 points</span>
           </div>
-          {level.chapters.map((c) => {
+          {chaptersOf(player).map((c) => {
             const h = houseOf(player, c.id)
             const cran = levelFromPoints(h.points, rules.ppc)
             return (

@@ -4,18 +4,24 @@ import * as U5 from './upgrades5e'
 import * as U2 from './upgrades2nde'
 import * as A5 from './age5e'
 import * as A2 from './age2nde'
-import { MAX_LEVEL, SERIES_SIZE } from '../data/curriculum'
+import { SUBJECT_CONTENT } from './subjects'
+import { MAX_LEVEL, SERIES_SIZE, levelById } from '../data/curriculum'
 import type { Difficulty, Exercise, Ladder, Maker, Tiers } from './utils'
 
-export const TIERS: Record<string, Tiers> = { ...CINQUIEME, ...SECONDE }
+const extra = Object.entries(SUBJECT_CONTENT)
+export const TIERS: Record<string, Tiers> = { ...CINQUIEME, ...SECONDE, ...Object.fromEntries(extra.map(([id, c]) => [id, c.tiers])) }
 type Registry = Record<string, Ladder>
 const reg = (m: object, name: string): Registry => ((m as Record<string, Registry | undefined>)[name] ?? {})
-export const UPGRADE_PROBLEMS: Registry = { ...reg(U5, 'UPGRADES_5E'), ...reg(U2, 'UPGRADES_2NDE') }
-export const AGE_PROBLEMS: Registry = { ...reg(A5, 'AGE_5E'), ...reg(A2, 'AGE_2NDE') }
+export const UPGRADE_PROBLEMS: Registry = { ...reg(U5, 'UPGRADES_5E'), ...reg(U2, 'UPGRADES_2NDE'), ...Object.fromEntries(extra.map(([id, c]) => [id, c.upgrades])) }
+export const AGE_PROBLEMS: Registry = { ...reg(A5, 'AGE_5E'), ...reg(A2, 'AGE_2NDE'), ...Object.fromEntries(extra.map(([id, c]) => [id, c.age])) }
+/** Sujet jouable : ses exercices existent. */
+export const hasContent = (subjectId: string) => subjectId in TIERS
 
-/** Le palier suit la jauge : cran 0 → palier 1, …, cran 4 et plus → palier 5. */
-export function difficultyForLevel(level: number): Difficulty {
-  return Math.min(MAX_LEVEL, level + 1) as Difficulty
+/** Palier des exercices selon les crans terminés et le niveau (5e, 2nde : cran 0 → palier 1 … cran 4 → palier 5 ;
+ *  les niveaux adultes jouent les paliers 1 à 3 ou 2 à 5 des sujets de Terminale). */
+export function difficultyForLevel(level: number, levelId?: string): Difficulty {
+  const table = levelId ? levelById(levelId).difficulty : null
+  return (table ? table[Math.min(table.length - 1, level)] : Math.min(MAX_LEVEL, level + 1)) as Difficulty
 }
 
 // ── Mémoire des modèles déjà vus ───────────────────────────────────────
@@ -52,14 +58,14 @@ function freshOrder(prefix: string, pool: Maker[]): number[] {
 }
 
 /** Type d'exercice (modèle) d'un cran : le moins récemment vu du palier, pour varier d'une partie à l'autre. */
-export function pickDrill(chapterId: string, level: number): number {
-  const d = difficultyForLevel(level)
+export function pickDrill(chapterId: string, level: number, levelId?: string): number {
+  const d = difficultyForLevel(level, levelId)
   return freshOrder(`t:${chapterId}:${d}`, TIERS[chapterId][d - 1])[0]
 }
 
 /** Série de 5 exercices d'un même type (entraînement par répétition), avec des nombres différents à chaque fois. */
-export function makeSeries(chapterId: string, level: number, model: number): Exercise[] {
-  const d = difficultyForLevel(level)
+export function makeSeries(chapterId: string, level: number, model: number, levelId?: string): Exercise[] {
+  const d = difficultyForLevel(level, levelId)
   const pool = TIERS[chapterId][d - 1]
   const i = model % pool.length
   const key = `t:${chapterId}:${d}#${i}`
