@@ -20,7 +20,7 @@ const skeleton = (s: string) => s.replace(/−?\d+(?:[,.]\d+)?/g, '#').replace(/
 /** Nombres écrits dans un texte (avec la virgule décimale française). */
 const numbersIn = (s: string) => (s.match(/−?\d+(?:,\d+)?/g) ?? []).map((x) => x.replace('−', '-').replace(',', '.'))
 // Motifs d'écriture maladroite : « + − », « 1x », « −0 », valeurs non numériques…
-const UGLY = /NaN|undefined|Infinity(?!\s*\])|\[object|\+ −|− −|\+ -|--|(?<![\d,])1x|−1x|−0(?![,\d])|\+ 0(?![,\d])|\(\+?0\)/
+const UGLY = /NaN|undefined|Infinity(?!\s*\])|\[object|\+ −|− −|\+ -|--|(?<![\d,])1x|−1x|−0(?![,\d])|\+ 0(?![,\d])|(?<![A-Za-z_])\(\+?0\)/
 
 function inspect(where: string, make: Maker, training = false) {
   const prompts = new Set<string>()
