@@ -246,7 +246,7 @@ export function isFactored(raw: string): boolean {
 
 // ── Constructeurs d'exercices ───────────────────────────────────────────
 const KEYS_NUMBER = ['−', '/', ',']
-const KEYS_EXPR = ['x', '²', '(', ')', '−', '^']
+const KEYS_EXPR = ['x', '²', '³', '(', ')', '−', '^']
 
 interface Opts {
   answer?: string

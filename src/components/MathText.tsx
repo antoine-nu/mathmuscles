@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 /** Affiche la mini-syntaxe des énoncés : {a/b} fraction, ^n exposant, √{…} racine, x_B indice. */
 export function MathText({ text }: { text: string }) {
   const out: ReactNode[] = []
-  const re = /\{(-?[^{}/]+)\/([^{}/]+)\}|√\{([^}]+)\}|\^\{([^}]+)\}|\^(-?\d+|n)|_([A-Za-z])/g
+  const re = /\{(-?[^{}/]+)\/([^{}/]+)\}|√\{([^}]+)\}|\^\{([^}]+)\}|\^(-?\d+|n)|_([A-Za-z])|([A-Za-z]{1,2})\u20D7/g
   let last = 0
   let m: RegExpExecArray | null
   let k = 0
@@ -17,6 +17,9 @@ export function MathText({ text }: { text: string }) {
       out.push(<sup key={k++}>{m[4] ?? m[5]}</sup>)
     } else if (m[6] !== undefined) {
       out.push(<sub key={k++}>{m[6]}</sub>)
+    } else if (m[7] !== undefined) {
+      // vecteur : flèche dessinée au-dessus (la flèche combinante s'affiche mal dans certaines polices)
+      out.push(<span key={k++} className="mvec">{m[7]}</span>)
     }
     last = re.lastIndex
   }

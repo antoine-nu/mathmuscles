@@ -27,6 +27,8 @@ interface Props {
   onMenu: () => void
   /** Message d'état réseau (ex. adversaire déconnecté). */
   notice?: string | null
+  /** Message sous le bilan quand il n'y a pas de bouton « Revanche » (invité d'un duel). */
+  endHint?: string
 }
 
 interface Hud {
@@ -36,7 +38,7 @@ interface Hud {
   hornOn: [boolean, boolean]
 }
 
-export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice }: Props) {
+export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint }: Props) {
   const [hud, setHud] = useState<Hud>({ t: 0, alive: [0, 0], hornsUsed: [0, 0], hornOn: [false, false] })
   const [now, setNow] = useState(Date.now())
   const [result, setResult] = useState<BattleResult | null>(null)
@@ -138,15 +140,15 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
                 <div key={s} className="bi-army" style={{ borderColor: colors[s] }}>
                   <b style={{ color: colors[s] }}>{names[s]}</b>
                   <ul>
-                    {armies[s].regiments.filter((r) => r.figures > 0).sort((a, b) => b.soldiers - a.soldiers).map((r) => {
-                      const c = CHAPTERS.get(r.chapterId)
-                      return (
-                        <li key={r.chapterId}>
-                          <span>{r.tier === 0 ? 'Villageois' : c?.corpsName}</span>
-                          <span>{r.figures}{r.upgrades ? ` · ${'★'.repeat(r.upgrades)}` : ''}</span>
-                        </li>
-                      )
-                    })}
+                    {armies[s].regiments.filter((r) => r.figures > 0 && r.tier > 0).sort((a, b) => b.soldiers - a.soldiers).map((r) => (
+                      <li key={r.chapterId}>
+                        <span>{CHAPTERS.get(r.chapterId)?.corpsName}</span>
+                        <span>{r.figures}{r.upgrades ? ` · ${'★'.repeat(r.upgrades)}` : ''}</span>
+                      </li>
+                    ))}
+                    {armies[s].regiments.some((r) => r.tier === 0 && r.figures > 0) && (
+                      <li><span>Villageois</span><span>{armies[s].regiments.filter((r) => r.tier === 0).reduce((n, r) => n + r.figures, 0)}</span></li>
+                    )}
                   </ul>
                   <small>{['Âge sombre', 'Âge féodal', 'Âge des châteaux', 'Âge impérial'][armies[s].age]}</small>
                 </div>
@@ -167,20 +169,22 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
               <p>{winnerName ? `${winnerName} remporte la bataille en ${Math.round(result.duration)} secondes.` : 'Les deux armées se sont neutralisées.'}</p>
               <div className="be-stats">
                 {([0, 1] as Side[]).map((s) => {
-                  const hero = result.heroes[s] ? CHAPTERS.get(result.heroes[s]!) : null
+                  const heroReg = armies[s].regiments.find((r) => r.chapterId === result.heroes[s])
+                  const heroName = heroReg ? (heroReg.tier === 0 ? 'Villageois' : CHAPTERS.get(heroReg.chapterId)?.corpsName) : null
                   return (
                     <div key={s} className="be-col" style={{ borderColor: colors[s] }}>
                       <b style={{ color: colors[s] }}>{names[s]}</b>
                       <span>Survivants : {result.survivors[s]}</span>
                       <span>Pertes : {result.losses[s]}</span>
                       <span>Conversions : {result.conversions[s]}</span>
-                      {hero && <span>Corps héroïque : {hero.corpsName}</span>}
+                      {heroName && <span>Corps héroïque : {heroName}</span>}
                     </div>
                   )
                 })}
               </div>
               <div className="be-actions">
                 {onRematch && <button className="btn gold" onClick={onRematch}>Revanche</button>}
+                {!onRematch && endHint && <p className="be-hint">{endHint}</p>}
                 <button className="btn gold" onClick={onMenu}>Menu principal</button>
               </div>
             </div>

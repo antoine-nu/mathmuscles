@@ -77,6 +77,10 @@ interface FreeOpts {
   caption?: string
   w?: number
   h?: number
+  /** Marge laissée autour de la figure (place pour les étiquettes). */
+  margin?: number
+  /** Étiquette du segment « AB » placée à l'opposé du point donné (au lieu de l'extérieur de la figure). */
+  away?: Record<string, string>
 }
 
 /** Figure libre en coordonnées mathématiques, cadrée automatiquement. */
@@ -84,7 +88,7 @@ function free(raw: Raw, o: FreeOpts = {}): Figure {
   const ext: Raw = { ...raw }
   o.notes?.forEach((n, i) => { ext[`__n${i}`] = n.at })
   const w = o.w ?? 320, h = o.h ?? 220
-  const pts = fitPoints(ext, w, h)
+  const pts = fitPoints(ext, w, h, o.margin ?? 44)
   const notes = o.notes?.map((n, i) => {
     const p = pts[`__n${i}`]
     delete pts[`__n${i}`]
@@ -98,7 +102,36 @@ function free(raw: Raw, o: FreeOpts = {}): Figure {
   const fig: Figure = { points: pts, segments: o.segments, angles: o.angles, polygons: o.polygons, notes, caption: o.caption }
   if (o.w) fig.w = w
   if (o.h) fig.h = h
-  return fig
+  return labelNotes(fig, o.away)
+}
+
+/**
+ * Remplace les étiquettes des segments par des notes placées du côté extérieur de la figure (ou à l'opposé
+ * du point indiqué dans `away`, clé « AB »), décalées selon la largeur du texte. Le rendu, lui, les centre
+ * à 13 px du trait et ignore les points cachés, ce qui fait chevaucher les textes larges.
+ */
+function labelNotes(fig: Figure, away: Record<string, string> = {}): Figure {
+  const w = fig.w ?? 320, h = fig.h ?? 220, pts = fig.points
+  const all = Object.values(pts)
+  const vis = all.filter((p) => !p.hidden).length >= 2 ? all.filter((p) => !p.hidden) : all
+  const cx = vis.reduce((s, p) => s + p.x, 0) / Math.max(1, vis.length)
+  const cy = vis.reduce((s, p) => s + p.y, 0) / Math.max(1, vis.length)
+  const extra: { x: number; y: number; text: string }[] = []
+  const segments = fig.segments?.map((s) => {
+    const a = pts[s.a], b = pts[s.b]
+    if (!s.label || !a || !b) return s
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+    let nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+    const ref = pts[away[s.a + s.b] ?? away[s.b + s.a] ?? ''] ?? { x: cx, y: cy }
+    if ((mx - ref.x) * nx + (my - ref.y) * ny < 0) { nx = -nx; ny = -ny }
+    const half = 3.9 * [...s.label].length
+    const x = Math.min(w - half - 3, Math.max(half + 3, mx + nx * (Math.abs(nx) < 0.3 ? 13 : 9 + half)))
+    extra.push({ x, y: Math.min(h - 4, Math.max(14, my + ny * 13 + 5)), text: s.label })
+    return { ...s, label: undefined }
+  })
+  const notes = [...(fig.notes ?? []), ...extra]
+  return { ...fig, segments, notes: notes.length ? notes : undefined }
 }
 
 /** Figure dans un repère orthonormé (axes gradués), avec droites y = mx + p éventuelles. */
@@ -138,12 +171,22 @@ function repere(raw: Raw, o: FreeOpts & { lines?: { m: number; p: number; color?
       segs.push({ a: `_L${i}a`, b: `_L${i}b`, color: L.color ?? '#3a2410', dashed: L.dashed })
     }
   })
+  // Noms des points situés sur une droite tracée : placés perpendiculairement à la droite.
+  const linePos: Record<string, LabelPos> = {}
+  const DIRS: LabelPos[] = ['e', 'ne', 'n', 'nw', 'w', 'sw', 's', 'se']
+  for (const [k, v] of Object.entries(raw)) {
+    const L = o.lines?.find((l) => Math.abs(v[1] - (l.m * v[0] + l.p)) < 1e-6)
+    if (!L) continue
+    const ang = Math.atan2(1, -L.m) // normale (−m ; 1), côté « au-dessus » de la droite
+    linePos[k] = DIRS[Math.round(((ang + 2 * Math.PI) % (2 * Math.PI)) / (Math.PI / 4)) % 8]
+  }
   const fig = free(ext, {
-    ...o, segments: [...segs, ...(o.segments ?? [])], pos: { O: 'sw', ...o.pos },
-    caption: o.caption ?? 'Repère orthonormé.', w: o.w ?? 320, h: o.h ?? 250,
+    ...o, segments: [...segs, ...(o.segments ?? [])], pos: { O: 'sw', ...linePos, ...o.pos },
+    caption: o.caption ?? 'Repère orthonormé.', w: o.w ?? 320, h: o.h ?? 250, margin: o.margin ?? 30,
   })
   const xb = fig.points._xb, yb = fig.points._yb
-  fig.notes = [...(fig.notes ?? []), { x: xb.x - 5, y: xb.y - 7, text: 'x' }, { x: yb.x + 10, y: yb.y + 10, text: 'y' }]
+  fig.notes = [...(fig.notes ?? []), { x: xb.x + 9, y: xb.y + 5, text: 'x' }, { x: yb.x, y: yb.y - 7, text: 'y' }]
+  if (vals.some((v) => Math.hypot(v[0], v[1]) < 1.5) && fig.points.O) fig.points.O.label = ''
   return fig
 }
 
@@ -234,7 +277,8 @@ const nombres: Ladder = [
         { t: 'Le galon de la tapisserie', u: 'dm', s: `Une tapisserie rectangulaire du château mesure ${a} dm sur ${b} dm. On veut coudre un galon doré le long de sa diagonale.` },
         { t: 'Le pont du navire', u: 'm', s: `Le pont d'un navire a la forme d'un rectangle de ${a} m sur ${b} m. Un mousse le traverse en diagonale.` },
       ])
-      const fig = free({ A: [0, 0], B: [a, 0], C: [a, b], D: [0, b] }, {
+      const hb = Math.min(2 * a, Math.max(0.45 * a, b))
+      const fig = free({ A: [0, 0], B: [a, 0], C: [a, hb], D: [0, hb] }, {
         segments: [
           { a: 'A', b: 'B', label: `${a} ${c.u}` }, { a: 'B', b: 'C', label: `${b} ${c.u}` }, { a: 'C', b: 'D' }, { a: 'D', b: 'A' },
           { a: 'A', b: 'C', color: RED, label: '?' },
@@ -323,7 +367,7 @@ const nombres: Ladder = [
         { t: 'Le fanion du tournoi', s: 'Un grand fanion triangulaire ABC' },
         { t: 'La rampe de skate', s: 'Le flanc triangulaire ABC d’une rampe de skate' },
       ])
-      const fig = free({ A: [0, 0], B: [p, 0], C: [0, q] }, {
+      const fig = free({ A: [0, 0], B: [p, 0], C: [0, Math.min(2 * p, Math.max(0.5 * p, q))] }, {
         segments: [{ a: 'A', b: 'B', label: `√${p * p * m} m` }, { a: 'A', b: 'C', label: `√${q * q * m} m` }, { a: 'B', b: 'C', label: '?' }],
         angles: [{ vertex: 'A', a: 'B', b: 'C', right: true }],
       })
@@ -336,7 +380,7 @@ const nombres: Ladder = [
       const k = randInt(2, 6), a = 2 * k
       if (Math.random() < 0.5) {
         const fig = free({ A: [0, 0], B: [2, 0], C: [1, Math.sqrt(3)], H: [1, 0] }, {
-          segments: [{ a: 'A', b: 'B', label: `${a} dm` }, { a: 'B', b: 'C' }, { a: 'C', b: 'A' }, { a: 'C', b: 'H', dashed: true, color: RED }],
+          segments: [{ a: 'A', b: 'B' }, { a: 'B', b: 'C', label: `${a} dm` }, { a: 'C', b: 'A' }, { a: 'C', b: 'H', dashed: true, color: RED }],
           angles: [{ vertex: 'H', a: 'B', b: 'C', right: true }],
           pos: { H: 's' },
         })
@@ -353,7 +397,7 @@ const nombres: Ladder = [
           ...[0, 1, 2, 3, 4, 5].map((i) => ({ a: 'O', b: `_h${i}`, dashed: true })),
         ],
         polygons: [{ pts: ['O', '_h5', '_h0'], fill: GOLD }],
-        pos: { O: 'n' },
+        labels: { O: '' },
       })
       return T('Le pavé hexagonal', radical(`Un pavé de la place du marché est un hexagone régulier de côté ${a} cm : il est formé de six triangles équilatéraux de côté ${a} cm. Calcule la valeur exacte de son aire (en cm²), sous la forme a√b.`, 6 * k * k, 3, {
         explanation: `Hauteur d'un triangle : √(${a}² − ${k}²) = √${3 * k * k} = ${k}√3. Aire d'un triangle : ${a} × ${k}√3 ÷ 2 = ${k * k}√3. Hexagone : 6 × ${k * k}√3 = ${6 * k * k}√3 cm².`,
@@ -737,7 +781,7 @@ const eq: Ladder = [
       if (!isInt(x) || x < 2 || x > 30 || a === c) return null
       const n = pick(THALES_NAMES)
       const ratio = Math.min(0.7, Math.max(0.3, x / (x + d)))
-      const fig = thalesFigure({ names: n, ratio, labels: { AM: 'x', MB: `${d}`, AN: `${a}`, NC: `${c}` } })
+      const fig = labelNotes(thalesFigure({ names: n, ratio, labels: { AM: 'x', MB: `${d}`, AN: `${a}`, NC: `${c}` } }))
       const ctx = pick([
         { t: 'La charpente', s: `Dans la charpente d'une grange, les poutres (${n.M}${n.N}) et (${n.B}${n.C}) sont parallèles.` },
         { t: 'Le pont de cordes', s: `Sur le plan d'un pont de cordes, les câbles (${n.M}${n.N}) et (${n.B}${n.C}) sont parallèles.` },
@@ -828,6 +872,7 @@ const eq: Ladder = [
         ],
         angles: [{ vertex: 'P', a: 'T', b: 'J', right: true }, { vertex: 'T', a: 'S', b: 'C', right: true }],
         pos: { S: 's', P: 's', T: 's', J: 'nw', C: 'ne' },
+        away: { PJ: 'S' },
         caption: 'Les rayons du soleil sont représentés en pointillés. La figure n’est pas à l’échelle.',
       })
       return T(o.t, numeric(`À un instant de la journée, l'ombre de ${name}, qui mesure ${fmt(h)} m, se termine exactement au même point S que l'ombre ${o.o}, haute de ${fmt(H)} m. ${name} se tient debout en P, à ${d} m ${o.b} (point T). On note x = SP la longueur de son ombre. Écris une équation vérifiée par x, puis calcule x (en m).`, x, {
@@ -894,8 +939,8 @@ const eq: Ladder = [
       const x = r6((d * ta) / (tb - ta)), H = r6(x * tb)
       if (!isDec(x, 1) || !isDec(H, 1) || H < 5 || H > 150) return null
       const name = prenom()
-      const W = d + x, k = Math.max(1, (0.5 * W) / H)
-      const fig = free({ A: [0, 0], B: [d, 0], F: [W, 0], S: [W, H * k] }, {
+      const xd = Math.min(2.5 * d, Math.max(0.4 * d, x)), W = d + xd
+      const fig = free({ A: [0, 0], B: [d, 0], F: [W, 0], S: [W, 0.55 * W] }, {
         segments: [{ a: 'A', b: 'B', label: `${d} m` }, { a: 'B', b: 'F' }, { a: 'F', b: 'S' }, { a: 'A', b: 'S', dashed: true }, { a: 'B', b: 'S', dashed: true }],
         angles: [{ vertex: 'A', a: 'F', b: 'S', label: 'α', radius: 26 }, { vertex: 'B', a: 'F', b: 'S', label: 'β' }, { vertex: 'F', a: 'A', b: 'S', right: true }],
         pos: { A: 's', B: 's', F: 's', S: 'ne' },
@@ -911,7 +956,7 @@ const eq: Ladder = [
       const x = r6((a * s) / (a + c))
       if (!isDec(x, 1)) return null
       const n = pick(THALES_NAMES)
-      const fig = thalesFigure({ names: n, ratio: a / c, butterfly: true, labels: { AM: 'x', AN: `${a}`, AC: `${c}` } })
+      const fig = labelNotes(thalesFigure({ names: n, ratio: a / c, butterfly: true, labels: { AM: 'x', AN: `${a}`, AC: `${c}` } }), { [n.A + n.M]: n.N, [n.A + n.N]: n.M, [n.A + n.C]: n.B })
       return T('Les haubans croisés', numeric(`Deux haubans d'une passerelle se croisent en ${n.A}. Sur la figure, les droites (${n.M}${n.N}) et (${n.B}${n.C}) sont parallèles ; les points ${n.M}, ${n.A}, ${n.B} sont alignés, ainsi que ${n.N}, ${n.A}, ${n.C}. On donne ${n.A}${n.N} = ${a} m, ${n.A}${n.C} = ${c} m et ${n.M}${n.B} = ${s} m. On note ${n.A}${n.M} = x. Écris une équation vérifiée par x, puis calcule x (en m).`, x, {
         explanation: `Thalès (configuration « papillon ») : ${F(`${n.A}${n.M}`, `${n.A}${n.B}`)} = ${F(`${n.A}${n.N}`, `${n.A}${n.C}`)}, avec ${n.A}${n.B} = ${s} − x : ${F('x', `${s} − x`)} = ${F(a, c)}. Donc ${c}x = ${a * s} − ${a}x, ${a + c}x = ${a * s} et x = ${fmt(x)} m.`,
       }), fig)
@@ -1091,6 +1136,7 @@ const fct: Ladder = [
         ],
         angles: [{ vertex: '_w0', a: '_g1', b: '_w1', right: true }],
         pos: { P: 's', Q: 's', H: 'w', K: 'w' },
+        away: { PH: '_w0' },
         caption: 'L’échelle passe de [PH] à [QK]. La figure n’est pas à l’échelle.',
       })
       return T('L’échelle qui glisse', numeric(`Une échelle de ${fmt(L)} m est appuyée contre un mur vertical. Quand son pied est à x m du mur, son sommet est à la hauteur h(x) (en m). Exprime h(x) à l'aide du théorème de Pythagore. Le pied de l'échelle glisse de ${fmt(x1)} m à ${fmt(x2)} m du mur : de combien de mètres le sommet descend-il ?`, r6(h1 - h2), {
@@ -1109,10 +1155,10 @@ const fct: Ladder = [
     // Le rectangle inscrit : Thalès puis maximum
     () => {
       const b = pick([4, 6, 8, 10, 12]), c = randInt(3, 12), max = (b * c) / 4
-      const t = 0.32
-      const fig = free({ A: [0, 0], B: [b, 0], C: [0, c], M: [t * b, 0], P: [t * b, c * (1 - t)], N: [0, c * (1 - t)] }, {
+      const t = 0.32, cd = Math.min(1.3 * b, Math.max(0.6 * b, c))
+      const fig = free({ A: [0, 0], B: [b, 0], C: [0, cd], M: [t * b, 0], P: [t * b, cd * (1 - t)], N: [0, cd * (1 - t)] }, {
         segments: [
-          { a: 'A', b: 'B', label: `${b} cm` }, { a: 'A', b: 'M', label: 'x', color: 'transparent' }, { a: 'B', b: 'C' }, { a: 'C', b: 'A', label: `${c} cm` },
+          { a: 'A', b: 'M', label: 'x' }, { a: 'M', b: 'B', label: `AB = ${b} cm`, color: 'transparent' }, { a: 'M', b: 'B' }, { a: 'B', b: 'C' }, { a: 'C', b: 'A', label: `${c} cm` },
           { a: 'M', b: 'P' }, { a: 'P', b: 'N' },
         ],
         polygons: [{ pts: ['A', 'M', 'P', 'N'], fill: GOLD }],
@@ -1190,7 +1236,7 @@ const vect: Ladder = [
     // Le quatrième sommet puis la diagonale
     () => retry(() => {
       const A = rp(5), B = rp(5), C = rp(5)
-      if (det(subv(B, A), subv(C, A)) === 0) return null
+      if (Math.abs(det(subv(B, A), subv(C, A))) < 8) return null
       const D = subv(add(A, C), B)
       if (!inBox(D, 7)) return null
       const u = subv(D, B), n = norm2(u), r = Math.round(Math.sqrt(n))
@@ -1211,7 +1257,7 @@ const vect: Ladder = [
       const rest = subv(subv(target, u), v)
       if (twice && (rest[0] % 2 || rest[1] % 2)) return null
       const w = twice ? mul(0.5, rest) : rest
-      if ([u, v, w].some((z) => !z[0] && !z[1]) || !inBox(w, 6)) return null
+      if ([u, v, w].some((z) => !z[0] && !z[1]) || !inBox(w, 6) || Math.abs(det(u, target)) < 8 || Math.abs(det(v, target)) < 4) return null
       const P1 = add(A, u), P2 = add(P1, v), P3 = add(P2, twice ? w : [0, 0]), B = add(A, target)
       const raw: Raw = { A, _p1: P1, _p2: P2, B }
       const segs: FigSegment[] = [{ a: 'A', b: '_p1', mark: 'arrow' }, { a: '_p1', b: '_p2', mark: 'arrow' }]
@@ -1251,7 +1297,7 @@ const vect: Ladder = [
     () => retry(() => {
       const A = rp(5), d: Pt = [randNonZero(-3, 3), randNonZero(-3, 3)], t = pick([-2, -1, 2, 3, 1.5, -0.5, 2.5])
       const B = add(A, d), C = add(A, mul(t, d))
-      if (!isInt(C[0]) || !isInt(C[1]) || !inBox(B, 8) || !inBox(C, 8)) return null
+      if (!isInt(C[0]) || !isInt(C[1]) || !C[0] || !inBox(B, 8) || !inBox(C, 8)) return null
       const ac0 = C[0] - A[0]
       const fig = repere({ A, B, _c1: [C[0], Math.min(A[1], B[1], C[1]) - 1], _c2: [C[0], Math.max(A[1], B[1], C[1]) + 1] }, {
         segments: [{ a: 'A', b: 'B' }, { a: '_c1', b: '_c2', dashed: true, color: RED }],
@@ -1302,7 +1348,7 @@ const vect: Ladder = [
       const A = rp(3), B = rp(4), C = rp(4)
       const al = pick([2, 3, -1, -2]), be = pick([1, -1, 2, 0.5, -0.5])
       const AB = subv(B, A), AC = subv(C, A)
-      if (det(AB, AC) === 0) return null
+      if (Math.abs(det(AB, AC)) < 4) return null
       const AM = add(mul(al, AB), mul(be, AC)), M = add(A, AM)
       if (!isInt(AM[0]) || !isInt(AM[1]) || !inBox(M, 9)) return null
       const coef = (c: number) => (c === 1 ? '' : c === -1 ? '−' : Math.abs(c) === 0.5 ? `${c < 0 ? '−' : ''}${F(1, 2)}` : fmt(c))
@@ -1329,7 +1375,7 @@ const vect: Ladder = [
     () => retry(() => {
       const [p, q] = pick([[1, 2], [1, 3], [2, 3], [1, 4], [3, 4]])
       const A = rp(3), AB: Pt = [q, q * randInt(-1, 1)], AD: Pt = [randInt(-2, 2), randInt(2, 4)]
-      if (det(AB, AD) === 0) return null
+      if (Math.abs(det(AB, AD)) < 6) return null
       const B = add(A, AB), D = add(A, AD), C = add(B, AD), E = add(A, mul(p / q, AB))
       if (![B, C, D].every((z) => inBox(z, 8))) return null
       const G = add(A, mul(p / (p + q), subv(C, A)))
@@ -1382,7 +1428,7 @@ const vect: Ladder = [
       const w = [randInt(1, 3), randInt(1, 3), randInt(1, 3)], S = w[0] + w[1] + w[2]
       if (w[0] === w[1] && w[1] === w[2]) return null
       const A = rp(5), B = rp(5), C = rp(5)
-      if (det(subv(B, A), subv(C, A)) === 0) return null
+      if (Math.abs(det(subv(B, A), subv(C, A))) < 8) return null
       const num: Pt = [w[0] * A[0] + w[1] * B[0] + w[2] * C[0], w[0] * A[1] + w[1] * B[1] + w[2] * C[1]]
       const G = mul(1 / S, num)
       if (!isInt(G[0]) || !isInt(G[1])) return null
@@ -1470,7 +1516,7 @@ const droites: Ladder = [
       const [t1, t2] = shuffle([-1, 2, 3, 0.5, -0.5, 1.5])
       const A: Pt = [a * (1 - t1), b * t1], B: Pt = [a * (1 - t2), b * t2]
       if (![...A, ...B].every(isInt) || !inBox(A, 8) || !inBox(B, 8)) return null
-      const fig = repere({ A, B }, { lines: [{ m, p: b }] })
+      const fig = repere({ A, B, _xi: [a, 0], _yi: [0, b] }, { lines: [{ m, p: b }] })
       return T('Le triangle des axes', numeric(`La droite (AB), avec ${P('A', A)} et ${P('B', B)}, coupe les deux axes du repère. Détermine son équation réduite, puis calcule l'aire du triangle qu'elle forme avec les deux axes.`, Math.abs(a * b) / 2, {
         explanation: `m = ${F(`${fmt(B[1])} − ${par(A[1])}`, `${fmt(B[0])} − ${par(A[0])}`)} = ${fmt(m)} et (AB) : ${lineEq(m, b)}. Elle coupe l'axe des ordonnées en (0 ; ${fmt(b)}) et l'axe des abscisses quand ${poly([m, 'x'], [b, ''])} = 0, soit en (${fmt(a)} ; 0). Aire = ${F(`${Math.abs(a)} × ${Math.abs(b)}`, 2)} = ${fmt(Math.abs(a * b) / 2)}.`,
       }), fig)
@@ -1524,7 +1570,7 @@ const droites: Ladder = [
     // La diagonale du parallélogramme
     () => retry(() => {
       const A = rp(5), B = rp(5), C = rp(5)
-      if (det(subv(B, A), subv(C, A)) === 0) return null
+      if (Math.abs(det(subv(B, A), subv(C, A))) < 8) return null
       const D = subv(add(A, C), B)
       if (!inBox(D, 8) || D[0] === B[0]) return null
       const m = (D[1] - B[1]) / (D[0] - B[0]), p = B[1] - m * B[0]
@@ -1553,7 +1599,7 @@ const droites: Ladder = [
     // Le centre de gravité par les médianes
     () => retry(() => {
       const A = rp(5), B = rp(5), C = rp(5)
-      if (det(subv(B, A), subv(C, A)) === 0) return null
+      if (Math.abs(det(subv(B, A), subv(C, A))) < 8) return null
       const sx = A[0] + B[0] + C[0], sy = A[1] + B[1] + C[1]
       if (sx % 3 || sy % 3) return null
       const Ap = mul(0.5, add(B, C)), Bp = mul(0.5, add(A, C))
@@ -1613,7 +1659,8 @@ const droites: Ladder = [
       const A = rp(5), B = add(A, [dx, m * dx])
       if (!inBox(B, 8)) return null
       const p = I[1] - m * I[0]
-      const fig = repere({ A, B }, { lines: [{ m: m1, p: p1, color: BLUE }, { m: m2, p: p2, color: BLUE }], segments: [{ a: 'A', b: 'B' }] })
+      const sp = (m0: number, dxx: number): Pt => [I[0] + dxx / Math.max(1, Math.abs(m0)), I[1] + (m0 * dxx) / Math.max(1, Math.abs(m0))]
+      const fig = repere({ A, B, _i: I, _a1: sp(m1, 2), _b1: sp(m1, -2), _a2: sp(m2, 2), _b2: sp(m2, -2) }, { lines: [{ m: m1, p: p1, color: BLUE }, { m: m2, p: p2, color: BLUE }], segments: [{ a: 'A', b: 'B' }] })
       return T('La nouvelle route', expression(`On veut construire une route Δ parallèle à la route (AB), avec ${P('A', A)} et ${P('B', B)}, qui passe par le carrefour I des routes d₁ : ${lineEq(m1, p1)} et d₂ : ${lineEq(m2, p2)} (en bleu). Donne l'équation réduite de Δ.`, poly([m, 'x'], [p, '']), 'any', {
         answer: lineEq(m, p), inputHint: 'y = mx + p',
         explanation: `${solveText(m1, p1, m2, p2, I)} : I(${fmt(I[0])} ; ${fmt(I[1])}). (AB) a pour coefficient directeur ${F(m * dx, dx)} = ${fmt(m)}. Δ : y = ${poly([m, 'x'])} + p, avec ${fmt(I[1])} = ${fmt(m)} × ${par(I[0])} + p, donc p = ${fmt(p)} et Δ : ${lineEq(m, p)}.`,

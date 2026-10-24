@@ -37,7 +37,34 @@ function retry(make: () => Exercise | null): Exercise {
   }
   throw new Error('tirage introuvable')
 }
-const titled = (title: string, ex: Exercise, figure?: Figure) => withMeta(ex, figure ? { title, figure } : { title })
+const titled = (title: string, ex: Exercise, figure?: Figure) => withMeta(ex, figure ? { title, figure: roomyLabels(figure) } : { title })
+
+/**
+ * Remplace les étiquettes de segments par des notes posées un peu plus loin du trait, selon la largeur du
+ * texte : sur un côté oblique, une étiquette longue (« 4x − 2 ») ne chevauche plus le segment.
+ * Même côté « extérieur » que dans FigureView (par rapport au centre des points visibles).
+ */
+function roomyLabels(fig: Figure): Figure {
+  const P = fig.points
+  const vis = Object.values(P).filter((p) => !p.hidden)
+  const cx = sum(vis.map((p) => p.x)) / Math.max(1, vis.length), cy = sum(vis.map((p) => p.y)) / Math.max(1, vis.length)
+  const notes = [...(fig.notes ?? [])]
+  const segments = (fig.segments ?? []).map((sg0) => {
+    if (!sg0.label) return sg0
+    const a = P[sg0.a], b = P[sg0.b]
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+    let nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+    if ((mx - cx) * nx + (my - cy) * ny < 0) { nx = -nx; ny = -ny }
+    const w = [...sg0.label].reduce((t, ch) => t + (ch === ' ' ? 3.5 : 7.4), 0)
+    const d = 5 + (w / 2) * Math.abs(nx) + 7 * Math.abs(ny)
+    const W = fig.w ?? 320, H = fig.h ?? 220
+    const x = Math.min(W - w / 2 - 2, Math.max(w / 2 + 2, mx + nx * d)), y = Math.min(H - 4, Math.max(14, my + ny * d + 5))
+    notes.push({ x, y, text: sg0.label })
+    return { ...sg0, label: undefined }
+  })
+  return { ...fig, segments, notes }
+}
 
 function troisPrenoms(): [string, string, string] {
   const [a, b] = deuxPrenoms()
@@ -51,7 +78,7 @@ function place(
   raw: Record<string, Pt>,
   opts: { hidden?: string[]; blank?: string[]; pos?: Partial<Record<string, LabelPos>>; labels?: Record<string, string>; w?: number; h?: number; margin?: number } = {},
 ): Record<string, FigPoint> {
-  const pts = fitPoints(raw, opts.w, opts.h, opts.margin)
+  const pts = fitPoints(raw, opts.w, opts.h, opts.margin ?? 46)
   for (const k of opts.hidden ?? []) pts[k] = { ...pts[k], hidden: true, label: '' }
   for (const k of opts.blank ?? []) pts[k] = { ...pts[k], label: '' }
   for (const [k, p] of Object.entries(opts.pos ?? {})) if (p) pts[k] = { ...pts[k], pos: p }
@@ -274,7 +301,7 @@ const prio3: Maker[] = [
       segments: [...loop(['A', 'B', 'C', 'D'], [`${L} m`, `${W} m`]), ...loop(['P', 'Q', 'R', 'S'], [`${p} m`])],
     }
     return titled('Le carrelage du grand hall', numeric(
-      `Le grand hall du château est un rectangle de ${L} m sur ${W} m. Au centre, un bassin carré de ${p} m de côté ne sera pas carrelé. Les carreaux sont des carrés de 50 cm de côté, vendus par boîtes de ${box} à ${price} € la boîte. Combien coûtera le carrelage (en €) ?`,
+      `Le grand hall du château est un rectangle de ${L} m sur ${W} m. Au centre, un bassin carré de ${p} m de côté ne sera pas carrelé. Les carreaux sont des carrés de 50 cm de côté, vendus par boîtes de ${box} carreaux ; une boîte coûte ${price} €. Combien coûtera le carrelage (en €) ?`,
       boxes * price, { explanation: `Surface à carreler : ${L} × ${W} − ${p} × ${p} = ${area} m². Il faut 2 × 2 = 4 carreaux par m², donc ${area} × 4 = ${tiles} carreaux. ${tiles} ÷ ${box} = ${fmt(Math.round((tiles / box) * 100) / 100)}${tiles % box ? '…' : ''} : ${boxes} boîtes, soit ${boxes} × ${price} = ${boxes * price} €.` }), figure)
   }),
   () => retry(() => {
@@ -644,7 +671,7 @@ const frac3: Maker[] = [
     const ctx = pick(['l’abreuvoir des chevaux', 'la piscine du club', 'la citerne du village', 'le bassin des carpes', 'la cuve de la brasserie'])
     return titled('Les deux robinets', numeric(
       `Pour remplir ${ctx}, le robinet A, seul, mettrait ${a} heures et le robinet B, seul, ${b} heures. En une heure, A remplit donc ${F(1, a)} de la cuve. Combien de minutes faut-il pour tout remplir si l'on ouvre les deux robinets en même temps ?`,
-      minutes, { explanation: `En une heure, les deux robinets remplissent ${F(1, a)} + ${F(1, b)} = ${F(k, b)} + ${F(1, b)} = ${F(k + 1, b)}${simp(k + 1, b)}. Chaque heure, on remplit ${k + 1} fois ${F(1, b)} de la cuve, et il faut ${b} fois ${F(1, b)} pour la remplir : cela prend ${b} ÷ ${k + 1} = ${fmt(b / (k + 1))} h, soit ${minutes} min.` }))
+      minutes, { explanation: `En une heure, les deux robinets remplissent ${F(1, a)} + ${F(1, b)} = ${F(k, b)} + ${F(1, b)} = ${F(k + 1, b)}${simp(k + 1, b)}. Chaque heure, on remplit ${k + 1} fois ${F(1, b)} de la cuve, et il faut ${b} fois ${F(1, b)} pour la remplir : cela prend ${b} ÷ ${k + 1} = ${Fs(b, k + 1)} h, soit ${b} × 60 ÷ ${k + 1} = ${minutes} min.` }))
   },
   () => retry(() => {
     const D = pick([12, 18, 20, 24, 30, 36, 40])
@@ -680,7 +707,7 @@ const frac3: Maker[] = [
       t, { explanation: `Chaque minute, l'écart augmente de ${F(n, d)} − ${F(b, q)} = ${F((n * q) / d, q)} − ${F(b, q)} = ${F(g, q)}${simp(g, q)} de tour. Pour ${L === 1 ? '1 tour' : `${L} tours`} d'avance, soit ${F(L * q, q)}, il faut ${L * q} ÷ ${g} = ${t} minutes.` }))
   }),
   () => retry(() => {
-    const s = pick([4, 6, 8, 10, 12]), p = randInt(1, s - 1), q = randInt(1, s - 1)
+    const s = pick([6, 8, 10, 12]), p = randInt(2, s - 2), q = randInt(2, s - 2)
     const t1 = (s * p) / 2, t2 = ((s - p) * q) / 2, t3 = (s * (s - q)) / 2, sh = s * s - t1 - t2 - t3
     const nn = 2 * sh, dd = 2 * s * s
     if (gcd(nn, dd) === dd) return null
@@ -688,7 +715,7 @@ const frac3: Maker[] = [
     const figure: Figure = {
       points, polygons: [{ pts: ['D', 'P', 'Q'], fill: RED }],
       segments: [{ a: 'A', b: 'P', label: `${p} cm` }, { a: 'P', b: 'B' }, { a: 'B', b: 'Q', label: `${q} cm` }, { a: 'Q', b: 'C' }, { a: 'C', b: 'D' }, { a: 'D', b: 'A', label: `${s} cm` }, ...loop(['D', 'P', 'Q'])],
-      angles: [{ vertex: 'A', a: 'B', b: 'D', right: true }, { vertex: 'B', a: 'C', b: 'A', right: true }, { vertex: 'C', a: 'D', b: 'B', right: true }],
+      angles: [{ vertex: 'C', a: 'D', b: 'B', right: true }],
     }
     return titled('Le carré découpé', fraction(
       `ABCD est un carré de ${s} cm de côté. Le point P est sur [AB] avec AP = ${p} cm et le point Q est sur [BC] avec BQ = ${q} cm. Quelle fraction de l'aire du carré représente le triangle DPQ colorié ? (Donne une fraction irréductible.)`,
@@ -935,6 +962,8 @@ const lit3: Maker[] = [
 // ═══════════════════════════════════════════════════════════════════════
 // 5e-prop — Proportionnalité
 // ═══════════════════════════════════════════════════════════════════════
+/** Durée d'un trajet en minutes, expliquée sans décimales interminables. */
+const dur = (d: number, v: number) => (clean(d / v) ? `${fmt(d)} ÷ ${v} = ${fmt(d / v)} h = ${fmt((d / v) * 60)} min` : `${fmt(d)} × 60 ÷ ${v} = ${fmt((d / v) * 60)} min`)
 type Ing = [number, string, string] // quantité, texte (# = quantité), question
 const RECIPES: { nom: string; ing: Ing[] }[] = [
   { nom: 'des crêpes', ing: [[250, '# g de farine', 'Quelle masse de farine faut-il (en g) ?'], [50, '# cL de lait', 'Quelle quantité de lait faut-il (en cL) ?'], [4, '# œufs', 'Combien d’œufs faut-il ?'], [40, '# g de sucre', 'Quelle masse de sucre faut-il (en g) ?']] },
@@ -977,7 +1006,7 @@ const prop1: Maker[] = [
     const name = prenom()
     return titled('L’allure régulière', numeric(
       `${name} se déplace ${ctx[0]} à vitesse constante : en ${t1} minutes, ${name} parcourt ${fmt(d1)} km. À cette allure, combien de minutes faut-il pour parcourir ${D} km ?`,
-      t2, { explanation: `En ${t1} min : ${fmt(d1)} km, donc en 60 min : ${fmt(d1)} × ${fmt(60 / t1)} = ${v} km (vitesse ${v} km/h). Pour ${D} km : ${D} ÷ ${v} = ${fmt(D / v)} h = ${t2} min.` }))
+      t2, { explanation: `En ${t1} min : ${fmt(d1)} km, donc en 60 min : ${fmt(d1)} × 60 ÷ ${t1} = ${v} km (vitesse ${v} km/h). Pour ${D} km : ${dur(D, v)}.` }))
   }),
   () => retry(() => {
     const obj = pick(['Un sweat', 'Une paire de baskets', 'Un sac à dos', 'Un casque audio', 'Une veste']), P = randInt(4, 30) * 5
@@ -1002,7 +1031,7 @@ const prop1: Maker[] = [
     const dest = pick(['à la mer', 'à la montagne', 'chez ses grands-parents', 'au festival'])
     return titled('Le plein pour les vacances', numeric(
       `La voiture de la famille ${deP(prenom())} consomme ${fmt(c)} L d'essence pour 100 km. Pour aller ${dest}, il faut parcourir ${D} km. L'essence coûte ${fmt(p)} € le litre. Combien coûtera l'essence du trajet (en €) ?`,
-      cost, { explanation: `Pour ${D} km : ${fmt(c)} × ${D / 100} = ${fmt(L)} L. Prix : ${fmt(L)} × ${fmt(p)} = ${fmt(cost)} €.` }))
+      cost, { explanation: `Pour ${D} km : ${fmt(c)} × ${fmt(D / 100)} = ${fmt(L)} L. Prix : ${fmt(L)} × ${fmt(p)} = ${fmt(cost)} €.` }))
   }),
 ]
 
@@ -1027,7 +1056,7 @@ const prop2: Maker[] = [
     const name = prenom()
     return titled('La carte au trésor', numeric(
       `Sur une carte à l'échelle 1/${scale}, le chemin qui mène du point A au trésor T est formé de trois segments (voir la figure). ${name} marche à ${v} km/h. Combien de minutes faut-il pour aller de A jusqu'au trésor ?`,
-      t, { explanation: `Sur la carte : ${l.map(fmt).join(' + ')} = ${fmt(map)} cm. En réalité : ${fmt(map)} × ${scale} = ${fmt(map * scale)} cm = ${fmt(D)} km. Durée : ${fmt(D)} ÷ ${v} = ${fmt(D / v)} h = ${t} min.` }), figure)
+      t, { explanation: `Sur la carte : ${l.map(fmt).join(' + ')} = ${fmt(map)} cm. En réalité : ${fmt(map)} × ${scale} = ${fmt(map * scale)} cm = ${fmt(D)} km. Durée : ${dur(D, v)}.` }), figure)
   }),
   () => retry(() => {
     const ctx = pick([
@@ -1061,7 +1090,7 @@ const prop2: Maker[] = [
     if (!isInt((d1 / v1) * 60) || !isInt((d2 / v2) * 60)) return null
     return titled('Le trajet en deux étapes', numeric(
       `${ctx[0]} ${d1} km ${ctx[1]} à ${v1} km/h, puis ${d2} km ${ctx[2]} à ${v2} km/h. Combien de minutes dure le trajet complet ?`,
-      t, { explanation: `1re étape : ${d1} ÷ ${v1} = ${fmt(d1 / v1)} h = ${(d1 / v1) * 60} min. 2e étape : ${d2} ÷ ${v2} = ${fmt(d2 / v2)} h = ${(d2 / v2) * 60} min. Total : ${t} min.` }))
+      t, { explanation: `1re étape : ${dur(d1, v1)}. 2e étape : ${dur(d2, v2)}. Total : ${fmt(t)} min.` }))
   }),
 ]
 
@@ -1072,7 +1101,7 @@ const prop3: Maker[] = [
     if (!isInt(min) || !clean(dA) || min < 20) return null
     return titled('La rencontre sur la route', numeric(
       `Deux villages sont distants de ${D} km. À midi, ${A} part du premier village à vélo vers le second, à ${v1} km/h ; au même moment, ${B} part du second village vers le premier, à ${v2} km/h. ${ask === 0 ? 'Au bout de combien de minutes se croisent-ils ?' : `À quelle distance du village de départ de ${A} (en km) se croisent-ils ?`}`,
-      ask === 0 ? min : dA, { explanation: `Chaque heure, ils se rapprochent de ${v1} + ${v2} = ${v1 + v2} km. Il leur faut ${D} ÷ ${v1 + v2} = ${fmt(t)} h = ${min} min pour se rejoindre.${ask === 1 ? ` Pendant ce temps, ${A} parcourt ${v1} × ${fmt(t)} = ${fmt(dA)} km.` : ''}` }))
+      ask === 0 ? min : dA, { explanation: `Chaque heure, ils se rapprochent de ${v1} + ${v2} = ${v1 + v2} km. Il leur faut ${dur(D, v1 + v2)} pour se rejoindre.${ask === 1 ? ` Pendant ce temps, ${A} parcourt ${v1} × ${fmt(min)} ÷ 60 = ${fmt(dA)} km.` : ''}` }))
   }),
   () => retry(() => {
     const scale = pick([25000, 50000, 100000, 200000, 250000]), l1 = randInt(4, 20) / 2, l2 = randInt(4, 20) / 2, ask = randInt(0, 1)
@@ -1085,7 +1114,7 @@ const prop3: Maker[] = [
     if (ask === 0) {
       return titled('La carte du cavalier', numeric(
         `${intro} Sur la même carte, B et C sont à ${fmt(l2)} cm. Un cavalier va de B à C à ${v} km/h. Combien de minutes dure son trajet ?`,
-        t, { explanation: `${fmt(l1)} cm sur la carte ↔ ${fmt(d1)} km, donc 1 cm ↔ ${fmt(d1 / l1)} km. BC réel : ${fmt(l2)} × ${fmt(d1 / l1)} = ${fmt(d2)} km. Durée : ${fmt(d2)} ÷ ${v} = ${fmt(d2 / v)} h = ${t} min.` }), figure)
+        t, { explanation: `${fmt(l1)} cm sur la carte ↔ ${fmt(d1)} km, donc 1 cm ↔ ${fmt(d1 / l1)} km. BC réel : ${fmt(l2)} × ${fmt(d1 / l1)} = ${fmt(d2)} km. Durée : ${dur(d2, v)}.` }), figure)
     }
     return titled('L’échelle de la carte', numeric(
       `${intro} L'échelle de la carte s'écrit 1/n : quelle est la valeur de n ?`,
@@ -1256,7 +1285,7 @@ const geo2: Maker[] = [
       v, { explanation: `L'angle de ${u}° et l'angle ABC sont alternes-internes (les droites (d) et (d′) sont parallèles, coupées par (AB)) : ABC = ${u}°. Dans le triangle ABC : ACB = 180 − ${u} − ${w} = ${v}°.` }), figure)
   }),
   () => {
-    const a = 2 * randInt(10, 28), c = (180 - a) / 2, q = randInt(0, 1)
+    const a = 2 * randInt(10, 22), c = (180 - a) / 2, q = randInt(0, 1)
     const B: Pt = [-1, 0], C: Pt = [1, 0], A: Pt = [0, Math.tan(rad(c))]
     const D = inter(B, polar(1, a, B), A, C)
     const ans = q === 0 ? c - a : 180 - c
@@ -1278,11 +1307,11 @@ const geo2: Maker[] = [
     const figure: Figure = {
       points: place({ A, B, C, D, E }, { pos: { A: 'sw', B: 'se', C: 'ne', D: 'nw', E: 'n' } }),
       segments: [{ a: 'A', b: 'B' }, { a: 'B', b: 'C' }, { a: 'C', b: 'D' }, { a: 'D', b: 'A', mark: 'tick' }, { a: 'A', b: 'E', mark: 'tick' }],
-      angles: [{ vertex: 'A', a: 'B', b: 'D', label: deg(a), radius: 14 }, q === 0 ? { vertex: 'A', a: 'D', b: 'E', label: '?', color: RED, radius: 40 } : { vertex: 'A', a: 'E', b: 'B', label: '?', color: RED, radius: 40 }],
+      angles: [{ vertex: 'B', a: 'C', b: 'A', label: deg(eab) }, q === 0 ? { vertex: 'A', a: 'D', b: 'E', label: '?', color: RED, radius: 26 } : { vertex: 'A', a: 'E', b: 'B', label: '?', color: RED, radius: 26 }],
     }
     return titled('Le parallélogramme et l’isocèle', numeric(
-      `ABCD est un parallélogramme dont l'angle DAB mesure ${a}°. Le point E est sur le côté [DC] et vérifie AE = AD. Combien mesure l'angle ${q === 0 ? 'DAE' : 'EAB'} ?`,
-      q === 0 ? dae : eab, { explanation: `Deux angles consécutifs d'un parallélogramme sont supplémentaires : ADC = 180 − ${a} = ${180 - a}°. ADE est isocèle en A, donc AED = ADE = ${180 - a}° et DAE = 180 − 2 × ${180 - a} = ${dae}°.${q === 1 ? ` Enfin EAB = DAB − DAE = ${a} − ${dae} = ${eab}°.` : ''}` }), figure)
+      `ABCD est un parallélogramme dont l'angle ABC mesure ${eab}°. Le point E est sur le côté [DC] et vérifie AE = AD. Combien mesure l'angle ${q === 0 ? 'DAE' : 'EAB'} ?`,
+      q === 0 ? dae : eab, { explanation: `Les angles opposés d'un parallélogramme sont égaux : ADC = ABC = ${eab}°. ADE est isocèle en A, donc AED = ADE = ${eab}°${q === 0 ? ` et DAE = 180 − 2 × ${eab} = ${dae}°.` : `. Comme (AB) // (DC), les angles EAB et AED sont alternes-internes, donc égaux : EAB = ${eab}°.`}` }), figure)
   }),
   () => retry(() => {
     const n = pick([5, 6]), S = (n - 2) * 180, base = randInt(0, 359)
@@ -1315,7 +1344,7 @@ const geo2: Maker[] = [
     if (extra === 1) { lo = Math.max(lo, a, b); cond = ', et que AC est la plus longue des trois distances'; note = ` et AC > ${Math.max(a, b)} (la plus longue)` }
     if (extra === 2) { hi = Math.min(hi, a, b); cond = ', et que AC est la plus courte des trois distances'; note = ` et AC < ${Math.min(a, b)} (la plus courte)` }
     const count = hi - lo - 1
-    if (count < 2 || a === b) return null
+    if (count < 2 || a === b || Math.max(a, b) > 2 * Math.min(a, b)) return null
     return titled('Les trois villages', numeric(
       `Trois villages A, B et C ne sont pas alignés. On sait que AB = ${a} km et BC = ${b} km${cond}. La distance AC est un nombre entier de kilomètres. Combien de valeurs sont possibles pour AC ?`,
       count, { explanation: `Inégalité triangulaire (villages non alignés, donc inégalités strictes) : AC < ${a} + ${b} = ${a + b} et AC > ${Math.max(a, b)} − ${Math.min(a, b)} = ${Math.abs(a - b)}${note}. AC peut valoir ${lo + 1}, …, ${hi - 1} : ${count} valeurs.` }),
@@ -1334,8 +1363,8 @@ const geo2: Maker[] = [
       points: place({ A, B, C, D, O }, { pos: { A: 'w', C: 'e', O: 'se' } }),
       segments: [...loop(['A', 'B', 'C', 'D']), { a: 'A', b: 'O', mark: 'tick2' }, { a: 'O', b: 'C', mark: 'tick2' }, { a: 'B', b: 'O', dashed: true, mark: 'tick' }, { a: 'O', b: 'D', dashed: true, mark: 'tick' }],
       angles: [
-        { vertex: 'A', a: 'B', b: 'C', label: deg(x) }, { vertex: 'C', a: 'B', b: 'A', label: deg(y) },
-        q === 0 ? { vertex: 'D', a: 'A', b: 'C', label: '?', color: RED } : { vertex: 'A', a: 'B', b: 'D', label: '?', color: RED, radius: 44 },
+        { vertex: 'A', a: 'B', b: 'C', label: deg(x), radius: q === 1 ? 34 : 20 }, { vertex: 'C', a: 'B', b: 'A', label: deg(y) },
+        q === 0 ? { vertex: 'D', a: 'A', b: 'C', label: '?', color: RED } : { vertex: 'A', a: 'B', b: 'D', label: '?', color: RED, radius: 20 },
       ],
     }
     const ans = q === 0 ? 180 - x - y : x + y
@@ -1525,7 +1554,7 @@ const stat1: Maker[] = [
     const cb = sum(sports.map((s, i) => (ball.includes(s) ? counts[i] : 0))), pct = (cb / N) * 100
     return titled('Le sondage du collège', numeric(
       `On a demandé à ${N} élèves leur sport préféré : ${sports.map((s, i) => `${s} ${counts[i]}`).join(' ; ')}. Quel pourcentage des élèves interrogés préfère un sport de ballon ?`,
-      pct, { explanation: `Sports de ballon (${ball.join(', ')}) : ${sports.map((s, i) => (ball.includes(s) ? counts[i] : null)).filter((v) => v !== null).join(' + ')} = ${cb} élèves sur ${N}. Fréquence : ${cb} ÷ ${N} = ${fmt(cb / N)}, soit ${fmt(pct)} %.` }))
+      pct, { explanation: `Sports de ballon (${ball.join(', ')}) : ${sports.map((s, i) => (ball.includes(s) ? counts[i] : null)).filter((v) => v !== null).join(' + ')} = ${cb} élèves sur ${N}. Fréquence : ${cb} ÷ ${N} × 100 = ${fmt(pct)} %.` }))
   }),
   () => retry(() => {
     const r = randInt(3, 9), b = randInt(3, 9), v = randInt(2, 6), k = randInt(1, 5), w = randInt(0, 1)
@@ -1646,7 +1675,7 @@ const stat3: Maker[] = [
     const tot = r + b + k
     return titled('Le sac à compléter', numeric(
       `Un sac contient ${r} jetons rouges et ${b} jetons bleus. Combien de jetons ${addRed ? 'rouges' : 'bleus'} faut-il ajouter pour que la probabilité de tirer un jeton rouge soit égale à ${F(p, q)} ?`,
-      k, { explanation: `Avec ${k} jetons ${addRed ? 'rouges' : 'bleus'} de plus, il y a ${addRed ? r + k : r} rouges sur ${tot} jetons, et ${F(addRed ? r + k : r, tot)} = ${F(p, q)}. Pour trouver ${k} : il faut que les rouges forment ${p} parts sur ${q}, ${addRed ? `donc que les ${b} bleus forment ${q - p} part${q - p > 1 ? 's' : ''} : une part vaut ${fmt(b / (q - p))}, il faut ${p} × ${fmt(b / (q - p))} = ${r + k} rouges` : `donc une part vaut ${r} ÷ ${p} = ${fmt(r / p)} et il faut ${q - p} × ${fmt(r / p)} = ${b + k} bleus`}.` }))
+      k, { explanation: `Avec ${k} jetons ${addRed ? 'rouges' : 'bleus'} de plus, il y a ${addRed ? r + k : r} rouges sur ${tot} jetons, et ${F(addRed ? r + k : r, tot)} = ${F(p, q)}. Pour trouver ${k} : il faut que les rouges forment ${p} parts sur ${q}, ${addRed ? `donc que les ${b} bleus forment ${q - p} part${q - p > 1 ? 's' : ''} : une part vaut ${Fs(b, q - p)}, il faut ${p} × ${Fs(b, q - p)} = ${r + k} rouges` : `donc une part vaut ${Fs(r, p)} et il faut ${q - p} × ${Fs(r, p)} = ${b + k} bleus`}.` }))
   }),
   () => retry(() => {
     const m = randInt(9, 14), e = randInt(6, 14), known = Array.from({ length: 4 }, () => randInt(5, 18))

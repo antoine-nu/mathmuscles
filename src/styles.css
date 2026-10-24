@@ -596,3 +596,14 @@ button { font-family: inherit; cursor: pointer; }
 @media (max-width: 520px) { .durations { grid-template-columns: repeat(2, 1fr); } }
 .setup-note.small { font-size: 13px; color: var(--muted); margin-top: 16px; }
 .setup-note.error { color: #ff9a8a; }
+.mvec { position: relative; display: inline-block; padding-top: 0.25em; }
+.mvec::after { content: '→'; position: absolute; left: 0; right: 0; top: -0.42em; text-align: center; font-size: 0.78em; font-style: normal; line-height: 1; }
+.be-hint { flex-basis: 100%; color: var(--muted); font-size: 14px; }
+/* les fenêtres ne doivent jamais dépasser l'écran (piste de grille contrainte) */
+.modal-backdrop { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.scroll, .townhall { max-width: 100%; min-width: 0; }
+@media (max-width: 520px) {
+  .scroll-rod { margin: 0 -6px; }
+  .q-text { font-size: 19px; }
+  .q-num { flex-wrap: wrap; }
+}

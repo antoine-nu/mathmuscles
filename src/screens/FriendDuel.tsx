@@ -261,6 +261,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
           else send({ t: 'horn' })
         }}
         onRematch={role === 'host' && peerOnline ? () => setPhase({ name: 'lobby' }) : undefined}
+        endHint={role === 'guest' ? (peerOnline ? 'L’hôte peut lancer une revanche : reste sur cet écran, la partie redémarrera toute seule.' : undefined) : undefined}
         onMenu={quit}
       />
     )
