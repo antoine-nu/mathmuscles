@@ -39,6 +39,9 @@ verrouillé.
 
 ## Modes de jeu
 
+L'accueil sépare **La conquête** (le village et l'assaut final : entraînement libre, duel contre un camarade ou contre
+l'ordinateur) et **L'entraînement** (sans village ni bataille : la quête du savoir et le siège des tables).
+
 - **Entraînement libre** : on fait grandir son royaume à son rythme ; la progression est sauvegardée dans le navigateur.
 
 - **La quête du savoir** : entraînement hors bataille sur un ou plusieurs chapitres du niveau, sur une carte de
@@ -51,7 +54,7 @@ verrouillé.
 
 - **Le siège des tables** (tous niveaux) : entraînement aux tables de multiplication ou d'addition. On choisit une ou
   plusieurs tables (de 1 à 10), ou un **défi** (Tables faciles : 2 à 5 ; Tables difficiles : 6 à 9 ; Toutes les
-  tables : 2 à 9), et une garnison : **Écuyer** (environ 9 s par réponse), **Chevalier** (environ 4,3 s) ou
+  tables : 2 à 9 ; sans × 1 ni × 10, et jamais deux fois la même opération), et une garnison : **Écuyer** (environ 9 s par réponse), **Chevalier** (environ 4,3 s) ou
   **Conquérant** (environ 2,5 s). Chaque bonne réponse fait tirer une catapulte : il faut 20 boulets pour abattre le
   château, qui se fissure, perd ses créneaux, s'ouvre d'une brèche, prend feu puis s'effondre ; pendant ce temps, sa
   garnison décime l'armée du joueur : les soldats tombent un à un, et le château détruit une catapulte d'une pierre

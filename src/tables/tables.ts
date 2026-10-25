@@ -54,6 +54,8 @@ const factKey = (f: Fact) => `${f.op}:${Math.min(f.a, f.b)}:${Math.max(f.a, f.b)
 /**
  * Tirage des opérations : toutes les opérations des tables choisies (table × 1 à 10), dans un ordre mélangé, sans
  * répéter la précédente. Une opération ratée revient un peu plus tard (3 à 5 questions après) pour l'ancrer.
+ * En défi (`challenge`), on écarte × 1 et × 10 et une opération n'est jamais posée deux fois (3 × 7 et 7 × 3 comptent
+ * pour une seule) : chaque défi offre au moins 26 opérations différentes, plus que les 20 boulets nécessaires.
  */
 export class FactDeck {
   private bag: Fact[] = []
@@ -61,12 +63,18 @@ export class FactDeck {
   private count = 0
   private last = ''
 
-  constructor(private op: Operation, private tables: number[]) {}
+  constructor(private op: Operation, private tables: number[], private challenge = false) {}
 
   private refill() {
     const all: Fact[] = []
+    const used = new Set<string>()
     for (const t of this.tables) {
-      for (let k = 1; k <= 10; k++) all.push(Math.random() < 0.5 ? { a: t, b: k, op: this.op } : { a: k, b: t, op: this.op })
+      for (let k = this.challenge ? 2 : 1; k <= (this.challenge ? 9 : 10); k++) {
+        const f: Fact = Math.random() < 0.5 ? { a: t, b: k, op: this.op } : { a: k, b: t, op: this.op }
+        if (this.challenge && used.has(factKey(f))) continue
+        used.add(factKey(f))
+        all.push(f)
+      }
     }
     for (let i = all.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -97,6 +105,7 @@ export class FactDeck {
 
   /** L'élève s'est trompé sur cette opération : elle reviendra bientôt. */
   missed(f: Fact) {
+    if (this.challenge) return
     if (!this.again.some((r) => factKey(r.fact) === factKey(f))) this.again.push({ fact: f, at: this.count + 3 + Math.floor(Math.random() * 3) })
   }
 }

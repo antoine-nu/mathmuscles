@@ -94,7 +94,8 @@ function Setup({ choice, onChange, onStart, onQuit }: { choice: SiegeChoice; onC
         </div>
         <p className="ts-note">
           Une médaille récompense une <b>seule table</b> : en en choisissant plusieurs, tu t’entraînes librement. Pour
-          gagner des médailles sur plusieurs tables à la fois, relève un défi :
+          gagner des médailles sur plusieurs tables à la fois, relève un défi (sans {sign} 1 ni {sign} 10, et jamais deux fois
+          la même opération) :
         </p>
         <div className="ts-challenges">
           {CHALLENGES.map((c) => {
@@ -154,7 +155,7 @@ interface Props { choice: SiegeChoice; startsAt: number; onAgain: () => void; on
 function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
   const lvl = siegeLevel(choice.level)
   const now = useFrameClock()
-  const deck = useMemo(() => new FactDeck(choice.op, choice.tables), [choice])
+  const deck = useMemo(() => new FactDeck(choice.op, choice.tables, !!challengeById(choice.challenge)), [choice])
   const [fact, setFact] = useState<Fact>(() => deck.next())
   const [value, setValue] = useState('')
   const [wrong, setWrong] = useState(0) // horodatage de la dernière erreur (secousse)
@@ -272,7 +273,8 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
         {!ended && (
           <>
             <form className="sq-form" onSubmit={(e) => { e.preventDefault(); submit() }}>
-              <span className="sq-fact">{factText(fact)} =</span>
+              {/* pendant le compte à rebours, la première opération reste cachée */}
+              <span className="sq-fact">{started ? factText(fact) : `? ${choice.op === 'mult' ? '×' : '+'} ?`} =</span>
               <input ref={inputRef} value={value} inputMode="numeric" autoComplete="off" aria-label="Ta réponse"
                 disabled={!started || fired >= lvl.hits} onChange={(e) => setValue(e.target.value.replace(/\D/g, '').slice(0, 3))} />
               <button className="btn gold" type="submit" data-sfx="none" disabled={!started || fired >= lvl.hits}>Feu !</button>
