@@ -5,8 +5,8 @@ import { MuteButton } from '../components/MuteButton'
 import { StartCountdown } from './PrepScreen'
 import { SHOT_FLIGHT, SiegeScene, TARGETS, type Shot } from '../tables/SiegeScene'
 import {
-  FactDeck, OPERATIONS, SIEGE_LEVELS, TABLES, awardMedals, factAnswer, factText, loadChoice, loadMedals, saveChoice, siegeLevel,
-  type Fact, type SiegeChoice, type SiegeLevelId,
+  CHALLENGES, FactDeck, OPERATIONS, SIEGE_LEVELS, TABLES, awardMedal, challengeById, factAnswer, factText, loadChoice, loadMedals,
+  medalKey, saveChoice, siegeLevel, type Fact, type SiegeChoice, type SiegeLevelId,
 } from '../tables/tables'
 
 type Phase =
@@ -37,9 +37,22 @@ const MEDAL_COLORS: Record<SiegeLevelId, string> = { ecuyer: '#c98a4a', chevalie
 
 function Setup({ choice, onChange, onStart, onQuit }: { choice: SiegeChoice; onChange: (c: SiegeChoice) => void; onStart: () => void; onQuit: () => void }) {
   const medals = loadMedals()[choice.op]
-  const toggle = (t: number) => onChange({ ...choice, tables: choice.tables.includes(t) ? choice.tables.filter((x) => x !== t) : [...choice.tables, t].sort((a, b) => a - b) })
+  const challenge = challengeById(choice.challenge)
+  // cliquer une table quitte le défi en cours
+  const toggle = (t: number) => {
+    const tables = challenge ? [] : choice.tables
+    onChange({ ...choice, challenge: undefined, tables: tables.includes(t) ? tables.filter((x) => x !== t) : [...tables, t].sort((a, b) => a - b) })
+  }
   const sign = OPERATIONS.find((o) => o.id === choice.op)!.sign
   const lvl = siegeLevel(choice.level)
+  const key = medalKey(choice)
+  const Medals = ({ got }: { got: SiegeLevelId[] }) => (
+    <span className="ts-medals" title="Médailles : château abattu en Écuyer, Chevalier, Conquérant">
+      {SIEGE_LEVELS.map((l) => (
+        <span key={l.id} className={`ts-medal ${got.includes(l.id) ? 'won' : ''}`} style={{ background: got.includes(l.id) ? MEDAL_COLORS[l.id] : undefined }}>{l.icon}</span>
+      ))}
+    </span>
+  )
   return (
     <div className="level-select tables-setup">
       <div className="opt-inner">
@@ -66,23 +79,37 @@ function Setup({ choice, onChange, onStart, onQuit }: { choice: SiegeChoice; onC
         </div>
         <div className="ts-tables">
           {TABLES.map((t) => {
-            const on = choice.tables.includes(t)
-            const got = medals[t] ?? []
+            const on = !challenge && choice.tables.includes(t)
             return (
               <button key={t} className={`opt-row ts-table ${on ? 'selected' : ''}`} data-sfx="select" aria-pressed={on} onClick={() => toggle(t)}>
                 <span className="ts-num">{sign} {t}</span>
-                <span className="ts-medals" title="Médailles : château abattu en Écuyer, Chevalier, Conquérant">
-                  {SIEGE_LEVELS.map((l) => (
-                    <span key={l.id} className={`ts-medal ${got.includes(l.id) ? 'won' : ''}`} style={{ background: got.includes(l.id) ? MEDAL_COLORS[l.id] : undefined }}>{l.icon}</span>
-                  ))}
-                </span>
+                <Medals got={medals[t] ?? []} />
               </button>
             )
           })}
         </div>
         <div className="ts-row-actions">
-          <button className="hud-btn" onClick={() => onChange({ ...choice, tables: [...TABLES] })}>Toutes</button>
-          <button className="hud-btn" onClick={() => onChange({ ...choice, tables: [] })}>Aucune</button>
+          <button className="hud-btn" onClick={() => onChange({ ...choice, challenge: undefined, tables: [...TABLES] })}>Toutes</button>
+          <button className="hud-btn" onClick={() => onChange({ ...choice, challenge: undefined, tables: [] })}>Aucune</button>
+        </div>
+        <p className="ts-note">
+          Une médaille récompense une <b>seule table</b> : en en choisissant plusieurs, tu t’entraînes librement. Pour
+          gagner des médailles sur plusieurs tables à la fois, relève un défi :
+        </p>
+        <div className="ts-challenges">
+          {CHALLENGES.map((c) => {
+            const on = challenge?.id === c.id
+            return (
+              <button key={c.id} className={`opt-row ts-challenge ${on ? 'selected' : ''}`} data-sfx="select" aria-pressed={on}
+                onClick={() => onChange({ ...choice, challenge: c.id, tables: [...c.tables] })}>
+                <span className="opt-text">
+                  <b>⚑ {c.name}</b>
+                  <small>{c.tables.length === 8 ? `de ${sign} 2 à ${sign} 9` : c.tables.map((t) => `${sign} ${t}`).join(' · ')}</small>
+                </span>
+                <Medals got={medals[c.id] ?? []} />
+              </button>
+            )
+          })}
         </div>
 
         <h2 className="ts-h">2 · Quelle garnison ?</h2>
@@ -100,8 +127,8 @@ function Setup({ choice, onChange, onStart, onQuit }: { choice: SiegeChoice; onC
       </div>
       <footer className="opt-bar">
         <div className="opt-count ok">
-          <b>{choice.tables.length ? `${choice.tables.length} table${choice.tables.length > 1 ? 's' : ''}` : 'Aucune table'}</b>
-          <small>{lvl.icon} {lvl.name} · {lvl.hits} boulets pour abattre le château</small>
+          <b>{challenge ? `Défi : ${challenge.name}` : choice.tables.length === 1 ? `Table de ${choice.tables[0]}` : choice.tables.length ? `${choice.tables.length} tables` : 'Aucune table'}</b>
+          <small>{lvl.icon} {lvl.name} · {key ? 'une médaille en jeu' : 'entraînement libre, sans médaille'}</small>
         </div>
         <button className="btn gold big" disabled={!choice.tables.length} onClick={onStart}>Lancer le siège 🏰</button>
       </footer>
@@ -134,18 +161,23 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
   const [shots, setShots] = useState<Shot[]>([])
   const [errors, setErrors] = useState<Fact[]>([])
   const [ended, setEnded] = useState<{ result: 'won' | 'lost'; t0: number } | null>(null)
-  const [medalsWon, setMedalsWon] = useState<number[]>([])
+  const [medalWon, setMedalWon] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const heard = useRef(0)
+  const heard = useRef({ impacts: 0, volley: -1, falls: 0 })
   const started = now >= startsAt
   const fired = shots.length
   // le temps de l'armée s'arrête quand le dernier boulet est parti (ou à la fin)
-  const stopAt = ended ? ended.t0 : fired >= lvl.hits ? shots[lvl.hits - 1].t0 : null
+  const stopAt = fired >= lvl.hits ? shots[lvl.hits - 1].t0 : ended ? ended.t0 : null
   const elapsed = Math.max(0, (stopAt ?? now) - startsAt)
   const armyHp = Math.max(0, 1 - elapsed / (lvl.seconds * 1000))
   const landed = shots.filter((s) => now >= s.t0 + SHOT_FLIGHT)
   const castleHp = Math.max(0, 1 - landed.length / lvl.hits)
   const impacts = landed.map((s) => ({ t: s.t0 + SHOT_FLIGHT, target: s.target }))
+  // le château détruit une catapulte quand l'armée passe sous 2/3, puis 1/3 de sa vie ; la dernière tombe avec elle
+  const falls = [0, 1, 2].map((i) => {
+    const t = startsAt + ((i + 1) / 3) * lvl.seconds * 1000
+    return stopAt === null || t <= stopAt ? t : Infinity
+  })
   const volleyEvery = lvl.seconds * 1000 / 45
   const volleys = useMemo(() => {
     if (!started || ended) return []
@@ -153,13 +185,16 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
     return [k - 1, k].filter((i) => i >= 0).map((i) => ({ id: i, t0: startsAt + i * volleyEvery }))
   }, [started, ended, elapsed, volleyEvery, startsAt])
 
-  // bruitages des impacts
+  // bruitages : impacts sur le château, volées de flèches, catapultes détruites
+  const lastVolley = volleys.length ? volleys[volleys.length - 1].id : -1
+  const fallen = falls.filter((t) => now >= t).length
   useEffect(() => {
-    if (landed.length > heard.current) {
-      heard.current = landed.length
-      audio.impact()
-    }
-  }, [landed.length])
+    const h = heard.current
+    if (landed.length > h.impacts) audio.impact()
+    if (lastVolley > h.volley) audio.arrows()
+    if (fallen > h.falls) audio.explode()
+    heard.current = { impacts: landed.length, volley: lastVolley, falls: fallen }
+  }, [landed.length, lastVolley, fallen])
 
   // victoire / défaite
   useEffect(() => {
@@ -169,7 +204,8 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
       audio.play(null)
       audio.collapse()
       window.setTimeout(() => audio.fanfare(true), 1500)
-      setMedalsWon(awardMedals(choice.op, choice.tables, choice.level))
+      const key = medalKey(choice)
+      setMedalWon(key !== null && awardMedal(choice.op, key, choice.level))
     } else if (armyHp <= 0 && fired < lvl.hits) {
       setEnded({ result: 'lost', t0: Date.now() })
       audio.play(null)
@@ -185,7 +221,9 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
     if (!started || ended || fired >= lvl.hits || !value) return
     if (Number(value) === factAnswer(fact)) {
       audio.launch()
-      setShots((s) => [...s, { id: s.length, t0: Date.now(), from: s.length % 3, target: Math.floor(Math.random() * TARGETS.length) }])
+      // seules les catapultes encore debout tirent, à tour de rôle
+      const standing = falls.map((t, i) => (Date.now() < t ? i : -1)).filter((i) => i >= 0)
+      setShots((s) => [...s, { id: s.length, t0: Date.now(), from: standing[s.length % standing.length] ?? 2, target: Math.floor(Math.random() * TARGETS.length) }])
       setValue('')
       setFact(deck.next())
     } else {
@@ -226,7 +264,7 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
       </header>
 
       <div className="siege-stage">
-        <SiegeScene now={now} castleHp={castleHp} armyHp={armyHp} shots={shots} impacts={impacts} volleys={volleys} ended={ended} />
+        <SiegeScene now={now} castleHp={castleHp} armyHp={armyHp} shots={shots} impacts={impacts} volleys={volleys} ended={ended} falls={falls} />
         {!started && <StartCountdown startsAt={startsAt} label="À l’assaut !" />}
       </div>
 
@@ -260,10 +298,9 @@ function Siege({ choice, startsAt, onAgain, onSetup, onQuit }: Props) {
                 ? <>Victoire en {secs} secondes, avec {errors.length} erreur{errors.length > 1 ? 's' : ''}.</>
                 : <>Il manquait {lvl.hits - fired} boulet{lvl.hits - fired > 1 ? 's' : ''}. Encore un effort !</>}
             </p>
-            {ended.result === 'won' && medalsWon.length > 0 && (
+            {ended.result === 'won' && medalWon && (
               <p className="se-medals">
-                {siegeLevel(choice.level).icon} Nouvelle{medalsWon.length > 1 ? 's' : ''} médaille{medalsWon.length > 1 ? 's' : ''} « {lvl.name} » :
-                {' '}{medalsWon.map((t) => `table de ${t}`).join(', ')}
+                {lvl.icon} Nouvelle médaille « {lvl.name} » : {challengeById(choice.challenge)?.name ?? `table de ${choice.tables[0]}`}
               </p>
             )}
             {toReview.length > 0 && (

@@ -134,7 +134,7 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes graze { 0%, 70%, 100% { transform: rotate(0); } 80%, 90% { transform: rotate(6deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .bob, .flag-wave, .flutter, .sway, .glow, .smoke circle, .shimmer, .graze { animation: none; }
+  .bob, .flag-wave, .sg-flag, .flutter, .sway, .glow, .smoke circle, .shimmer, .graze { animation: none; }
 }
 
 /* ── Panneau de commande (bas) ──────────────────── */
@@ -161,6 +161,7 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 3px;
 }
 .portrait-name { font-family: var(--font-title); font-weight: 700; color: var(--gold-bright); font-size: 14px; text-align: center; }
+.sc-num.sc-word { font-size: clamp(30px, 6.5vw, 60px); letter-spacing: 1px; }
 .portrait-count { font-size: 13px; color: var(--muted); }
 
 .cmd-info { min-width: 0; }
@@ -765,6 +766,13 @@ button { font-family: inherit; cursor: pointer; }
 .ts-medal { display: grid; place-items: center; width: 24px; height: 24px; font-size: 12px; border-radius: 50%; background: rgba(0, 0, 0, 0.35); border: 1px solid #5a4024; filter: grayscale(1); opacity: 0.45; }
 .ts-medal.won { filter: none; opacity: 1; border-color: #120b05; box-shadow: 0 0 6px rgba(242, 210, 122, 0.6); }
 .ts-row-actions { display: flex; gap: 8px; margin-top: 10px; }
+.ts-note { margin: 16px 0 10px; font-size: 14px; color: #cdb98d; line-height: 1.5; }
+.ts-challenges { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); gap: 10px; }
+.ts-challenge { justify-content: space-between; gap: 10px; }
+.ts-challenge .opt-text b { font-family: var(--font-title); }
+/* drapeau de l'armée assiégeante : il flotte doucement depuis sa hampe */
+.sg-flag { animation: sg-flag 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: left center; }
+@keyframes sg-flag { 0%, 100% { transform: scaleX(1) skewY(0deg); } 50% { transform: scaleX(0.93) skewY(2deg); } }
 
 .siege { display: grid; grid-template-rows: auto 1fr auto; height: 100%; background: #1c140b; }
 .siege-hud { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: linear-gradient(180deg, #3a2412, #24150a); border-bottom: 2px solid var(--gold); }

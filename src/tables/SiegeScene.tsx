@@ -29,18 +29,18 @@ interface Props {
   impacts: { t: number; target: number }[]
   volleys: Volley[]
   ended: { result: 'won' | 'lost'; t0: number } | null
+  /** Instant où chaque catapulte est détruite par une pierre enflammée du château (Infinity : jamais). */
+  falls: number[]
 }
 
 const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v))
 const ease = (t: number) => 1 - Math.pow(1 - t, 3)
 
-export function SiegeScene({ now, castleHp, armyHp, shots, impacts, volleys, ended }: Props) {
-  // tremblement de l'écran juste après un impact
+export function SiegeScene({ now, castleHp, armyHp, shots, impacts, volleys, ended, falls }: Props) {
+  // seul le château vibre un peu sous l'impact
   const lastImpact = impacts.length ? impacts[impacts.length - 1].t : -1e9
-  const shake = clamp(1 - (now - lastImpact) / 300) * 5
+  const shake = clamp(1 - (now - lastImpact) / 260) * 2.2
   const collapse = ended?.result === 'won' ? clamp((now - ended.t0) / 2200) : 0
-  const ruin = ended?.result === 'lost' ? clamp((now - ended.t0) / 1800) : 0
-  const sx = shake ? Math.sin(now / 17) * shake : 0, sy = shake ? Math.cos(now / 23) * shake : 0
 
   return (
     <svg className="siege-scene" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Le siège du château">
@@ -61,16 +61,16 @@ export function SiegeScene({ now, castleHp, armyHp, shots, impacts, volleys, end
           <stop offset="1" stopColor="#d9452b" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <g transform={`translate(${sx} ${sy})`}>
-        <Landscape />
+      <Landscape />
+      <g transform={shake ? `translate(${Math.sin(now / 15) * shake} ${Math.cos(now / 21) * shake * 0.5})` : undefined}>
         <Castle hp={castleHp} collapse={collapse} now={now} />
-        <Army hp={armyHp} now={now} shots={shots} ruin={ruin} />
-        {volleys.map((v) => <Arrows key={v.id} v={v} now={now} />)}
-        {shots.map((s) => <Boulder key={s.id} s={s} now={now} />)}
-        {impacts.map((im, i) => <Impact key={i} t={im.t} target={im.target} now={now} />)}
-        {ruin > 0 && <FireStones now={now} t0={ended!.t0} />}
-        {collapse > 0 && <Dust p={collapse} />}
       </g>
+      <Army hp={armyHp} now={now} shots={shots} falls={falls} />
+      {volleys.map((v) => <Arrows key={v.id} v={v} now={now} />)}
+      {shots.map((s) => <Boulder key={s.id} s={s} now={now} />)}
+      {impacts.map((im, i) => <Impact key={i} t={im.t} target={im.target} now={now} />)}
+      <FireStones now={now} falls={falls} />
+      {collapse > 0 && <Dust p={collapse} />}
     </svg>
   )
 }
@@ -124,7 +124,7 @@ function Tower({ x, w, top, roofOff = false, missing }: { x: number; w: number; 
           <path d={`M${x - 6},${top - 12} L${x + w / 2},${top - 62} L${x + w + 6},${top - 12} Z`} fill={RED} stroke={INK} strokeWidth={1.2} />
           <path d={`M${x + w / 2},${top - 62} L${x + w + 6},${top - 12} L${x + w / 2},${top - 12} Z`} fill="#000" opacity={0.18} />
           <line x1={x + w / 2} y1={top - 62} x2={x + w / 2} y2={top - 90} stroke={INK} strokeWidth={2} />
-          <path className="flag-wave" d={`M${x + w / 2},${top - 90} l26,7 l-26,7 Z`} fill={RED} stroke={INK} strokeWidth={0.8} />
+          <path className="sg-flag" d={`M${x + w / 2},${top - 90} l26,7 l-26,7 Z`} fill={RED} stroke={INK} strokeWidth={0.8} />
         </g>
       )}
     </g>
@@ -186,7 +186,7 @@ function Castle({ hp, collapse, now }: { hp: number; collapse: number; now: numb
             <rect key={i} x={600 + i * 23} y={GROUND - 30 - ((i * 37) % 26)} width={18} height={11} fill={i % 2 ? STONE : STONE_LIGHT} stroke={INK} strokeWidth={0.8}
               transform={`rotate(${(i * 47) % 60 - 30} ${609 + i * 23} ${GROUND - 25})`} />
           ))}
-          <path className="flag-wave" d={`M760,${GROUND - 58} l0,-36 l24,7 l-24,7`} fill={BLUE} stroke={INK} strokeWidth={1} />
+          <path className="sg-flag" d={`M760,${GROUND - 58} l0,-36 l24,7 l-24,7`} fill={BLUE} stroke={INK} strokeWidth={1} />
         </g>
       )}
     </g>
@@ -230,32 +230,48 @@ const SOLDIERS = [
   { x: 300, y: 422, k: 'archer' }, { x: 345, y: 440, k: 'spear' }, { x: 400, y: 424, k: 'infantry' }, { x: 440, y: 442, k: 'knight' },
 ] as const
 
-function Army({ hp, now, shots, ruin }: { hp: number; now: number; shots: Shot[]; ruin: number }) {
-  const alive = Math.ceil(hp * SOLDIERS.length)
+/** Ordre dans lequel les soldats tombent (mélangé, pour ne pas vider l'armée de gauche à droite). */
+const DEATH_ORDER = [5, 1, 7, 3, 0, 6, 2, 4]
+/** Seuil de vie de l'armée sous lequel la catapulte i est menacée (elle tombe à 2/3, 1/3 puis 0). */
+const fallAt = (i: number) => 1 - (i + 1) / 3
+
+function Army({ hp, now, shots, falls }: { hp: number; now: number; shots: Shot[]; falls: number[] }) {
+  const dead = SOLDIERS.length - Math.ceil(hp * SOLDIERS.length)
   return (
     <g>
       {CATAPULTS.map((c, i) => {
         // recul du bras au départ d'un boulet
         const fired = shots.filter((s) => s.from === i).map((s) => now - s.t0).filter((d) => d >= 0 && d < 400)
         const kick = fired.length ? Math.sin((fired[0] / 400) * Math.PI) : 0
-        const broken = ruin > 0.25 + i * 0.2
+        const broken = now >= falls[i]
+        const damaged = !broken && hp < fallAt(i) + 0.17
         return (
           <g key={i}>
-            <g transform={`translate(${c.x} ${c.y}) scale(1.9) rotate(${broken ? 18 : -kick * 8})`} opacity={broken ? 0.75 : 1}>
+            <g transform={`translate(${c.x} ${c.y}) scale(1.9) rotate(${broken ? 22 : -kick * 8})`} opacity={broken ? 0.55 : 1}
+              style={broken ? { filter: 'grayscale(0.7) brightness(0.55)' } : undefined}>
               <UnitSprite look={{ kind: 'siege', tier: 2, color: BLUE, emblem: '∑', name: '', upgrades: 1 }} />
-              {broken && <path d="M-16,-10 l10,6 M4,-14 l8,10 M-6,-2 l6,-6" stroke={INK} strokeWidth={1.4} />}
+              {(damaged || broken) && <path d="M-16,-10 l10,6 M4,-14 l8,10 M-6,-2 l6,-6 M-12,-20 l6,4" stroke={INK} strokeWidth={1.4} />}
             </g>
             {broken && <g transform={`translate(${c.x} ${c.y - 30}) scale(0.6)`}><Smoke x={0} y={0} now={now + i * 400} /></g>}
+            {broken && <g transform={`translate(${c.x - 18} ${c.y - 6})`}><Flames x={0} y={0} now={now + i * 300} /></g>}
           </g>
         )
       })}
-      {SOLDIERS.map((s, i) => (
-        <g key={i} transform={`translate(${s.x} ${s.y}) scale(1.35)`} opacity={i < alive ? 1 : 0} style={{ transition: 'opacity 0.6s' }}>
-          <UnitSprite look={{ kind: s.k, tier: 2, color: BLUE, emblem: '∑', name: '', upgrades: 0 }} />
-        </g>
-      ))}
+      {SOLDIERS.map((s, i) => {
+        const fallen = DEATH_ORDER.indexOf(i) < dead
+        return (
+          <g key={i} transform={`translate(${s.x} ${s.y})`}>
+            {/* un soldat tombé reste allongé au sol */}
+            <g style={{ transform: fallen ? 'translate(4px, -4px) rotate(-84deg)' : 'none', transition: 'transform 0.5s ease-in', filter: fallen ? 'grayscale(0.5) brightness(0.8)' : undefined }}>
+              <g transform="scale(1.35)">
+                <UnitSprite look={{ kind: s.k, tier: 2, color: BLUE, emblem: '∑', name: '', upgrades: 0 }} />
+              </g>
+            </g>
+          </g>
+        )
+      })}
       <line x1={30} y1={440} x2={30} y2={340} stroke={INK} strokeWidth={2.5} />
-      <path className="flag-wave" d="M30,340 l46,10 l-46,12 Z" fill={BLUE} stroke={INK} strokeWidth={1} />
+      <path className="sg-flag" d="M30,340 l46,10 l-46,12 Z" fill={BLUE} stroke={INK} strokeWidth={1} />
       <text x={44} y={356} className="sg-emblem">∑</text>
     </g>
   )
@@ -320,16 +336,26 @@ function Arrows({ v, now }: { v: Volley; now: number }) {
   )
 }
 
-/** Défaite : le château lance des pierres enflammées sur les catapultes. */
-function FireStones({ now, t0 }: { now: number; t0: number }) {
+/** Pierres enflammées du château : chacune détruit une catapulte (à l'instant falls[i]). */
+const FIRE_FLIGHT = 900
+function FireStones({ now, falls }: { now: number; falls: number[] }) {
   return (
     <g>
       {CATAPULTS.map((c, i) => {
-        const t = (now - t0 - i * 360) / 900
-        if (t < 0 || t > 1.3) return null
+        const t = (now - (falls[i] - FIRE_FLIGHT)) / FIRE_FLIGHT
+        if (!Number.isFinite(falls[i]) || t < 0 || t > 1.7) return null
         if (t > 1) {
-          const p = (t - 1) / 0.3
-          return <circle key={i} cx={c.x} cy={c.y - 20} r={20 + p * 40} fill="#ff9a3c" opacity={0.8 * (1 - p)} />
+          const p = (t - 1) / 0.7
+          return (
+            <g key={i}>
+              <circle cx={c.x} cy={c.y - 20} r={20 + p * 50} fill="#fff1a8" opacity={0.8 * (1 - p)} />
+              <circle cx={c.x} cy={c.y - 20} r={14 + p * 36} fill="#ff9a3c" opacity={0.8 * (1 - p)} />
+              {Array.from({ length: 7 }, (_, k) => {
+                const a = (k / 7) * Math.PI * 2
+                return <rect key={k} x={c.x + Math.cos(a) * p * 50} y={c.y - 20 + Math.sin(a) * p * 40 + p * p * 40} width={7} height={4} fill="#6b4a26" opacity={1 - p} />
+              })}
+            </g>
+          )
         }
         const x = 760 + (c.x - 760) * t, y = 220 + (c.y - 30 - 220) * t - Math.sin(t * Math.PI) * 120
         return <circle key={i} cx={x} cy={y} r={10} fill="url(#sg-fire)" stroke="#d9452b" strokeWidth={2} />

@@ -78,7 +78,7 @@ export function StartCountdown({ startsAt, label = 'À l’entraînement !' }: {
   if (now > startsAt + 900) return null
   return (
     <div className="start-countdown" role="status">
-      <div className="sc-num" key={left}>{left > 0 ? left : label}</div>
+      <div className={`sc-num ${left > 0 ? '' : 'sc-word'}`} key={left}>{left > 0 ? left : label}</div>
       <small>Le chrono démarre…</small>
     </div>
   )

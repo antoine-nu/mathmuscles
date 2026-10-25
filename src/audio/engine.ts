@@ -492,13 +492,56 @@ class AudioEngine {
     for (let i = 0; i < 6; i++) this.drum(t + i * 0.28 + Math.random() * 0.08, { from: 70 - i * 4, to: 26, gain: 0.5 - i * 0.05, decay: 0.8, noise: 0.35, dest: this.sfxBus })
   }
 
-  /** Impact d'un boulet (limité pour ne pas saturer). */
+  /** Bruit filtré (souffle, grondement, sifflement) qui glisse de f0 à f1. */
+  private whoosh(t: number, o: { f0: number; f1: number; dur: number; gain: number; type?: BiquadFilterType; q?: number; attack?: number }) {
+    const ctx = this.ctx!
+    const n = ctx.createBufferSource()
+    n.buffer = this.noise
+    const f = ctx.createBiquadFilter()
+    f.type = o.type ?? 'bandpass'
+    f.Q.value = o.q ?? 1.2
+    f.frequency.setValueAtTime(o.f0, t)
+    f.frequency.exponentialRampToValueAtTime(o.f1, t + o.dur)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(o.gain, t + (o.attack ?? 0.01))
+    g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur)
+    n.connect(f).connect(g).connect(this.sfxBus)
+    n.start(t, Math.random() * 0.4)
+    n.stop(t + o.dur + 0.02)
+  }
+
+  /** Impact d'un boulet sur la muraille : choc sourd, pierres qui éclatent, éboulis (limité pour ne pas saturer). */
   impact() {
     if (!this.ctx) return
     const now = this.ctx.currentTime
     if (now - this.lastImpact < 0.25) return
     this.lastImpact = now
-    this.drum(now, { from: 55, to: 28, gain: 0.25, decay: 0.45, noise: 0.18, dest: this.sfxBus })
+    const t = now + 0.005
+    this.drum(t, { from: 72, to: 30, gain: 0.7, decay: 0.55, noise: 0.45, dest: this.sfxBus })
+    this.whoosh(t, { f0: 900, f1: 180, dur: 0.6, gain: 0.32, type: 'lowpass', q: 0.7 })
+    for (let i = 0; i < 4; i++) this.tap(t + 0.02 + i * 0.05 + Math.random() * 0.04, 1400 + Math.random() * 1600, 0.06, 0.12)
+  }
+
+  /** Volée de flèches : sifflements brefs et décalés. */
+  arrows() {
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.01
+    for (let i = 0; i < 3; i++) {
+      const at = t + i * 0.07 + Math.random() * 0.04
+      this.whoosh(at, { f0: 3600 + Math.random() * 800, f1: 1500, dur: 0.32, gain: 0.035, q: 6, attack: 0.08 })
+    }
+  }
+
+  /** Catapulte détruite : explosion, craquements de bois, flammes. */
+  explode() {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.01
+    this.drum(t, { from: 90, to: 24, gain: 0.85, decay: 1.1, noise: 0.6, dest: this.sfxBus })
+    this.whoosh(t, { f0: 2400, f1: 120, dur: 1.4, gain: 0.45, type: 'lowpass', q: 0.6, attack: 0.005 })
+    for (let i = 0; i < 7; i++) this.tap(t + 0.05 + i * 0.07 + Math.random() * 0.06, 500 + Math.random() * 900, 0.07, 0.14)
+    this.whoosh(t + 0.25, { f0: 700, f1: 1600, dur: 1.2, gain: 0.06, q: 0.8, attack: 0.3 })
   }
 
   fanfare(victory: boolean) {

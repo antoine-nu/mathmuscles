@@ -17,13 +17,26 @@ export interface SiegeLevel {
 
 export const SIEGE_LEVELS: SiegeLevel[] = [
   { id: 'ecuyer', name: 'Écuyer', hint: 'Le château se défend mollement', icon: '🛡', hits: 20, seconds: 180 },
-  { id: 'chevalier', name: 'Chevalier', hint: 'Les archers du château visent juste', icon: '⚔', hits: 20, seconds: 110 },
-  { id: 'conquerant', name: 'Conquérant', hint: 'La garnison ne laisse aucun répit', icon: '👑', hits: 20, seconds: 65 },
+  { id: 'chevalier', name: 'Chevalier', hint: 'Les archers du château visent juste', icon: '⚔', hits: 20, seconds: 85 },
+  { id: 'conquerant', name: 'Conquérant', hint: 'La garnison ne laisse aucun répit', icon: '👑', hits: 20, seconds: 50 },
 ]
 export const siegeLevel = (id: SiegeLevelId) => SIEGE_LEVELS.find((l) => l.id === id) ?? SIEGE_LEVELS[0]
 
 /** Tables proposées : de 1 à 10. */
 export const TABLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+/** Défis : un groupe de tables fixé, avec ses propres médailles. */
+export interface Challenge {
+  id: 'faciles' | 'difficiles' | 'toutes'
+  name: string
+  tables: number[]
+}
+export const CHALLENGES: Challenge[] = [
+  { id: 'faciles', name: 'Tables faciles', tables: [2, 3, 4, 5] },
+  { id: 'difficiles', name: 'Tables difficiles', tables: [6, 7, 8, 9] },
+  { id: 'toutes', name: 'Toutes les tables', tables: [2, 3, 4, 5, 6, 7, 8, 9] },
+]
+export const challengeById = (id?: string) => CHALLENGES.find((c) => c.id === id)
 export const OPERATIONS: { id: Operation; name: string; sign: string }[] = [
   { id: 'mult', name: 'Tables de multiplication', sign: '×' },
   { id: 'add', name: 'Tables d’addition', sign: '+' },
@@ -88,8 +101,9 @@ export class FactDeck {
   }
 }
 
-// ── Médailles : une par table, par opération et par niveau, gagnée en faisant tomber le château ──
-export type Medals = Record<Operation, Record<number, SiegeLevelId[]>>
+// ── Médailles : trois par table (s'entraîner sur une seule table) et trois par défi, pour chaque opération ──
+/** Clé de médaille : le numéro de la table (« 7 ») ou l'identifiant du défi (« difficiles »). */
+export type Medals = Record<Operation, Record<string, SiegeLevelId[]>>
 const KEY = 'mathmuscles:siege'
 
 export function loadMedals(): Medals {
@@ -102,23 +116,24 @@ export function loadMedals(): Medals {
   return { mult: {}, add: {} }
 }
 
-/** Ajoute les médailles d'une victoire ; renvoie les tables qui gagnent une nouvelle médaille. */
-export function awardMedals(op: Operation, tables: number[], level: SiegeLevelId): number[] {
+/** Ce que rapporte un siège : une médaille de table (une seule table), de défi, ou rien (plusieurs tables au choix). */
+export function medalKey(c: SiegeChoice): string | null {
+  if (challengeById(c.challenge)) return c.challenge!
+  return c.tables.length === 1 ? String(c.tables[0]) : null
+}
+
+/** Ajoute la médaille d'une victoire ; renvoie true si elle est nouvelle. */
+export function awardMedal(op: Operation, key: string, level: SiegeLevelId): boolean {
   const m = loadMedals()
-  const fresh: number[] = []
-  for (const t of tables) {
-    const got = m[op][t] ?? []
-    if (!got.includes(level)) {
-      m[op][t] = [...got, level]
-      fresh.push(t)
-    }
-  }
+  const got = m[op][key] ?? []
+  if (got.includes(level)) return false
+  m[op][key] = [...got, level]
   try {
     localStorage.setItem(KEY, JSON.stringify(m))
   } catch {
     /* médailles non mémorisées */
   }
-  return fresh
+  return true
 }
 
 /** Choix mémorisés (opération, tables, niveau) pour la prochaine visite. */
@@ -126,6 +141,8 @@ export interface SiegeChoice {
   op: Operation
   tables: number[]
   level: SiegeLevelId
+  /** Défi choisi (ses tables sont alors imposées). */
+  challenge?: Challenge['id']
 }
 const CHOICE_KEY = 'mathmuscles:siege-choix'
 export function loadChoice(): SiegeChoice {
