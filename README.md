@@ -54,7 +54,10 @@ Chaque partie tire un **décor** : plaine, mer et montagnes, désert, hiver ou a
 entraînement libre). Le village est entouré de forêts, de mer ou de montagnes selon le décor, et le champ de la bataille
 finale reprend le même thème. En duel, l'hôte tire le décor pour les deux joueurs. Démonstration :
 `/?bataille&theme=desert` (plaine, cote, desert, hiver, automne).
-- **Défier l'ordinateur** : on choisit la durée et la **note sur 20** de l'adversaire (sa vitesse et sa réussite en dépendent).
+- **Défier l'ordinateur** : on choisit la durée et la **note sur 20** de l'adversaire. Son rythme se règle dans
+  `src/bot/bot.ts` (`botPace`) : environ 1 bonne réponse par minute à 5/20, 2,2 à 10/20, 3,5 à 15/20 et 5 à 20/20 ;
+  il commence par les maisons qui forment vite des soldats, si bien que même à 5/20 il bat un joueur qui ne fait rien.
+  Les bons élèves (12/20 et plus) se concentrent sur 3 maisons pour débloquer améliorations et problèmes.
 - **Défier un camarade** : l'un crée une partie et donne le **code à 4 caractères**, l'autre le saisit. L'hôte choisit la
   durée (15, 30, 45 min, 1 heure ou une durée personnalisée de 1 à 180 min). Les deux classes peuvent être différentes (5e contre 2nde) : les unités sont les
   mêmes, seuls les exercices changent ; sur 1 200 batailles simulées entre élèves de même niveau (15 min à 1 h),

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Level } from '../data/curriculum'
-import { Bot, BOT_NAMES } from '../bot/bot'
+import { BOT_NAMES, Bot, botPace } from '../bot/bot'
 import { Battle } from '../battle/sim'
 import { LocalFeed } from '../battle/feed'
 import { RulesContext, duelRules } from '../game/rules'
@@ -105,7 +105,7 @@ export function BotDuel({ level, playerName, onQuit }: Props) {
             <input id="bot-grade" type="range" min={4} max={20} value={grade} onChange={(e) => setGrade(Number(e.target.value))} aria-label="Note de l'ordinateur sur 20" />
             <div className="grade-value"><b>{grade}</b><small>/20</small></div>
           </div>
-          <p className="setup-note"><b>{botName}</b> · {gradeLabel(grade)} : plus sa note est haute, plus il répond juste et vite, et plus il ose les problèmes de l’hôtel de ville.</p>
+          <p className="setup-note"><b>{botName}</b> · {gradeLabel(grade)} : environ {botPace(grade).correctPerMin.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} bonne{botPace(grade).correctPerMin >= 2 ? 's' : ''} réponse{botPace(grade).correctPerMin >= 2 ? 's' : ''} par minute. Plus sa note est haute, plus il répond juste et vite, et plus il ose les améliorations et les problèmes de l’hôtel de ville.</p>
         </div>
         <button className="btn gold big" onClick={() => { audio.unlock(); setPhase({ name: 'prep' }) }}>Préparer la bataille ⚔</button>
       </SetupFrame>
