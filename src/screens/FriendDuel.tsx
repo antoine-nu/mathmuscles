@@ -316,6 +316,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         onMenu={quit}
         villages={mySide === 0 ? [player, null] : [null, player]}
         themeId={player.mapTheme}
+        canAccelerate={false}
       />
     )
   }

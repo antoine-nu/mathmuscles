@@ -67,7 +67,9 @@ et qu'il faut une longue partie pour bâtir un grand empire ; on voit l'âge et 
 déploient, se ruent l'une sur l'autre et combattent jusqu'à l'élimination d'un camp ; au bout de 2 min 30, la plus
 grande valeur d'armée restante l'emporte). Pendant la bataille, le **cor de guerre** : un calcul mental juste (tables, relatifs,
 carrés… selon la classe, sans limite de temps pour répondre) donne +25 % d'attaque pendant 5 s, 5 fois au plus ; un
-bandeau et une aura dorée sur les troupes montrent qu'il est actif.
+bandeau et une aura dorée sur les troupes montrent qu'il est actif. La bataille se joue à vitesse normale ; contre l'ordinateur,
+le bouton « ⏩ Accélérer » la fait défiler deux fois plus vite (pas en duel entre camarades, pour laisser à chacun le
+temps du cor).
 
 Après la bataille, **« Bilan et villages »** : pour chaque corps, unités engagées, survivants, ennemis mis hors de combat
 et corps adverse qui lui a fait le plus de pertes ; quelques conseils tirés de ces chiffres (composition adverse et ce

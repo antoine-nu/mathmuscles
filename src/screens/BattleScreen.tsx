@@ -33,6 +33,8 @@ interface Props {
   villages?: [PlayerState | null, PlayerState | null]
   /** Décor du champ de bataille (celui des villages). */
   themeId?: ThemeId
+  /** Bouton pour accélérer la bataille (×2). Absent en duel entre camarades : l'invité doit avoir le temps du cor. */
+  canAccelerate?: boolean
   /** Message d'état réseau (ex. adversaire déconnecté). */
   notice?: string | null
   /** Message sous le bilan quand il n'y a pas de bouton « Revanche » (invité d'un duel). */
@@ -48,7 +50,7 @@ interface Hud {
   hornLeft: [number, number]
 }
 
-export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint, villages, themeId }: Props) {
+export function BattleScreen({ feed, local, armies, names, colors, mySide, startAt, onHorn, onRematch, onMenu, notice, endHint, villages, themeId, canAccelerate = true }: Props) {
   const [debrief, setDebrief] = useState(false)
   const [hud, setHud] = useState<Hud>({ t: 0, alive: [0, 0], hornsUsed: [0, 0], hornOn: [false, false], hornLeft: [0, 0] })
   const [now, setNow] = useState(Date.now())
@@ -277,8 +279,11 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
           {Object.entries(UNIT_STATS).filter(([k]) => k !== 'villager').length > 0 && (
             <span className="legend-hint">Lanciers ▸ cavalerie · Archers ▸ fantassins · Éclaireurs ▸ archers, siège, moines · Moines ▸ chevaliers</span>
           )}
-          {local && (
-            <button className="hud-btn" onClick={() => setSpeed(speed === 1 ? 2 : 1)}>Vitesse ×{speed === 1 ? 2 : 1}</button>
+          {local && canAccelerate && (
+            <button className="hud-btn" aria-pressed={speed === 2} onClick={() => setSpeed(speed === 1 ? 2 : 1)}
+              title={speed === 1 ? 'Faire défiler la bataille deux fois plus vite' : 'Revenir à la vitesse normale'}>
+              {speed === 1 ? '⏩ Accélérer' : '▶ Vitesse normale'}
+            </button>
           )}
           <MuteButton />
         </div>
