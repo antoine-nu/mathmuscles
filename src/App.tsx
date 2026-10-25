@@ -8,6 +8,7 @@ import { BotDuel } from './screens/BotDuel'
 import { DemoBattle } from './screens/DemoBattle'
 import { FriendDuel } from './screens/FriendDuel'
 import { OptionsScreen } from './screens/OptionsScreen'
+import { TablesScreen } from './screens/TablesScreen'
 import { loadChosen, randomAssignment, sameChapters } from './game/selection'
 import { audio, useUiSounds } from './audio/engine'
 
@@ -16,6 +17,7 @@ type Screen =
   | { name: 'demo' }
   | { name: 'solo'; level: Level }
   | { name: 'options'; level: Level }
+  | { name: 'tables' }
   | { name: 'duel'; level: Level; mode: Exclude<HomeChoice, 'solo'> }
 
 function loadName(): string {
@@ -60,6 +62,7 @@ export default function App() {
   }
 
   if (screen.name === 'demo') return <DemoBattle onMenu={home} />
+  if (screen.name === 'tables') return <TablesScreen onQuit={home} />
   if (screen.name === 'options') return <OptionsScreen level={screen.level} onBack={() => setScreen({ name: 'home' })} />
 
   if (screen.name === 'duel' && screen.mode === 'bot') {
@@ -84,6 +87,7 @@ export default function App() {
         if (mode === 'solo' && (!p.selection || !sameChapters(p.selection, loadChosen(level.id)))) {
           solo.update(level.id, (q) => ({ ...q, selection: randomAssignment(level.id) }))
         }
+        if (mode === 'tables') return setScreen({ name: 'tables' })
         if (mode === 'solo') audio.play('calm')
         setScreen(mode === 'solo' ? { name: 'solo', level } : { name: 'duel', level, mode })
       }}

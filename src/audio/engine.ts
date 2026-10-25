@@ -6,7 +6,7 @@
 // - bruitages d'interface très discrets (clics, fermetures, bonne / mauvaise réponse), comme dans Age of Empires.
 import { useEffect, useState } from 'react'
 
-type Track = 'calm' | 'battle'
+type Track = 'calm' | 'battle' | 'siege'
 export type UiSound = 'click' | 'key' | 'select' | 'open' | 'close'
 const MUTE_KEY = 'mathmuscles:muted'
 
@@ -122,10 +122,11 @@ class AudioEngine {
     this.step = 0
     this.nextTime = ctx.currentTime + 0.1
     if (track === 'calm') this.startDrone()
-    const stepDur = track === 'calm' ? 60 / 66 / 2 : 60 / 116 / 4
+    const stepDur = track === 'calm' ? 60 / 66 / 2 : track === 'siege' ? 60 / 84 / 2 : 60 / 116 / 4
     this.timer = window.setInterval(() => {
       while (this.nextTime < ctx.currentTime + 0.3) {
         if (track === 'calm') this.calmStep(this.step, this.nextTime, stepDur)
+        else if (track === 'siege') this.siegeStep(this.step, this.nextTime, stepDur)
         else this.battleStep(this.step, this.nextTime, stepDur)
         this.nextTime += stepDur
         this.step++
@@ -270,6 +271,25 @@ class AudioEngine {
     }
     // roulement lointain toutes les 16 mesures : la guerre approche
     if (bar % 16 === 15 && pos >= 4) this.drum(t, { from: 90, to: 60, gain: 0.05 + (pos - 4) * 0.025, decay: 0.25 })
+  }
+
+  /** Siège des tables : ostinato de cordes pincées et tambour léger, un peu de suspense sans agressivité. */
+  private siegeStep(step: number, t: number, dur: number) {
+    const bar = Math.floor(step / 8), pos = step % 8
+    // tambour feutré
+    if (pos === 0 || pos === 3 || pos === 6) this.drum(t, { from: pos === 0 ? 70 : 90, to: 45, gain: pos === 0 ? 0.18 : 0.09, decay: 0.22 })
+    // basse pincée : Ré m – Si♭ – Do – La (la dominante entretient l'attente)
+    const roots = [0, -4, -2, -5]
+    const root = roots[Math.floor(bar / 2) % 4]
+    const pattern = [0, 0, 7, 0, 3, 0, 7, 5]
+    const third = root === -5 ? 4 : 3
+    const n = D2 + 12 + root + (pattern[pos] === 3 ? third : pattern[pos])
+    this.tone(midi(n), t, dur * 0.9, { type: 'triangle', gain: 0.06, attack: 0.004, release: dur * 0.7, filter: 900 })
+    // petite mélodie de luth toutes les deux mesures
+    if (bar % 2 === 1 && pos % 2 === 0 && Math.random() < 0.7) {
+      const deg = [4, 3, 2, 0, 2, 4, 5, 4][(pos + bar * 2) % 8]
+      this.tone(midi(D4 + DORIAN[deg]), t, dur * 2.2, { type: 'triangle', gain: 0.04, attack: 0.006, release: dur * 1.8, send: true })
+    }
   }
 
   private battleStep(step: number, t: number, dur: number) {
@@ -439,6 +459,37 @@ class AudioEngine {
     this.unlock()
     if (!this.ctx) return
     this.drum(this.ctx.currentTime + 0.01, { from: strong ? 80 : 110, to: 45, gain: strong ? 0.6 : 0.35, decay: 0.4, noise: 0.2, dest: this.sfxBus })
+  }
+
+  /** Départ d'un boulet : craquement du bras et souffle. */
+  launch() {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.01
+    this.tap(t, 380, 0.08, 0.09)
+    this.drum(t, { from: 140, to: 60, gain: 0.12, decay: 0.12, dest: this.sfxBus })
+    const n = this.ctx.createBufferSource()
+    n.buffer = this.noise
+    const f = this.ctx.createBiquadFilter()
+    f.type = 'bandpass'
+    f.Q.value = 1.4
+    f.frequency.setValueAtTime(500, t)
+    f.frequency.exponentialRampToValueAtTime(2400, t + 0.5)
+    const g = this.ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(0.07, t + 0.15)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6)
+    n.connect(f).connect(g).connect(this.sfxBus)
+    n.start(t, Math.random() * 0.3)
+    n.stop(t + 0.65)
+  }
+
+  /** Effondrement du château : grondements en cascade. */
+  collapse() {
+    this.unlock()
+    if (!this.ctx) return
+    const t = this.ctx.currentTime + 0.02
+    for (let i = 0; i < 6; i++) this.drum(t + i * 0.28 + Math.random() * 0.08, { from: 70 - i * 4, to: 26, gain: 0.5 - i * 0.05, decay: 0.8, noise: 0.35, dest: this.sfxBus })
   }
 
   /** Impact d'un boulet (limité pour ne pas saturer). */

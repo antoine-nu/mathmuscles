@@ -41,6 +41,15 @@ verrouillé.
 
 - **Entraînement libre** : on fait grandir son royaume à son rythme ; la progression est sauvegardée dans le navigateur.
 
+- **Le siège des tables** (tous niveaux) : entraînement aux tables de multiplication ou d'addition. On choisit une ou
+  plusieurs tables (de 1 à 10) et une garnison : **Écuyer** (lente, environ 9 s par réponse), **Chevalier** (environ
+  5,5 s) ou **Conquérant** (environ 3,3 s). Chaque bonne réponse fait tirer une catapulte : il faut 20 boulets pour
+  abattre le château, qui se fissure, perd ses créneaux, s'ouvre d'une brèche, prend feu puis s'effondre ; pendant ce
+  temps, sa garnison décime l'armée du joueur (barre de vie). Une réponse fausse est signalée et la catapulte attend
+  la bonne réponse ; l'opération ratée revient quelques questions plus tard. Chaque victoire donne une **médaille** à
+  chaque table jouée pour la garnison vaincue (bronze, argent, or) ; le bilan liste les opérations à revoir. Musique
+  propre, discrète (cordes pincées, tambour feutré).
+
 Chaque partie tire un **décor** : plaine, mer et montagnes, désert, hiver ou automne (bouton 🗺 pour en changer en
 entraînement libre). Le village est entouré de forêts, de mer ou de montagnes selon le décor, et le champ de la bataille
 finale reprend le même thème. En duel, l'hôte tire le décor pour les deux joueurs. Démonstration :
