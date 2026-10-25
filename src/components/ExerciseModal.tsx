@@ -11,6 +11,8 @@ export { MathText }
 export interface ScrollResult {
   correct: number
   answered: number
+  /** Réussite de chaque exercice répondu, dans l'ordre. */
+  results?: boolean[]
 }
 
 interface Props {
@@ -25,12 +27,14 @@ interface Props {
   summary: (correct: number, total: number) => ReactNode
   /** null = abandon (fermé avant la fin). */
   onClose: (result: ScrollResult | null) => void
+  /** Libellé du bouton final (« Retour au camp » par défaut). */
+  doneLabel?: string
 }
 
 type Phase = 'question' | 'feedback' | 'done'
 
 /** Parchemin d'exercices : une série de 5 ou un problème unique (titre, figure). */
-export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline, summary, onClose }: Props) {
+export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline, summary, onClose, doneLabel = 'Retour au camp' }: Props) {
   const [index, setIndex] = useState(0)
   const [value, setValue] = useState('')
   const [results, setResults] = useState<boolean[]>([])
@@ -46,8 +50,8 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
   }, [phase, index])
 
   // Fin du temps : on referme en comptant ce qui a été répondu.
-  const latest = useRef({ correct, answered: results.length })
-  latest.current = { correct, answered: results.length }
+  const latest = useRef<ScrollResult>({ correct, answered: results.length, results })
+  latest.current = { correct, answered: results.length, results }
   useEffect(() => {
     if (!deadline) return
     const t = window.setTimeout(() => onClose(latest.current), Math.max(0, deadline - Date.now()))
@@ -112,7 +116,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
               <div className="eyebrow">{eyebrow}</div>
               <h2>{heading}</h2>
             </div>
-            <button className="close" onClick={() => onClose(phase === 'done' ? { correct, answered: results.length } : null)} aria-label="Fermer">✕</button>
+            <button className="close" onClick={() => onClose(phase === 'done' ? { correct, answered: results.length, results } : null)} aria-label="Fermer">✕</button>
           </header>
 
           {!single && (
@@ -188,7 +192,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
               {!single && <div className="score">{correct}<small>/{exercises.length}</small></div>}
               {summary(correct, exercises.length)}
               <div className="summary-actions">
-                <button className="btn gold" data-sfx="close" onClick={() => onClose({ correct, answered: results.length })} autoFocus>Retour au camp</button>
+                <button className="btn gold" data-sfx="close" onClick={() => onClose({ correct, answered: results.length, results })} autoFocus>{doneLabel}</button>
               </div>
             </div>
           )}

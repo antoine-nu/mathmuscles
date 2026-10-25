@@ -41,14 +41,25 @@ verrouillé.
 
 - **Entraînement libre** : on fait grandir son royaume à son rythme ; la progression est sauvegardée dans le navigateur.
 
+- **La quête du savoir** : entraînement hors bataille sur un ou plusieurs chapitres du niveau, sur une carte de
+  campagne en trois étapes : **la caserne** (10 exercices d'entraînement, deux par palier, de plus en plus difficiles),
+  **l'hôtel de ville** (5 missions : petits problèmes avec une situation à comprendre) et **le monastère** (2 défis
+  qui vont un peu au-delà du cours). Les pastilles de chaque étape montrent la progression ; chaque bonne réponse
+  rapporte 1, 2 ou 3 points de gloire selon l'étape, et la quête se termine par un titre (Recrue, Écuyer, Chevalier,
+  Maître d'armes). Le meilleur résultat est mémorisé pour chaque chapitre. Code : `src/quest/quest.ts`,
+  `src/screens/QuestScreen.tsx`.
+
 - **Le siège des tables** (tous niveaux) : entraînement aux tables de multiplication ou d'addition. On choisit une ou
-  plusieurs tables (de 1 à 10) et une garnison : **Écuyer** (lente, environ 9 s par réponse), **Chevalier** (environ
-  5,5 s) ou **Conquérant** (environ 3,3 s). Chaque bonne réponse fait tirer une catapulte : il faut 20 boulets pour
-  abattre le château, qui se fissure, perd ses créneaux, s'ouvre d'une brèche, prend feu puis s'effondre ; pendant ce
-  temps, sa garnison décime l'armée du joueur (barre de vie). Une réponse fausse est signalée et la catapulte attend
-  la bonne réponse ; l'opération ratée revient quelques questions plus tard. Chaque victoire donne une **médaille** à
-  chaque table jouée pour la garnison vaincue (bronze, argent, or) ; le bilan liste les opérations à revoir. Musique
-  propre, discrète (cordes pincées, tambour feutré).
+  plusieurs tables (de 1 à 10), ou un **défi** (Tables faciles : 2 à 5 ; Tables difficiles : 6 à 9 ; Toutes les
+  tables : 2 à 9), et une garnison : **Écuyer** (environ 9 s par réponse), **Chevalier** (environ 4,3 s) ou
+  **Conquérant** (environ 2,5 s). Chaque bonne réponse fait tirer une catapulte : il faut 20 boulets pour abattre le
+  château, qui se fissure, perd ses créneaux, s'ouvre d'une brèche, prend feu puis s'effondre ; pendant ce temps, sa
+  garnison décime l'armée du joueur : les soldats tombent un à un, et le château détruit une catapulte d'une pierre
+  enflammée quand l'armée passe sous 2/3 puis 1/3 de sa vie (la dernière tombe avec elle). Une réponse fausse est
+  signalée et la catapulte attend la bonne réponse ; l'opération ratée revient quelques questions plus tard.
+  **Médailles** (bronze, argent, or selon la garnison) : une victoire sur **une seule table** donne la médaille de
+  cette table, une victoire sur un **défi** celle du défi ; plusieurs tables choisies librement ne donnent pas de
+  médaille. Le bilan liste les opérations à revoir. Musique propre, discrète (cordes pincées, tambour feutré).
 
 Chaque partie tire un **décor** : plaine, mer et montagnes, désert, hiver ou automne (bouton 🗺 pour en changer en
 entraînement libre). Le village est entouré de forêts, de mer ou de montagnes selon le décor, et le champ de la bataille

@@ -2,13 +2,14 @@ import { useState } from 'react'
 import type { Level } from './data/curriculum'
 import { useSoloPlayers } from './game/state'
 import { RulesContext, SOLO_RULES } from './game/rules'
-import { HomeScreen, type HomeChoice } from './screens/HomeScreen'
+import { HomeScreen } from './screens/HomeScreen'
 import { TrainingScreen } from './screens/TrainingScreen'
 import { BotDuel } from './screens/BotDuel'
 import { DemoBattle } from './screens/DemoBattle'
 import { FriendDuel } from './screens/FriendDuel'
 import { OptionsScreen } from './screens/OptionsScreen'
 import { TablesScreen } from './screens/TablesScreen'
+import { QuestScreen } from './screens/QuestScreen'
 import { loadChosen, randomAssignment, sameChapters } from './game/selection'
 import { audio, useUiSounds } from './audio/engine'
 
@@ -18,7 +19,8 @@ type Screen =
   | { name: 'solo'; level: Level }
   | { name: 'options'; level: Level }
   | { name: 'tables' }
-  | { name: 'duel'; level: Level; mode: Exclude<HomeChoice, 'solo'> }
+  | { name: 'quest'; level: Level }
+  | { name: 'duel'; level: Level; mode: 'friend' | 'bot' }
 
 function loadName(): string {
   try {
@@ -63,6 +65,7 @@ export default function App() {
 
   if (screen.name === 'demo') return <DemoBattle onMenu={home} />
   if (screen.name === 'tables') return <TablesScreen onQuit={home} />
+  if (screen.name === 'quest') return <QuestScreen level={screen.level} onQuit={home} />
   if (screen.name === 'options') return <OptionsScreen level={screen.level} onBack={() => setScreen({ name: 'home' })} />
 
   if (screen.name === 'duel' && screen.mode === 'bot') {
@@ -88,6 +91,7 @@ export default function App() {
           solo.update(level.id, (q) => ({ ...q, selection: randomAssignment(level.id) }))
         }
         if (mode === 'tables') return setScreen({ name: 'tables' })
+        if (mode === 'quest') return setScreen({ name: 'quest', level })
         if (mode === 'solo') audio.play('calm')
         setScreen(mode === 'solo' ? { name: 'solo', level } : { name: 'duel', level, mode })
       }}

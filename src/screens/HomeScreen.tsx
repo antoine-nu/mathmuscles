@@ -5,7 +5,7 @@ import { levelPlayable, loadChosen } from '../game/selection'
 import { SOLO_RULES } from '../game/rules'
 import { Portrait } from '../components/Portrait'
 
-export type HomeChoice = 'solo' | 'friend' | 'bot' | 'tables'
+export type HomeChoice = 'solo' | 'quest' | 'friend' | 'bot' | 'tables'
 
 interface Props {
   getSolo: (levelId: string) => PlayerState
@@ -17,6 +17,7 @@ interface Props {
 
 const MODES: { id: HomeChoice; title: string; text: string; icon: string }[] = [
   { id: 'solo', title: 'Entraînement libre', text: 'Fais grandir ton royaume à ton rythme. Ta progression est sauvegardée.', icon: '⚒' },
+  { id: 'quest', title: 'La quête du savoir', text: 'Choisis tes chapitres : 10 exercices, 5 missions et 2 défis pour progresser pas à pas.', icon: '🗺' },
   { id: 'friend', title: 'Défier un camarade', text: 'Duel en direct : un code à partager, un chrono, puis la grande bataille.', icon: '⚔' },
   { id: 'bot', title: 'Défier l’ordinateur', text: 'Choisis la note sur 20 de ton adversaire et mesure-toi à lui.', icon: '♜' },
   { id: 'tables', title: 'Le siège des tables', text: 'Tables de multiplication et d’addition : chaque bonne réponse, un boulet sur le château !', icon: '🏰' },

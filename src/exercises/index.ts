@@ -86,6 +86,23 @@ export function makeSeries(chapterId: string, level: number, model: number, leve
 }
 const lastPrompts = new Map<string, string[]>()
 
+/** `count` exercices d'un même modèle du palier donné (le moins récemment vu), aux énoncés différents. */
+export function makeTierExercises(chapterId: string, tier: Difficulty, count: number): Exercise[] {
+  const pool = TIERS[chapterId][tier - 1]
+  const i = freshOrder(`t:${chapterId}:${tier}`, pool)[0]
+  remember(`t:${chapterId}:${tier}#${i}`)
+  const out: Exercise[] = []
+  const seen = new Set<string>()
+  let guard = 0
+  while (out.length < count) {
+    const ex = pool[i]()
+    if (seen.has(ex.prompt) && guard++ < 80) continue
+    seen.add(ex.prompt)
+    out.push(ex)
+  }
+  return out
+}
+
 function fromLadder(kind: 'u' | 'a', ladders: Record<string, Ladder>, chapterId: string, n: 1 | 2 | 3): Exercise {
   const pool = ladders[chapterId]?.[n - 1]
   if (!pool || pool.length === 0) {
