@@ -14,16 +14,20 @@ export const BOT_NAMES = ['Sire Algorithme', 'Dame Calculette', 'Baron Pythagore
 
 /**
  * Rythme de l'ordinateur selon sa note (sur 20) — les réglages se font ici.
- * - correctPerMin : bonnes réponses par minute sur les exercices les plus simples (5/20 ≈ 1, 10/20 ≈ 2,2,
- *   15/20 ≈ 3,5, 20/20 ≈ 5) : c'est ce qui fixe la taille de son armée (1 bonne réponse = 1 point).
+ * - correctPerMin : bonnes réponses par minute sur les exercices les plus simples (5/20 ≈ 0,7, 10/20 ≈ 1,5,
+ *   15/20 ≈ 2,3, 20/20 ≈ 3,3) : c'est ce qui fixe la taille de son armée (1 bonne réponse = 1 point).
+ *   SLOWDOWN ralentit toutes les notes dans la même proportion.
  * - accuracy : part de réponses justes (le reste du temps est perdu en erreurs).
  * - ambition : probabilité de tenter un problème de l'hôtel de ville ou une amélioration quand il y en a un.
  * - solve : chance de réussir un problème de rang 1 (moins pour les rangs 2 et 3).
  */
+/** Facteur de vitesse commun à toutes les notes (2/3 : un tiers plus lent que le premier réglage). */
+const SLOWDOWN = 2 / 3
+
 export function botPace(grade: number) {
   const g = Math.max(0, Math.min(20, grade))
   return {
-    correctPerMin: 0.2 + 0.16 * g + 0.004 * g * g,
+    correctPerMin: (0.2 + 0.16 * g + 0.004 * g * g) * SLOWDOWN,
     accuracy: Math.min(0.95, 0.35 + 0.03 * g),
     ambition: Math.min(0.85, 0.1 + 0.035 * g),
     solve: Math.min(0.95, 0.05 + 0.045 * g),
@@ -113,9 +117,9 @@ export class Bot {
     const pool = !trained || Math.random() < 0.85 ? this.focus : chapters.map((c) => c.id)
     const chapterId = [...pool].sort((a, b) => houseOf(this.state, a).points - houseOf(this.state, b).points + (trained ? (Math.random() - 0.5) * this.rules.ppc : 0))[0]
     const tier = difficultyForLevel(levelFromPoints(houseOf(this.state, chapterId).points, this.rules.ppc), this.state.levelId)
-    // les exercices plus difficiles prennent plus de temps et réussissent un peu moins ; les deux tout premiers,
-    // très simples, sont réussis vite (même faible, l'ordinateur aligne vite deux soldats)
-    const warmUp = this.state.answered < 2
+    // les exercices plus difficiles prennent plus de temps et réussissent un peu moins ; les trois tout premiers,
+    // très simples, sont réussis vite (même faible, l'ordinateur aligne vite quelques soldats)
+    const warmUp = this.state.answered < 3
     const ok = warmUp || Math.random() < Math.max(0.15, accuracy - 0.03 * (tier - 1))
     const perAttempt = ((60 * accuracy) / this.pace.correctPerMin) * (1 + 0.12 * (tier - 1)) * (warmUp ? 0.5 : 1)
     return { kind: 'exercise', chapterId, ok, ends: now + perAttempt * 1000 * (0.8 + Math.random() * 0.4) }

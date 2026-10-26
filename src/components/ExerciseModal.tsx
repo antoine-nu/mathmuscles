@@ -19,8 +19,12 @@ interface Props {
   eyebrow: string
   heading: string
   exercises: Exercise[]
-  /** Indication de difficulté (palier, points…), affichée à droite du numéro. */
-  tierLabel?: ReactNode
+  /** Indication de difficulté (palier, points…), affichée à droite du numéro ; une fonction donne celle de chaque exercice. */
+  tierLabel?: ReactNode | ((index: number) => ReactNode)
+  /** Enchaînement de problèmes (titres, figures) : parchemin large, titre de chaque problème affiché. */
+  problems?: boolean
+  /** Nom d'un élément de la suite (« Exercice » par défaut, « Mission », « Défi »…). */
+  itemName?: string
   /** Horodatage de fin de partie : le parchemin se referme alors tout seul en comptant les réponses données. */
   deadline?: number
   /** Bilan affiché à la fin. */
@@ -34,7 +38,7 @@ interface Props {
 type Phase = 'question' | 'feedback' | 'done'
 
 /** Parchemin d'exercices : une série de 5 ou un problème unique (titre, figure). */
-export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline, summary, onClose, doneLabel = 'Retour au camp' }: Props) {
+export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems, itemName = 'Exercice', deadline, summary, onClose, doneLabel = 'Retour au camp' }: Props) {
   const [index, setIndex] = useState(0)
   const [value, setValue] = useState('')
   const [results, setResults] = useState<boolean[]>([])
@@ -108,7 +112,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
 
   return (
     <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Enter' && phase === 'feedback') next() }}>
-      <div className={`scroll ${single ? 'wide' : ''}`} role="dialog" aria-label={heading}>
+      <div className={`scroll ${single || problems ? 'wide' : ''}`} role="dialog" aria-label={heading}>
         <div className="scroll-rod top" />
         <div className="scroll-body">
           <header className="scroll-head">
@@ -130,8 +134,10 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, deadline
           {phase !== 'done' && ex && (
             <div className="question">
               <div className="q-num">
-                {single ? (ex.title ? <span className="q-title">{ex.title}</span> : 'Problème') : <>Exercice {index + 1} / {exercises.length}</>}
-                {tierLabel && <span className="q-tier">{tierLabel}</span>}
+                {single ? (ex.title ? <span className="q-title">{ex.title}</span> : 'Problème') : (
+                  <span>{itemName} {index + 1} / {exercises.length}{problems && ex.title && <span className="q-title"> · {ex.title}</span>}</span>
+                )}
+                {tierLabel && <span className="q-tier">{typeof tierLabel === 'function' ? tierLabel(index) : tierLabel}</span>}
               </div>
               <p className="q-text"><MathText text={ex.prompt} /></p>
               {ex.code && <pre className="q-code"><code>{ex.code}</code></pre>}

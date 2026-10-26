@@ -24,12 +24,12 @@ Ne modifiez **que vos propres fichiers de sujets**. D'autres personnes écrivent
 Écrivez dans votre fichier les petites aides dont vous avez besoin, au lieu de modifier `utils.ts` ou `figure.ts`.
 
 ## Règles du jeu à respecter
-- Pendant tout un « cran » (10 exercices = 2 séries de 5), l'élève répète **un seul modèle** d'un palier : la
+- Pendant une série de 5 exercices, l'élève répète **un seul modèle** d'un palier (il en change à la série suivante) : la
   **mécanique** se répète, mais pas l'énoncé. Chaque modèle d'entraînement doit donc tirer au hasard parmi
   **3 à 6 variantes** (contexte, configuration, forme, nombre de données…) de la même compétence, de difficulté
   homogène. Utilisez `variants(...)` et `fresh(...)` de `../utils` (voir leurs commentaires).
 - Une configuration « triviale » (réponse écrite dans l'énoncé) peut exister mais doit rester minoritaire (< 25 %).
-- Au cran suivant, l'élève passe à un **autre modèle** d'un palier plus difficile.
+- Au cran suivant, l'élève passe aux modèles d'un palier plus difficile.
 - Paliers : 5e et 2nde utilisent les paliers 1 à 5 (cran 1 → palier 1 … cran 5 → palier 5). Les sujets de
   **Terminale** (`T-*`) servent à deux niveaux « adultes » : « remise en jambes » (adultes qui ont un peu oublié)
   joue les paliers **1 à 3**, « aguerris » joue les paliers **2 à 5**. Pour les sujets T : palier 1 = rappel

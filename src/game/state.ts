@@ -24,8 +24,8 @@ export interface PlayerState {
   cooldowns: Record<string, number>
   answered: number
   correct: number
-  /** Type d'exercice tiré pour chaque cran d'une maison (« chapitre:cran » → n° du modèle) : on s'entraîne
-   *  par répétition sur le même type jusqu'au cran suivant. */
+  /** Type d'exercice tiré pour chaque série d'une maison (« chapitre:cran:série » → n° du modèle) : les 5 exercices
+   *  d'une série répètent le même type, la série suivante en change. */
   drills?: Record<string, number>
   /** Décor de la carte (et du champ de bataille). */
   mapTheme?: ThemeId
@@ -68,7 +68,7 @@ export function solveAgeProblem(p: PlayerState, chapterId: string, n: number): P
 
 export const setCooldown = (p: PlayerState, key: string, until: number): PlayerState => ({ ...p, cooldowns: { ...p.cooldowns, [key]: until } })
 
-export const drillKey = (chapterId: string, cran: number) => `${chapterId}:${cran}`
+export const drillKey = (chapterId: string, cran: number, series: number) => `${chapterId}:${cran}:${series}`
 export const setDrill = (p: PlayerState, key: string, model: number): PlayerState => ({ ...p, drills: { ...p.drills, [key]: model } })
 
 // ── Disponibilités ─────────────────────────────────────────────────────

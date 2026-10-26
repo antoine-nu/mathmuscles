@@ -180,7 +180,7 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
               </div>
               {state === 'current' && current && (
                 <button className="btn gold" data-sfx="open" onClick={() => setOpen(true)}>
-                  {current.exercises.length > 1 ? `▶ ${current.label}` : `▶ ${current.label} : ${chapterTitle(current.chapterIds[0])}`}
+                  {START[current.stage]}
                 </button>
               )}
             </div>
@@ -193,7 +193,9 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
           eyebrow={`${stage.place} · ${stage.name}`}
           heading={current.chapterIds.map(chapterTitle).join(' · ')}
           exercises={current.exercises}
-          tierLabel={current.exercises.length > 1 ? current.label : `${stage.glory} gloire`}
+          tierLabel={(i: number) => current.captions[i]}
+          problems={current.stage !== 'caserne'}
+          itemName={ITEM[current.stage]}
           summary={(c, n) => (
             <p>{n > 1 ? `${c} bonne${c > 1 ? 's' : ''} réponse${c > 1 ? 's' : ''} sur ${n}` : c ? 'Mission accomplie !' : 'Ce sera pour la prochaine fois.'} · +{c * stage.glory} gloire</p>
           )}
@@ -224,6 +226,10 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
     </div>
   )
 }
+
+/** Bouton de lancement et nom d'un élément de chaque étape (les exercices d'une étape s'enchaînent). */
+const START: Record<StageId, string> = { caserne: '▶ Commencer les 10 exercices', hotel: '▶ Partir pour les 5 missions', monastere: '▶ Relever les 2 défis' }
+const ITEM: Record<StageId, string> = { caserne: 'Exercice', hotel: 'Mission', monastere: 'Défi' }
 
 // ── Carte de campagne ──────────────────────────────────────────────────
 const SPOTS = [{ x: 170, y: 210 }, { x: 480, y: 190 }, { x: 790, y: 205 }]

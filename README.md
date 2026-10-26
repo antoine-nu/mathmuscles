@@ -47,7 +47,7 @@ l'ordinateur) et **L'entraînement** (sans village ni bataille : la quête du sa
 - **La quête du savoir** : entraînement hors bataille sur un ou plusieurs chapitres du niveau, sur une carte de
   campagne en trois étapes : **la caserne** (10 exercices d'entraînement, deux par palier, de plus en plus difficiles),
   **l'hôtel de ville** (5 missions : petits problèmes avec une situation à comprendre) et **le monastère** (2 défis
-  qui vont un peu au-delà du cours). Les pastilles de chaque étape montrent la progression ; chaque bonne réponse
+  qui vont un peu au-delà du cours). Les exercices de chaque étape s'enchaînent dans un même parchemin. Les pastilles de chaque étape montrent la progression ; chaque bonne réponse
   rapporte 1, 2 ou 3 points de gloire selon l'étape, et la quête se termine par un titre (Recrue, Écuyer, Chevalier,
   Maître d'armes). Le meilleur résultat est mémorisé pour chaque chapitre. Code : `src/quest/quest.ts`,
   `src/screens/QuestScreen.tsx`.
@@ -69,7 +69,7 @@ entraînement libre). Le village est entouré de forêts, de mer ou de montagnes
 finale reprend le même thème. En duel, l'hôte tire le décor pour les deux joueurs. Démonstration :
 `/?bataille&theme=desert` (plaine, cote, desert, hiver, automne).
 - **Défier l'ordinateur** : on choisit la durée et la **note sur 20** de l'adversaire. Son rythme se règle dans
-  `src/bot/bot.ts` (`botPace`) : environ 1 bonne réponse par minute à 5/20, 2,2 à 10/20, 3,5 à 15/20 et 5 à 20/20 ;
+  `src/bot/bot.ts` (`botPace`) : environ 0,7 bonne réponse par minute à 5/20, 1,5 à 10/20, 2,3 à 15/20 et 3,3 à 20/20 ;
   il commence par les maisons qui forment vite des soldats, si bien que même à 5/20 il bat un joueur qui ne fait rien.
   Les bons élèves (12/20 et plus) se concentrent sur 3 maisons pour débloquer améliorations et problèmes.
 - **Défier un camarade** : l'un crée une partie et donne le **code à 4 caractères**, l'autre le saisit. L'hôte choisit la
@@ -130,9 +130,10 @@ atteint (1 lancier par bonne réponse, 1 chevalier toutes les 2, 1 engin de siè
 toutes les unités formées partent au combat. Chaque maison commence avec un villageois, qui garde le camp jusqu'au
 premier soldat. Rangs des soldats : recrue, vétéran après le cran 3, élite après le cran 5.
 
-**Entraînement.** Séries de 5 exercices. Pendant tout un cran, les exercices sont **du même type** (entraînement par
-répétition, avec des nombres différents) ; au cran suivant, le type change et la difficulté augmente (5 paliers). Le
-type de chaque cran est tiré parmi les modèles les moins récemment vus, pour que deux parties ne se ressemblent pas.
+**Entraînement.** Séries de 5 exercices. Les 5 exercices d'une série sont **du même type** (entraînement par
+répétition, avec des nombres différents) ; à la série suivante, le type change, et à chaque nouveau cran la difficulté
+augmente (5 paliers). Le type de chaque série est tiré parmi les modèles les moins récemment vus du palier, pour varier
+d'une série et d'une partie à l'autre.
 
 **Améliorations** (3 par maison, effets réels en bataille). Chacune s'obtient en résolvant **un problème** de
 généralisation, plus difficile que l'entraînement : n°1 avec l'Âge féodal et le cran 1 terminé, n°2 avec l'Âge des

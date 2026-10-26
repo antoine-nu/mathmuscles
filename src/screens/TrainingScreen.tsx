@@ -77,9 +77,11 @@ export function TrainingScreen({ player, update, mode, teamColor, playerName, op
   }, [timeUp])
 
   const startSeries = (c: Chapter) => {
-    const cran = levelFromPoints(houseOf(player, c.id).points, rules.ppc)
-    // un seul type d'exercice par cran : tiré la première fois, puis répété jusqu'au cran suivant
-    const key = drillKey(c.id, cran)
+    const house = houseOf(player, c.id)
+    const cran = levelFromPoints(house.points, rules.ppc)
+    // un nouveau type d'exercice à chaque série de 5 (le moins récemment vu du palier) ; une série abandonnée
+    // reprend le même type
+    const key = drillKey(c.id, cran, house.series)
     let model = player.drills?.[key]
     if (model === undefined) {
       const picked = pickDrill(c.id, cran, player.levelId)

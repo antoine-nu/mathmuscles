@@ -4,6 +4,7 @@
 // 3. Le monastère : 2 défis qui vont un peu au-delà du cours et demandent plus de réflexion.
 import { difficultyForLevel, makeAgeProblem, makeTierExercises, makeUpgradeProblem, type Exercise } from '../exercises'
 import { shuffle } from '../exercises/utils'
+import { SUBJECTS } from '../data/curriculum'
 
 export type StageId = 'caserne' | 'hotel' | 'monastere'
 
@@ -23,45 +24,49 @@ export const STAGES: Stage[] = [
   { id: 'monastere', place: 'Le monastère', name: 'Réflexion', text: '2 défis pour aller un peu plus loin que le cours', icon: '✦', glory: 3 },
 ]
 
-/** Une épreuve : un parchemin (une série d'exercices ou un problème seul) dans une étape. */
+/** Une étape : un seul parchemin qui enchaîne tous ses exercices (10, 5 ou 2). */
 export interface Trial {
   stage: StageId
-  /** Chapitres des exercices du parchemin. */
+  /** Chapitres de l'étape (sans doublon). */
   chapterIds: string[]
   exercises: Exercise[]
-  /** Libellé de difficulté affiché dans le parchemin. */
-  label: string
+  /** Chapitre et difficulté de chaque exercice, affichés dans le parchemin. */
+  captions: string[]
 }
 
 /**
- * Prépare la quête sur les chapitres choisis (au moins un). Les chapitres alternent d'une épreuve à l'autre ;
+ * Prépare la quête sur les chapitres choisis (au moins un). Les chapitres alternent d'un exercice à l'autre ;
  * chaque paire d'exercices de la caserne répète un même modèle (la mécanique s'ancre), un palier plus haut à chaque fois.
  */
 export function buildQuest(levelId: string, chapterIds: string[]): Trial[] {
   const order = shuffle([...chapterIds])
   let k = 0
   const next = () => order[k++ % order.length]
-  const trials: Trial[] = []
-  // la caserne : deux séries de 5 (paliers des crans 1-2-3, puis 3-4-5), deux exercices par palier
-  const practice: { chapterId: string; ex: Exercise }[] = []
+  const title = (id: string) => SUBJECTS.get(id)?.title ?? id
+  const trial = (stage: StageId, items: { chapterId: string; ex: Exercise; caption: string }[]): Trial => ({
+    stage,
+    chapterIds: [...new Set(items.map((i) => i.chapterId))],
+    exercises: items.map((i) => i.ex),
+    captions: items.map((i) => (chapterIds.length > 1 ? `${title(i.chapterId)} · ${i.caption}` : i.caption)),
+  })
+  // la caserne : 10 exercices enchaînés, deux par palier (crans 1 à 5 du niveau)
+  const practice: { chapterId: string; ex: Exercise; caption: string }[] = []
   for (let step = 0; step < 5; step++) {
     const chapterId = next()
-    for (const ex of makeTierExercises(chapterId, difficultyForLevel(step, levelId), 2)) practice.push({ chapterId, ex })
+    for (const ex of makeTierExercises(chapterId, difficultyForLevel(step, levelId), 2)) practice.push({ chapterId, ex, caption: `niveau ${step + 1}` })
   }
-  for (const half of [0, 1]) {
-    const part = practice.slice(half * 5, half * 5 + 5)
-    trials.push({ stage: 'caserne', chapterIds: [...new Set(part.map((p) => p.chapterId))], exercises: part.map((p) => p.ex), label: `Série ${half + 1} / 2` })
-  }
-  // l'hôtel de ville : 5 problèmes de l'hôtel de ville (rangs 1, 1, 1, 2, 2)
-  for (const n of [1, 1, 1, 2, 2] as const) {
+  // l'hôtel de ville : 5 problèmes de l'hôtel de ville enchaînés (rangs 1, 1, 1, 2, 2)
+  const missions = ([1, 1, 1, 2, 2] as const).map((n) => {
     const chapterId = next()
-    trials.push({ stage: 'hotel', chapterIds: [chapterId], exercises: [makeAgeProblem(chapterId, n)], label: n === 1 ? 'Mission simple' : 'Mission délicate' })
-  }
+    return { chapterId, ex: makeAgeProblem(chapterId, n), caption: n === 1 ? 'mission simple' : 'mission délicate' }
+  })
   // le monastère : un problème de généralisation, puis un défi de fin de chapitre
   const a = next(), b = next()
-  trials.push({ stage: 'monastere', chapterIds: [a], exercises: [makeUpgradeProblem(a, 3)], label: 'Défi du sage' })
-  trials.push({ stage: 'monastere', chapterIds: [b], exercises: [makeAgeProblem(b, 3)], label: 'Grand défi' })
-  return trials
+  const challenges = [
+    { chapterId: a, ex: makeUpgradeProblem(a, 3), caption: 'défi du sage' },
+    { chapterId: b, ex: makeAgeProblem(b, 3), caption: 'grand défi' },
+  ]
+  return [trial('caserne', practice), trial('hotel', missions), trial('monastere', challenges)]
 }
 
 export const stageOf = (id: StageId) => STAGES.find((s) => s.id === id)!
