@@ -5,10 +5,11 @@ import * as U2 from './upgrades2nde'
 import * as A5 from './age5e'
 import * as A2 from './age2nde'
 import { SUBJECT_CONTENT } from './subjects'
+import { MATERNELLE } from './maternelle/content'
 import { MAX_LEVEL, SERIES_SIZE, levelById } from '../data/curriculum'
 import type { Difficulty, Exercise, Ladder, Maker, Tiers } from './utils'
 
-const extra = Object.entries(SUBJECT_CONTENT)
+const extra = [...Object.entries(SUBJECT_CONTENT), ...Object.entries(MATERNELLE)]
 export const TIERS: Record<string, Tiers> = { ...CINQUIEME, ...SECONDE, ...Object.fromEntries(extra.map(([id, c]) => [id, c.tiers])) }
 type Registry = Record<string, Ladder>
 const reg = (m: object, name: string): Registry => ((m as Record<string, Registry | undefined>)[name] ?? {})

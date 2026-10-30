@@ -107,6 +107,8 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
   // résultats de chaque épreuve terminée (dans l'ordre)
   const [done, setDone] = useState<boolean[][]>([])
   const [open, setOpen] = useState(false)
+  // réponses déjà données dans l'étape en cours, si on a refermé le parchemin avant la fin
+  const [partial, setPartial] = useState<boolean[]>([])
   const current = done.length < trials.length ? trials[done.length] : null
   const finished = !current
   const glory = done.reduce((s, r, i) => s + r.filter(Boolean).length * stageOf(trials[i].stage).glory, 0)
@@ -120,7 +122,7 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
     const out: (boolean | undefined)[] = []
     trials.forEach((t, i) => {
       if (t.stage !== id) return
-      t.exercises.forEach((_, j) => out.push(done[i]?.[j]))
+      t.exercises.forEach((_, j) => out.push(i === done.length ? partial[j] : done[i]?.[j]))
     })
     return out
   }
@@ -128,6 +130,7 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
   const close = (r: ScrollResult | null) => {
     setOpen(false)
     if (!r || !current) return
+    setPartial([])
     const results = r.results ?? current.exercises.map((_, i) => i < r.correct)
     const next = [...done, results]
     setDone(next)
@@ -180,7 +183,7 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
               </div>
               {state === 'current' && current && (
                 <button className="btn gold" data-sfx="open" onClick={() => setOpen(true)}>
-                  {START[current.stage]}
+                  {partial.length ? `▶ Reprendre (${partial.length} / ${current.exercises.length} faits)` : START[current.stage]}
                 </button>
               )}
             </div>
@@ -200,6 +203,8 @@ function Quest({ level, chapters, trials, onAgain, onSetup, onQuit }: QuestProps
             <p>{n > 1 ? `${c} bonne${c > 1 ? 's' : ''} réponse${c > 1 ? 's' : ''} sur ${n}` : c ? 'Mission accomplie !' : 'Ce sera pour la prochaine fois.'} · +{c * stage.glory} gloire</p>
           )}
           doneLabel="Reprendre la route"
+          initialResults={partial}
+          onPause={setPartial}
           onClose={close}
         />
       )}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Level } from './data/curriculum'
 import { useSoloPlayers } from './game/state'
 import { RulesContext, SOLO_RULES } from './game/rules'
@@ -43,6 +43,11 @@ export default function App() {
       /* nom non mémorisé */
     }
   }
+
+  // maternelle : gros pointeur sur tout le jeu
+  useEffect(() => {
+    if ('level' in screen) document.body.classList.toggle('kid', screen.level.id === 'maternelle')
+  }, [screen])
 
   const home = () => {
     audio.play(null)

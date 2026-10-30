@@ -1,16 +1,17 @@
 import { useState } from 'react'
-import { LEVELS } from '../data/curriculum'
+import { DEFAULT_LEVEL, LEVELS, levelById } from '../data/curriculum'
 import { AGE_PROBLEMS, TIERS, UPGRADE_PROBLEMS, hasContent } from '../exercises'
 import type { Exercise, Maker } from '../exercises/utils'
 import { MathText } from './ExerciseModal'
 import { FigureView } from './FigureView'
+import { KidIcon, PicView } from './PicView'
 
 type Section = 'entrainement' | 'ameliorations' | 'hotel'
 
 /** Page de relecture de tous les modèles d'exercices : /?problemes (option &chapitre=5e-geo). */
 export function ProblemGallery() {
   const params = new URLSearchParams(location.search)
-  const [chapterId, setChapterId] = useState(params.get('chapitre') ?? LEVELS[0].chapters[0].id)
+  const [chapterId, setChapterId] = useState(params.get('chapitre') ?? levelById(DEFAULT_LEVEL).chapters[0].id)
   const [section, setSection] = useState<Section>((params.get('section') as Section) ?? 'hotel')
   const [seed, setSeed] = useState(0)
 
@@ -70,7 +71,16 @@ function Card({ make, index }: { make: Maker; index: number }) {
           <p><MathText text={ex.prompt} /></p>
           {ex.code && <pre className="q-code"><code>{ex.code}</code></pre>}
           {ex.figure && <FigureView figure={ex.figure} />}
-          {ex.choices && <p className="pg-choices">Choix : {ex.choices.join(' · ')}</p>}
+          {ex.kid && (
+            <div className="pg-kid">
+              <KidIcon icon={ex.kid.icon} />
+              {ex.kid.scene && <div className={`kid-scene kid-scene-${ex.kid.scene.t}`}><PicView pic={ex.kid.scene} /></div>}
+              <div className={`kid-choices n${ex.kid.options.length}`}>
+                {ex.kid.options.map((p, i) => <div key={i} className={`kid-choice kid-choice-${p.t} ${String(i) === ex!.answer ? 'right' : ''}`}><PicView pic={p} /></div>)}
+              </div>
+            </div>
+          )}
+          {ex.choices && !ex.kid && <p className="pg-choices">Choix : {ex.choices.join(' · ')}</p>}
           <p className="pg-answer">⇒ <MathText text={ex.answer} /></p>
           {ex.explanation && <p className="pg-expl"><MathText text={ex.explanation} /></p>}
         </>

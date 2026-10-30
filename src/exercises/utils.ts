@@ -1,4 +1,5 @@
 import type { Figure } from './figure'
+import type { KidSpec } from './maternelle/pics'
 
 export interface Exercise {
   /** Titre court d'un problème (« Le pont-levis », « La part du trésor »…), affiché au-dessus de l'énoncé. */
@@ -25,6 +26,8 @@ export interface Exercise {
   /** Message précis quand la réponse est fausse (ex. « juste mais pas développée »). */
   diagnose?: (value: string) => string | undefined
   check: (value: string) => boolean
+  /** Exercice de maternelle : consigne lue à voix haute, réponses en images (voir maternelle/pics.ts). */
+  kid?: KidSpec
 }
 
 /** 5 paliers : le palier n correspond au cran n − 1 de la jauge. */

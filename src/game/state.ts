@@ -1,7 +1,7 @@
 // État d'un joueur : maisons (jauges, améliorations), points d'âge, problèmes résolus, temps de recharge.
 import { useCallback, useEffect, useState } from 'react'
 import {
-  AGE_PROBLEM_CRAN, LEVELS, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints, chaptersFor, levelById,
+  AGE_PROBLEM_CRAN, DEFAULT_LEVEL, LEVELS, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints, chaptersFor, levelById,
   levelFromPoints, maxPoints, type Chapter, type Level,
 } from '../data/curriculum'
 import { figuresFor, garrison } from '../battle/units'
@@ -39,7 +39,7 @@ export function emptyPlayer(levelId: string, mapTheme?: ThemeId, selection?: str
   return { levelId, houses: {}, agePoints: 0, solved: [], cooldowns: {}, answered: 0, correct: 0, mapTheme, selection }
 }
 
-export const levelOf = (p: PlayerState): Level => LEVELS.find((l) => l.id === p.levelId) ?? LEVELS[0]
+export const levelOf = (p: PlayerState): Level => LEVELS.find((l) => l.id === p.levelId) ?? levelById(DEFAULT_LEVEL)
 /** Les 7 maisons du joueur, avec les sujets qu'il a choisis. */
 export const chaptersOf = (p: PlayerState): Chapter[] => chaptersFor(p.levelId, p.selection)
 export const houseOf = (p: PlayerState, chapterId: string): HouseState => p.houses[chapterId] ?? EMPTY_HOUSE

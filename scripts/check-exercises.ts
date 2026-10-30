@@ -8,7 +8,7 @@ import { FIG_H, FIG_W } from '../src/exercises/figure'
 
 const RUNS = Number(process.env.RUNS ?? 400)
 const showSamples = process.argv.includes('samples')
-const only = process.argv.find((a) => /^(5e|2|T)-/.test(a))
+const only = process.argv.find((a) => /^(5e|2|T|M)-/.test(a))
 const problems: string[] = []
 const samples: string[] = []
 const variety: string[] = []
@@ -34,7 +34,8 @@ function inspect(where: string, make: Maker, training = false) {
       problems.push(`${where} EXCEPTION ${(e as Error).message}`)
       return
     }
-    prompts.add(ex.prompt)
+    // maternelle : l'énoncé est surtout l'image (une même consigne sert à beaucoup d'images différentes)
+    prompts.add(ex.prompt + (ex.kid ? JSON.stringify([ex.kid.scene, ex.kid.options]) : ''))
     skeletons.add(skeleton(ex.prompt))
     if (ex.kind === 'input' && /^−?\d+(?:,\d+)?$/.test(ex.answer.trim())) {
       const ans = ex.answer.trim().replace('−', '-').replace(',', '.')

@@ -24,18 +24,37 @@ Pages utiles : `/?problemes` (relecture de tous les exercices et problèmes, ave
 
 ## Niveaux et chapitres
 
-Quatre niveaux : **Cinquième**, **Seconde**, et deux niveaux **adultes** sur tout le programme de Terminale
+Cinq niveaux : **Maternelle**, **Cinquième**, **Seconde**, et deux niveaux **adultes** sur tout le programme de Terminale
 (spécialité, options maths expertes et complémentaires) : « remise en jambes » (paliers de difficulté 1 à 3, pour qui a
 un peu oublié) et « aguerris » (paliers 2 à 5).
 
 Le village a toujours **7 maisons**, une par type d'unité (infanterie, lanciers, archers, chevaliers, éclaireurs,
 siège, moines). Dans les **Options** (bouton ⚙ de l'accueil), chacun choisit les **7 chapitres** sur lesquels il veut
-s'entraîner parmi le programme complet de son niveau (15 chapitres en 5e, 13 en 2nde, 18 pour les adultes) : on
+s'entraîner parmi le programme complet de son niveau (8 en maternelle, 15 chapitres en 5e, 13 en 2nde, 18 pour les adultes) : on
 sélectionne ou désélectionne un chapitre en cliquant sur sa ligne ; le choix est mémorisé par niveau. À chaque partie,
 ces 7 chapitres sont **répartis au hasard** entre les maisons (en entraînement libre, la répartition change quand on
 modifie ses chapitres ; la progression de chaque chapitre est conservée). L'ordinateur tire ses chapitres au hasard.
 Un chapitre dont les exercices ne sont pas encore écrits n'est pas proposé ; un niveau sans assez de chapitres reste
 verrouillé.
+
+### Maternelle
+
+Pour les enfants qui ne lisent pas encore : **tout passe par l'image et la voix**.
+- 8 chapitres : *Compter*, *Les chiffres*, *Plus, moins, autant*, *Grand, petit, long, court*, *Les formes*,
+  *Les suites* (colliers, motifs), *Les lettres* (lettres pareilles, lettre ou chiffre, première lettre d'un mot,
+  capitale et minuscule, mots pareils), *Se repérer et observer* (sur, sous, dans, devant…, ombres, intrus, dessins
+  pareils). Paliers : jusqu'à 3, 5, 6, 8 puis 10 objets ; 3 puis 4 réponses proposées. Les problèmes de l'hôtel de
+  ville ajoutent de petites histoires en images (« on en ajoute », « on en enlève »).
+- Chaque exercice a un **pictogramme de consigne** toujours identique pour un même type (ex. « dé = ? » pour
+  compter, « 🔊 → ▲ » pour « montre la forme que je dis », « ● ● ● ? » pour « ce qui vient après ») : accompagné au
+  début, l'enfant apprend à reconnaître les exercices.
+- La **consigne est lue à voix haute** (synthèse vocale du navigateur, en français ; bouton haut-parleur pour la
+  réécouter ; coupée par le bouton de sourdine). La phrase est aussi écrite en petit pour l'adulte.
+- **Réponses en grandes images** à toucher ; verdict ✓ / ✗ en couleur, la bonne réponse s'allume, gros bouton ▶ pour
+  continuer ; bilan en étoiles.
+- **Gros pointeur** jaune cerclé de noir sur tout le jeu dès que le niveau Maternelle est choisi.
+- Code : `src/exercises/maternelle/` (images et exercices), `src/components/PicView.tsx` (dessins),
+  `src/audio/speech.ts` (voix).
 
 ## Modes de jeu
 
@@ -47,7 +66,8 @@ l'ordinateur) et **L'entraînement** (sans village ni bataille : la quête du sa
 - **La quête du savoir** : entraînement hors bataille sur un ou plusieurs chapitres du niveau, sur une carte de
   campagne en trois étapes : **la caserne** (10 exercices d'entraînement, deux par palier, de plus en plus difficiles),
   **l'hôtel de ville** (5 missions : petits problèmes avec une situation à comprendre) et **le monastère** (2 défis
-  qui vont un peu au-delà du cours). Les exercices de chaque étape s'enchaînent dans un même parchemin. Les pastilles de chaque étape montrent la progression ; chaque bonne réponse
+  qui vont un peu au-delà du cours). Les exercices de chaque étape s'enchaînent dans un même parchemin ; si on le
+  referme avant la fin, les réponses déjà données sont gardées et on reprend là où on s'était arrêté. Les pastilles de chaque étape montrent la progression ; chaque bonne réponse
   rapporte 1, 2 ou 3 points de gloire selon l'étape, et la quête se termine par un titre (Recrue, Écuyer, Chevalier,
   Maître d'armes). Le meilleur résultat est mémorisé pour chaque chapitre. Code : `src/quest/quest.ts`,
   `src/screens/QuestScreen.tsx`.

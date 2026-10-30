@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { LEVELS, SUBJECTS, UPCOMING_LEVELS, maxPoints, type Level } from '../data/curriculum'
+import { useEffect, useState } from 'react'
+import { DEFAULT_LEVEL, LEVELS, SUBJECTS, UPCOMING_LEVELS, levelById, maxPoints, type Level } from '../data/curriculum'
 import { chaptersOf, houseOf, type PlayerState } from '../game/state'
 import { levelPlayable, loadChosen } from '../game/selection'
 import { SOLO_RULES } from '../game/rules'
@@ -31,12 +31,16 @@ const TRAINING: Mode[] = [
 export function HomeScreen({ getSolo, name, onName, onPick, onOptions }: Props) {
   const [levelId, setLevelId] = useState<string>(() => {
     try {
-      return localStorage.getItem('mathmuscles:level') ?? LEVELS[0].id
+      return localStorage.getItem('mathmuscles:level') ?? DEFAULT_LEVEL
     } catch {
-      return LEVELS[0].id
+      return DEFAULT_LEVEL
     }
   })
-  const level = LEVELS.find((l) => l.id === levelId && levelPlayable(l.id)) ?? LEVELS[0]
+  const level = LEVELS.find((l) => l.id === levelId && levelPlayable(l.id)) ?? levelById(DEFAULT_LEVEL)
+  // maternelle : gros pointeur dès l'accueil
+  useEffect(() => {
+    document.body.classList.toggle('kid', level.id === 'maternelle')
+  }, [level.id])
   const choose = (id: string) => {
     setLevelId(id)
     try {

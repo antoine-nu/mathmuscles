@@ -35,8 +35,8 @@ export function DemoBattle({ onMenu }: { onMenu: () => void }) {
   const [round, setRound] = useState(0)
   const { feed, armies, themeId } = useMemo(() => {
     const armies: [ArmySpec, ArmySpec] = variant === 'artillerie'
-      ? [siegeArmy(LEVELS[0].id), siegeArmy(LEVELS[1].id)]
-      : [makeArmy(LEVELS[0].id, 17), makeArmy(LEVELS[1].id, 17)]
+      ? [siegeArmy('5e'), siegeArmy('2nde')]
+      : [makeArmy('5e', 17), makeArmy('2nde', 17)]
     // ?theme=desert (plaine, cote, desert, hiver, automne) : décor imposé ; sinon tiré au hasard
     const forced = new URLSearchParams(location.search).get('theme') as ThemeId | null
     const themeId = forced && THEME_IDS.includes(forced) ? forced : randomTheme()

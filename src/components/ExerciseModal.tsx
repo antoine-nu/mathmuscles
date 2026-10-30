@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { levelFromPoints, maxPoints, unitName, type Chapter } from '../data/curriculum'
 import { figuresFor, garrison, pointsToNextUnit } from '../battle/units'
-import type { Exercise } from '../exercises/utils'
+import { pick, type Exercise } from '../exercises/utils'
 import { FigureView } from './FigureView'
 import { MathText } from './MathText'
 import { audio } from '../audio/engine'
+import { speak, stopSpeaking } from '../audio/speech'
+import { KidIcon, PicView, ThingGlyph } from './PicView'
 
 export { MathText }
 
@@ -33,16 +35,21 @@ interface Props {
   onClose: (result: ScrollResult | null) => void
   /** Libellé du bouton final (« Retour au camp » par défaut). */
   doneLabel?: string
+  /** Réponses déjà données lors d'une ouverture précédente : on reprend à l'exercice suivant. */
+  initialResults?: boolean[]
+  /** Fermeture avant la fin : reçoit les réponses déjà données (pour reprendre plus tard). Sans elle, tout est perdu. */
+  onPause?: (results: boolean[]) => void
 }
 
 type Phase = 'question' | 'feedback' | 'done'
 
 /** Parchemin d'exercices : une série de 5 ou un problème unique (titre, figure). */
-export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems, itemName = 'Exercice', deadline, summary, onClose, doneLabel = 'Retour au camp' }: Props) {
-  const [index, setIndex] = useState(0)
+export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems, itemName = 'Exercice', deadline, summary, onClose, doneLabel = 'Retour au camp', initialResults, onPause }: Props) {
+  const [index, setIndex] = useState(() => Math.min(initialResults?.length ?? 0, exercises.length - 1))
   const [value, setValue] = useState('')
-  const [results, setResults] = useState<boolean[]>([])
-  const [phase, setPhase] = useState<Phase>('question')
+  const [results, setResults] = useState<boolean[]>(() => initialResults?.slice(0, exercises.length) ?? [])
+  // tout avait déjà été répondu : on passe directement au bilan
+  const [phase, setPhase] = useState<Phase>(() => ((initialResults?.length ?? 0) >= exercises.length ? 'done' : 'question'))
   const [warning, setWarning] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const ex = exercises[index]
@@ -52,6 +59,15 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
   useEffect(() => {
     if (phase === 'question') inputRef.current?.focus()
   }, [phase, index])
+
+  // maternelle : la consigne est lue à voix haute à chaque nouvel exercice
+  const kidSay = phase === 'question' ? ex?.kid?.say : undefined
+  useEffect(() => {
+    if (!kidSay || audio.muted) return
+    const t = window.setTimeout(() => speak(kidSay), 250)
+    return () => window.clearTimeout(t)
+  }, [kidSay, index])
+  useEffect(() => stopSpeaking, [])
 
   // Fin du temps : on referme en comptant ce qui a été répondu.
   const latest = useRef<ScrollResult>({ correct, answered: results.length, results })
@@ -75,6 +91,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
     const ok = ex.check(answer)
     if (ok) audio.correct()
     else audio.wrong()
+    if (ex.kid && !audio.muted) speak(ok ? pick(['Bravo !', 'Super !', 'Très bien !', 'Oui, c’est ça !']) : 'Oh non. Regarde, c’était celle-là.')
     setResults((r) => [...r, ok])
     setPhase('feedback')
   }
@@ -112,7 +129,7 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
 
   return (
     <div className="modal-backdrop" onKeyDown={(e) => { if (e.key === 'Enter' && phase === 'feedback') next() }}>
-      <div className={`scroll ${single || problems ? 'wide' : ''}`} role="dialog" aria-label={heading}>
+      <div className={`scroll ${single || problems || ex?.kid ? 'wide' : ''} ${ex?.kid ? 'kid-scroll' : ''}`} role="dialog" aria-label={heading}>
         <div className="scroll-rod top" />
         <div className="scroll-body">
           <header className="scroll-head">
@@ -120,7 +137,13 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
               <div className="eyebrow">{eyebrow}</div>
               <h2>{heading}</h2>
             </div>
-            <button className="close" onClick={() => onClose(phase === 'done' ? { correct, answered: results.length, results } : null)} aria-label="Fermer">✕</button>
+            <button className="close" onClick={() => {
+              if (phase === 'done') onClose({ correct, answered: results.length, results })
+              else {
+                onPause?.(results)
+                onClose(null)
+              }
+            }} aria-label="Fermer">✕</button>
           </header>
 
           {!single && (
@@ -131,7 +154,37 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
             </div>
           )}
 
-          {phase !== 'done' && ex && (
+          {phase !== 'done' && ex?.kid && (
+            <div className="kid-q">
+              <div className="kid-head">
+                <KidIcon icon={ex.kid.icon} />
+                <button className="kid-say" data-sfx="none" onClick={() => speak(ex.kid!.say)} aria-label="Écouter la consigne">
+                  <PicView pic={{ t: 'mark', ch: 'voix' }} />
+                </button>
+              </div>
+              <p className="kid-text">{ex.kid.say}</p>
+              {ex.kid.scene && <div className={`kid-scene kid-scene-${ex.kid.scene.t}`}><PicView pic={ex.kid.scene} /></div>}
+              <div className={`kid-choices n${ex.kid.options.length}`}>
+                {ex.kid.options.map((p, i) => {
+                  const state = phase === 'feedback' ? (String(i) === ex.answer ? 'right' : String(i) === value ? 'wrong' : 'dim') : ''
+                  return (
+                    <button key={i} data-sfx="none" data-choice={i} className={`kid-choice kid-choice-${p.t} ${state}`} disabled={phase !== 'question'} onClick={() => submit(String(i))}>
+                      <PicView pic={p} />
+                    </button>
+                  )
+                })}
+              </div>
+              {phase === 'feedback' && (
+                <div className={`kid-feedback ${lastOk ? 'ok' : 'ko'}`}>
+                  <span className="kid-verdict" aria-label={lastOk ? 'Bravo' : 'Raté'}>{lastOk ? '✓' : '✗'}</span>
+                  <button className="kid-next" onClick={next} autoFocus aria-label="Suivant">▶</button>
+                  <small>{ex.explanation}</small>
+                </div>
+              )}
+            </div>
+          )}
+
+          {phase !== 'done' && ex && !ex.kid && (
             <div className="question">
               <div className="q-num">
                 {single ? (ex.title ? <span className="q-title">{ex.title}</span> : 'Problème') : (
@@ -195,7 +248,13 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
 
           {phase === 'done' && (
             <div className="summary">
-              {!single && <div className="score">{correct}<small>/{exercises.length}</small></div>}
+              {exercises[0]?.kid ? (
+                <div className="kid-stars" aria-label={`${correct} sur ${exercises.length}`}>
+                  {exercises.map((_, i) => (
+                    <svg key={i} viewBox="-22 -22 44 44" className={i < correct ? 'won' : ''}><ThingGlyph thing="etoile" color={i < correct ? 'jaune' : undefined} silhouette={i >= correct} /></svg>
+                  ))}
+                </div>
+              ) : !single && <div className="score">{correct}<small>/{exercises.length}</small></div>}
               {summary(correct, exercises.length)}
               <div className="summary-actions">
                 <button className="btn gold" data-sfx="close" onClick={() => onClose({ correct, answered: results.length, results })} autoFocus>{doneLabel}</button>

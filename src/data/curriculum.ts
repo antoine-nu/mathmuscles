@@ -118,9 +118,30 @@ const HOUSES_ADULTES: HouseDef[] = [
   house('monk', 'monastery', 'Bibliothèque', 'Érudits', ['Copiste', 'Érudit', 'Grand savant'], '#1f8a8a', MONK_UPGRADES),
 ]
 
+const HOUSES_MATERNELLE: HouseDef[] = [
+  house('infantry', 'barracks', 'Caserne', 'Petits soldats', ['Petit soldat', 'Soldat', 'Champion'], '#2f5fb3', INFANTRY_UPGRADES),
+  house('spear', 'barracks', 'Caserne des piquiers', 'Lanciers', ['Petit lancier', 'Lancier', 'Grand lancier'], '#b8362f', SPEAR_UPGRADES),
+  house('archer', 'range', 'Camp de tir', 'Archers', ['Petit archer', 'Archer', 'Grand archer'], '#2f8f4e', ARCHER_UPGRADES),
+  house('knight', 'stable', 'Écurie royale', 'Chevaliers', ['Petit chevalier', 'Chevalier', 'Grand chevalier'], '#7a3fa8', CAVALRY_UPGRADES),
+  house('scout', 'stable', 'Écurie', 'Cavaliers', ['Poney', 'Cavalier', 'Grand cavalier'], '#d9862b', CAVALRY_UPGRADES),
+  house('siege', 'workshop', 'Atelier', 'Catapultes', ['Petit bélier', 'Catapulte', 'Grande catapulte'], '#8a6a3c', SIEGE_UPGRADES),
+  house('monk', 'monastery', 'Monastère', 'Moines', ['Petit moine', 'Moine', 'Sage'], '#1f8a8a', MONK_UPGRADES),
+]
+
 // ── Sujets ──────────────────────────────────────────────────────────────
 const subject = (id: string, domain: string, title: string, emblem: string, topics: string[]): Subject => ({ id, domain, title, emblem, topics })
 
+const MN = 'Les nombres', MF = 'Formes, grandeurs et suites', ML = 'Les lettres et l’espace'
+const SUBJECTS_MATERNELLE: Subject[] = [
+  subject('M-compter', MN, 'Compter', '3', ['Compter jusqu’à 10', 'Constellations du dé', 'Montrer une quantité']),
+  subject('M-chiffres', MN, 'Les chiffres', '1', ['Reconnaître les chiffres', 'Chiffre et quantité', 'La comptine']),
+  subject('M-quantites', MN, 'Plus, moins, autant', '+', ['Comparer des quantités', 'Autant', 'Ajouter, enlever']),
+  subject('M-grandeurs', MF, 'Grand, petit, long, court', '↕', ['Plus grand, plus petit', 'Plus long, plus court', 'Ranger']),
+  subject('M-formes', MF, 'Les formes', '△', ['Rond, carré, triangle, rectangle', 'Même forme', 'Intrus']),
+  subject('M-suites', MF, 'Les suites', '●', ['Colliers de couleurs', 'Motifs de formes', 'Ce qui manque']),
+  subject('M-lettres', ML, 'Les lettres', 'A', ['Reconnaître les lettres', 'Lettres et chiffres', 'Première lettre d’un mot']),
+  subject('M-espace', ML, 'Se repérer et observer', '◎', ['Sur, sous, dans, devant…', 'Ombres', 'Intrus et dessins pareils']),
+]
 const NC = 'Nombres et calculs', EG = 'Espace et géométrie', GM = 'Grandeurs et mesures', OD = 'Données et probabilités'
 const SUBJECTS_5E: Subject[] = [
   subject('5e-prio', NC, 'Enchaînements d’opérations', '×', ['Priorités opératoires', 'Parenthèses', 'Calcul mental']),
@@ -184,6 +205,12 @@ const merge = (h: HouseDef, s: Subject): Chapter => ({ ...h, ...s })
 
 export const LEVELS: Level[] = [
   level({
+    id: 'maternelle', label: 'Maternelle', short: 'Mat.', era: 'Âge sombre',
+    tagline: 'Compter, les formes, les lettres : de grandes images et une voix qui lit les consignes.',
+    houses: HOUSES_MATERNELLE, subjects: SUBJECTS_MATERNELLE, difficulty: [1, 2, 3, 4, 5, 5],
+    defaults: ['M-compter', 'M-chiffres', 'M-quantites', 'M-formes', 'M-suites', 'M-lettres', 'M-espace'],
+  }),
+  level({
     id: '5e', label: 'Cinquième', short: '5e', era: 'Âge féodal',
     tagline: 'Bâtis ton premier royaume : relatifs, fractions, premières lettres…',
     houses: HOUSES_5E, subjects: SUBJECTS_5E, difficulty: [1, 2, 3, 4, 5, 5],
@@ -211,7 +238,9 @@ export const LEVELS: Level[] = [
 
 /** Tous les sujets, par identifiant (un sujet peut servir à plusieurs niveaux). */
 export const SUBJECTS = new Map<string, Subject>(LEVELS.flatMap((l) => l.subjects.map((s) => [s.id, s] as const)))
-export const levelById = (id: string): Level => LEVELS.find((l) => l.id === id) ?? LEVELS[0]
+/** Niveau proposé par défaut (et repli pour un identifiant inconnu). */
+export const DEFAULT_LEVEL = '5e'
+export const levelById = (id: string): Level => LEVELS.find((l) => l.id === id) ?? LEVELS.find((l) => l.id === DEFAULT_LEVEL)!
 
 /** Maisons d'un niveau avec les sujets choisis (selection[i] pour la maison i ; défaut sinon). */
 export function chaptersFor(levelId: string, selection?: readonly string[]): Chapter[] {
