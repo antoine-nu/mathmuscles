@@ -43,11 +43,15 @@ Pour les enfants qui ne lisent pas encore : **tout passe par l'image et la voix*
 - 8 chapitres : *Compter*, *Les chiffres*, *Plus, moins, autant*, *Grand, petit, long, court*, *Les formes*,
   *Les suites* (colliers, motifs), *Les lettres* (lettres pareilles, lettre ou chiffre, première lettre d'un mot,
   capitale et minuscule, mots pareils), *Se repérer et observer* (sur, sous, dans, devant…, ombres, intrus, dessins
-  pareils). Paliers : jusqu'à 3, 5, 6, 8 puis 10 objets ; 3 puis 4 réponses proposées. Les problèmes de l'hôtel de
-  ville ajoutent de petites histoires en images (« on en ajoute », « on en enlève »).
-- Chaque exercice a un **pictogramme de consigne** toujours identique pour un même type (ex. « dé = ? » pour
-  compter, « 🔊 → ▲ » pour « montre la forme que je dis », « ● ● ● ? » pour « ce qui vient après ») : accompagné au
-  début, l'enfant apprend à reconnaître les exercices.
+  pareils).
+- **Chaque maison a ses propres exercices** : doigts levés et boîte de 10 jetons (Compter) ; comptine, avant/après,
+  compte à rebours, plus grand nombre, deux dés (Les chiffres) ; tours de cubes, « combien faut-il en ajouter »,
+  petites histoires (Plus, moins, autant) ; balance, verres plus ou moins remplis, crayons décalés (Grandeurs) ;
+  encastrements (Formes)…
+- **La difficulté monte à chaque cran** : nombres de 1 à 5, puis jusqu'à 8, 10, 12 et 15 ; 3 puis 4 réponses ;
+  comparaisons qui obligent à compter (écart d'un seul objet, objets de tailles différentes, tours de même hauteur
+  faites de cubes de tailles différentes, crayons qui ne partent pas du même endroit) ; formes tournées et formes
+  ressemblantes ; lettres qui se ressemblent (E/F, O/Q, P/R…).
 - La **consigne est lue à voix haute** (synthèse vocale du navigateur, en français ; bouton haut-parleur pour la
   réécouter ; coupée par le bouton de sourdine). La phrase est aussi écrite en petit pour l'adulte.
 - **Réponses en grandes images** à toucher ; verdict ✓ / ✗ en couleur, la bonne réponse s'allume, gros bouton ▶ pour

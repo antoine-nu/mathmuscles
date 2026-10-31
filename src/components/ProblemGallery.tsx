@@ -4,7 +4,7 @@ import { AGE_PROBLEMS, TIERS, UPGRADE_PROBLEMS, hasContent } from '../exercises'
 import type { Exercise, Maker } from '../exercises/utils'
 import { MathText } from './ExerciseModal'
 import { FigureView } from './FigureView'
-import { KidIcon, PicView } from './PicView'
+import { PicView } from './PicView'
 
 type Section = 'entrainement' | 'ameliorations' | 'hotel'
 
@@ -73,7 +73,6 @@ function Card({ make, index }: { make: Maker; index: number }) {
           {ex.figure && <FigureView figure={ex.figure} />}
           {ex.kid && (
             <div className="pg-kid">
-              <KidIcon icon={ex.kid.icon} />
               {ex.kid.scene && <div className={`kid-scene kid-scene-${ex.kid.scene.t}`}><PicView pic={ex.kid.scene} /></div>}
               <div className={`kid-choices n${ex.kid.options.length}`}>
                 {ex.kid.options.map((p, i) => <div key={i} className={`kid-choice kid-choice-${p.t} ${String(i) === ex!.answer ? 'right' : ''}`}><PicView pic={p} /></div>)}

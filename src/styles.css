@@ -882,16 +882,11 @@ body.kid, body.kid * {
 .scroll.kid-scroll { width: min(980px, 100%); }
 .kid-q { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .kid-head { display: flex; align-items: center; gap: 16px; }
-.kid-icon { display: flex; align-items: center; gap: 4px; height: 64px; padding: 6px 14px; border-radius: 14px; background: #fff8e1; border: 3px solid #c9a24a; box-shadow: inset 0 0 0 2px #fff; }
-.kid-icon .pv { width: auto; height: 50px; min-width: 30px; }
-.kid-icon .pv-set { width: 66px; }
-.kid-icon .pv-row { height: 46px; }
-.kid-icon .pv-bar { width: 60px; height: 22px; }
 .kid-say { width: 70px; height: 70px; padding: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6d8, #f2c94c); border: 3px solid #2b1d10; box-shadow: 0 4px 0 #8a5a2e; }
 .kid-say:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a5a2e; }
 .kid-text { margin: 0; font-size: 15px; color: #6b5030; font-style: italic; text-align: center; }
 .kid-scene { width: min(400px, 84vw); height: 230px; padding: 8px; border-radius: 16px; background: #fffdf4; border: 3px solid #c9a24a; }
-.kid-scene-row { width: min(560px, 90vw); height: 110px; }
+.kid-scene-row { width: min(600px, 92vw); height: 140px; }
 .kid-scene-digit, .kid-scene-text, .kid-scene-shape, .kid-scene-thing, .kid-scene-dice { width: 170px; height: 150px; }
 .kid-scene-bar { width: min(420px, 80vw); height: 80px; }
 .kid-scene-word { width: 200px; height: 190px; }

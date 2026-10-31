@@ -71,10 +71,20 @@ export type Pic =
   | { t: 'dice'; n: number }
   /** Une suite d'images ; hole : case vide marquée « ? ». */
   | { t: 'row'; items: Pic[]; hole?: number }
-  /** Une barre (crayon) de longueur relative 0..1. */
-  | { t: 'bar'; len: number; color: ColorName }
-  /** Une tour de n cubes. */
-  | { t: 'tower'; n: number; color: ColorName }
+  /** Une barre (crayon) de longueur relative 0..1, qui commence en `from` (0..0.4, décalée pour obliger à comparer). */
+  | { t: 'bar'; len: number; color: ColorName; from?: number }
+  /** Une tour de n cubes (size : hauteur d'un cube, 14 par défaut ; des cubes de tailles différentes obligent à compter). */
+  | { t: 'tower'; n: number; color: ColorName; size?: number }
+  /** Des mains qui montrent n doigts (une main jusqu'à 5, deux mains au-delà). */
+  | { t: 'hands'; n: number }
+  /** Boîte de 10 (cadre 2 × 5) remplie de n jetons ; deux boîtes au-delà de 10. */
+  | { t: 'frame'; n: number; color: ColorName }
+  /** Une balance : le côté le plus lourd penche. */
+  | { t: 'balance'; left: Thing; right: Thing; heavier: 'left' | 'right' }
+  /** Un verre rempli à `level` (0..1). */
+  | { t: 'glass'; level: number }
+  /** Une planche percée d'un trou en forme de `shape` (le jeu d'encastrement). */
+  | { t: 'hole'; shape: Shape; rot?: number }
   /** Une scène : un objet placé par rapport à une boîte. */
   | { t: 'scene'; rel: Relation; thing: Thing }
   /** Un signe (« ? », « = », « → ») pour les pictogrammes de consigne. */
@@ -84,8 +94,6 @@ export type Pic =
 export interface KidSpec {
   /** Consigne lue à voix haute (et écrite en petit pour l'adulte qui accompagne). */
   say: string
-  /** Pictogramme de la consigne : toujours le même pour un même type d'exercice, pour que l'enfant le reconnaisse. */
-  icon: Pic[]
   /** Image principale (facultative). */
   scene?: Pic
   /** Les réponses possibles, en images (dans l'ordre des choix « 0 », « 1 »…). */
@@ -97,7 +105,7 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a)
 
 /** n objets éparpillés sans se chevaucher dans la boîte 200 × 150 (le plus gros possible). */
 export function scatter(n: number, things: (i: number) => { thing: Thing; color?: ColorName; s?: number }): Placed[] {
-  const s = n <= 2 ? 1.6 : n <= 4 ? 1.35 : n <= 6 ? 1.15 : 0.95
+  const s = n <= 2 ? 1.6 : n <= 4 ? 1.35 : n <= 6 ? 1.15 : n <= 10 ? 0.95 : 0.78
   const minD = 42 * s
   const out: Placed[] = []
   for (let i = 0; i < n; i++) {

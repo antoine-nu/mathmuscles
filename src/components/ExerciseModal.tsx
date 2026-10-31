@@ -6,7 +6,7 @@ import { FigureView } from './FigureView'
 import { MathText } from './MathText'
 import { audio } from '../audio/engine'
 import { speak, stopSpeaking } from '../audio/speech'
-import { KidIcon, PicView, ThingGlyph } from './PicView'
+import { PicView, ThingGlyph } from './PicView'
 
 export { MathText }
 
@@ -157,7 +157,6 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
           {phase !== 'done' && ex?.kid && (
             <div className="kid-q">
               <div className="kid-head">
-                <KidIcon icon={ex.kid.icon} />
                 <button className="kid-say" data-sfx="none" onClick={() => speak(ex.kid!.say)} aria-label="Écouter la consigne">
                   <PicView pic={{ t: 'mark', ch: 'voix' }} />
                 </button>

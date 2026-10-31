@@ -140,22 +140,33 @@ const VIEW: Record<string, string> = { set: '0 0 200 150', scene: '10 20 180 112
 /** Une image, dans son propre cadre SVG. */
 export function PicView({ pic, className }: { pic: Pic; className?: string }) {
   if (pic.t === 'row') {
+    // une case de 60 de large par image ; une collection (boîte 200 × 150) prend une case plus large
     const n = pic.items.length + (pic.hole === pic.items.length ? 1 : 0)
+    const hasSet = pic.items.some((p) => p.t === 'set')
+    const H = hasSet ? 90 : 60
     const cells: ReactNode[] = []
-    let k = 0
+    let k = 0, x = 0
     for (let i = 0; i < n; i++) {
-      const x = 30 + i * 60
       if (i === pic.hole) {
-        cells.push(<g key={`h${i}`}><rect x={x - 25} y={5} width={50} height={50} rx={8} fill="#fff8e1" stroke={INK} strokeWidth={2.4} strokeDasharray="7 5" /><text x={x} y={42} className="pv-mark">?</text></g>)
+        cells.push(<g key={`h${i}`}><rect x={x + 5} y={H / 2 - 25} width={50} height={50} rx={8} fill="#fff8e1" stroke={INK} strokeWidth={2.4} strokeDasharray="7 5" /><text x={x + 30} y={H / 2 + 12} className="pv-mark">?</text></g>)
         if (pic.hole < pic.items.length) k++
+        x += 60
         continue
       }
       const item = pic.items[k++]
-      cells.push(<g key={i} transform={`translate(${x} 30) scale(0.95)`}><Inner pic={item} /></g>)
+      if (item.t === 'set') {
+        cells.push(<g key={i} transform={`translate(${x} 0) scale(${H / 150})`}><Inner pic={item} /></g>)
+        x += (200 * H) / 150
+      } else {
+        // un nombre à deux chiffres prend une case plus large
+        const w = item.t === 'digit' && item.n >= 10 ? 84 : 60
+        cells.push(<g key={i} transform={`translate(${x + w / 2} ${H / 2}) scale(0.95)`}><Inner pic={item} /></g>)
+        x += w
+      }
     }
-    return <svg className={`pv pv-row ${className ?? ''}`} viewBox={`0 0 ${n * 60} 60`} role="img"><g>{cells}</g></svg>
+    return <svg className={`pv pv-row ${className ?? ''}`} viewBox={`0 0 ${x} ${H}`} role="img"><g>{cells}</g></svg>
   }
-  const vb = VIEW[pic.t] ?? (pic.t === 'word' ? '-40 -32 80 74' : pic.t === 'bar' ? '0 -18 200 36' : pic.t === 'tower' ? '-30 -112 60 116' : pic.t === 'text' ? `${-Math.max(1, pic.text.length) * 16} -30 ${Math.max(1, pic.text.length) * 32} 60` : '-30 -30 60 60')
+  const vb = VIEW[pic.t] ?? (pic.t === 'word' ? '-40 -32 80 74' : pic.t === 'bar' ? '0 -18 230 36' : pic.t === 'tower' ? '-34 -206 68 210' : pic.t === 'hands' ? (pic.n > 5 ? '-62 -46 124 76' : '-32 -46 64 76') : pic.t === 'frame' ? (pic.n > 10 ? '-84 -68 168 136' : '-84 -34 168 68') : pic.t === 'balance' ? '-86 -76 172 128' : pic.t === 'glass' ? '-34 -46 68 92' : pic.t === 'hole' ? '-44 -40 88 80' : pic.t === 'text' ? `${-Math.max(1, pic.text.length) * 16} -30 ${Math.max(1, pic.text.length) * 32} 60` : '-30 -30 60 60')
   return <svg className={`pv pv-${pic.t} ${className ?? ''}`} viewBox={vb} role="img"><Inner pic={pic} /></svg>
 }
 
@@ -176,10 +187,46 @@ function Inner({ pic }: { pic: Pic }) {
       return <g><rect x={-24} y={-24} width={48} height={48} rx={9} fill="#fffdf6" stroke={INK} strokeWidth={2.6} />{pts[pic.n].map(([x, y], i) => <circle key={i} cx={x * 13} cy={y * 13} r={5} fill={INK} />)}</g>
     }
     case 'bar': {
-      const w = 30 + pic.len * 160
-      return <g><rect x={6} y={-9} width={w - 18} height={18} rx={3} fill={COLORS[pic.color]} stroke={INK} strokeWidth={2.2} /><path d={`M${w - 12},-9 L${w + 6},0 L${w - 12},9 Z`} fill="#f2dcae" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" /><path d={`M${w + 1},-2.5 L${w + 6},0 L${w + 1},2.5 Z`} fill={INK} /></g>
+      const x0 = 6 + (pic.from ?? 0) * 200, w = 24 + pic.len * 130
+      return <g><rect x={x0} y={-9} width={w - 18} height={18} rx={3} fill={COLORS[pic.color]} stroke={INK} strokeWidth={2.2} /><path d={`M${x0 + w - 18},-9 L${x0 + w},0 L${x0 + w - 18},9 Z`} fill="#f2dcae" stroke={INK} strokeWidth={2.2} strokeLinejoin="round" /><path d={`M${x0 + w - 5},-2.5 L${x0 + w},0 L${x0 + w - 5},2.5 Z`} fill={INK} /></g>
     }
-    case 'tower': return <g>{Array.from({ length: pic.n }, (_, i) => <rect key={i} x={-14} y={-14 * (i + 1)} width={28} height={14} fill={COLORS[pic.color]} stroke={INK} strokeWidth={2} />)}</g>
+    case 'tower': {
+      const h = pic.size ?? 14
+      const w = Math.min(2 * h, 56)
+      return <g>{Array.from({ length: pic.n }, (_, i) => <rect key={i} x={-w / 2} y={-h * (i + 1)} width={w} height={h} fill={COLORS[pic.color]} stroke={INK} strokeWidth={2} />)}</g>
+    }
+    case 'hands': return pic.n <= 5 ? <Hand n={pic.n} /> : <g><g transform="translate(-30 0)"><Hand n={5} /></g><g transform="translate(30 0) scale(-1 1)"><Hand n={pic.n - 5} /></g></g>
+    case 'frame': {
+      const frames = pic.n > 10 ? 2 : 1
+      return (
+        <g>
+          {Array.from({ length: frames }, (_, f) => (
+            <g key={f} transform={`translate(0 ${frames === 1 ? 0 : f === 0 ? -34 : 34})`}>
+              <rect x={-80} y={-30} width={160} height={60} rx={6} fill="#fffdf6" stroke={INK} strokeWidth={2.6} />
+              {Array.from({ length: 10 }, (_, i) => {
+                const x = -64 + (i % 5) * 32, y = i < 5 ? -15 : 15
+                const on = f * 10 + i < pic.n
+                return <g key={i}><rect x={x - 16} y={y - 15} width={32} height={30} fill="none" stroke={INK} strokeWidth={1.4} />{on && <circle cx={x} cy={y} r={11} fill={COLORS[pic.color]} stroke={INK} strokeWidth={1.8} />}</g>
+              })}
+            </g>
+          ))}
+        </g>
+      )
+    }
+    case 'balance': {
+      const tilt = pic.heavier === 'left' ? -11 : 11
+      const pan = (side: -1 | 1, th: Thing) => {
+        const dy = side * Math.sin((tilt * Math.PI) / 180) * 55
+        return <g transform={`translate(${side * 55} ${dy})`}><line x1={0} y1={-34} x2={0} y2={-6} stroke={INK} strokeWidth={1.6} /><path d="M-24,-6 L24,-6 L16,4 L-16,4 Z" fill="#c9a24a" stroke={INK} strokeWidth={2} /><g transform="translate(0 -24) scale(0.85)"><ThingGlyph thing={th} /></g></g>
+      }
+      return <g transform="translate(0 6)"><path d="M-14,40 L14,40 L4,-30 L-4,-30 Z" fill="#8a5a2e" stroke={INK} strokeWidth={2.2} /><g transform={`translate(0 -32) rotate(${tilt})`}><rect x={-62} y={-3} width={124} height={6} rx={3} fill="#a8743f" stroke={INK} strokeWidth={2} /></g><g transform="translate(0 -2)">{pan(-1, pic.left)}{pan(1, pic.right)}</g><circle cx={0} cy={-32} r={4} fill="#e2b43c" stroke={INK} strokeWidth={1.6} /></g>
+    }
+    case 'glass': {
+      const top = -40, bottom = 40, lv = bottom - pic.level * (bottom - top - 6)
+      const wAt = (y: number) => 22 + ((bottom - y) / (bottom - top)) * 6
+      return <g><path d={`M${-wAt(lv)},${lv} L${wAt(lv)},${lv} L22,${bottom} L-22,${bottom} Z`} fill="#5aa9e6" opacity={0.85} /><path d={`M-28,${top} L-22,${bottom} L22,${bottom} L28,${top}`} fill="none" stroke={INK} strokeWidth={2.8} strokeLinejoin="round" /></g>
+    }
+    case 'hole': return <g><rect x={-40} y={-36} width={80} height={72} rx={8} fill="#c9935a" stroke={INK} strokeWidth={2.6} /><g transform={`rotate(${pic.rot ?? 0})`}><HoleShape shape={pic.shape} /></g></g>
     case 'scene': return <SceneView rel={pic.rel} thing={pic.thing} />
     case 'mark':
       // « voix » : haut-parleur (la consigne est dite à voix haute)
@@ -189,11 +236,32 @@ function Inner({ pic }: { pic: Pic }) {
   }
 }
 
-/** Pictogramme de consigne : une petite suite d'images (ex. « 🍎🍎🍎 = ? »). */
-export function KidIcon({ icon }: { icon: Pic[] }) {
+/** Une main : n doigts levés (le pouce d'abord, puis l'index, le majeur…). */
+function Hand({ n }: { n: number }) {
+  const skin = '#f5c9a0'
+  const fingers = [-13, -4.5, 4.5, 13] // index, majeur, annulaire, auriculaire
   return (
-    <div className="kid-icon" aria-hidden>
-      {icon.map((p, i) => <PicView key={i} pic={p} />)}
-    </div>
+    <g transform="translate(0 6)">
+      {fingers.map((x, i) => {
+        const up = n >= i + 2
+        const h = up ? [30, 33, 30, 24][i] : 7
+        return <rect key={i} x={x - 4} y={-12 - h} width={8} height={h + 6} rx={4} fill={skin} stroke={INK} strokeWidth={1.8} />
+      })}
+      <path d="M-18,-12 L18,-12 L17,14 C17,22 -17,22 -17,14 Z" fill={skin} stroke={INK} strokeWidth={2} />
+      <g transform={`translate(-17 2) rotate(${n >= 1 ? -50 : -10})`}><rect x={-4} y={n >= 1 ? -24 : -10} width={8} height={n >= 1 ? 26 : 12} rx={4} fill={skin} stroke={INK} strokeWidth={1.8} /></g>
+    </g>
   )
+}
+
+/** Trou d'encastrement (forme sombre, un peu plus grande que la pièce). */
+function HoleShape({ shape }: { shape: Shape }) {
+  const p = { fill: '#4a2e14', stroke: '#2b1d10', strokeWidth: 1.6 }
+  switch (shape) {
+    case 'rond': return <circle r={21} {...p} />
+    case 'carre': return <rect x={-19} y={-19} width={38} height={38} {...p} />
+    case 'triangle': return <path d="M0,-22 L22,17 L-22,17 Z" {...p} />
+    case 'rectangle': return <rect x={-27} y={-14} width={54} height={28} {...p} />
+    case 'losange': return <path d="M0,-25 L17,0 L0,25 L-17,0 Z" {...p} />
+    case 'ovale': return <ellipse rx={27} ry={16} {...p} />
+  }
 }
