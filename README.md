@@ -52,8 +52,10 @@ Pour les enfants qui ne lisent pas encore : **tout passe par l'image et la voix*
   comparaisons qui obligent à compter (écart d'un seul objet, objets de tailles différentes, tours de même hauteur
   faites de cubes de tailles différentes, crayons qui ne partent pas du même endroit) ; formes tournées et formes
   ressemblantes ; lettres qui se ressemblent (E/F, O/Q, P/R…).
-- La **consigne est lue à voix haute** (synthèse vocale du navigateur, en français ; bouton haut-parleur pour la
-  réécouter ; coupée par le bouton de sourdine). La phrase est aussi écrite en petit pour l'adulte.
+- La **consigne est lue à voix haute** (synthèse vocale du navigateur, voix française uniquement ; bouton
+  haut-parleur pour la réécouter ; coupée par le bouton de sourdine). La phrase est aussi écrite en petit pour
+  l'adulte. Sans voix française (fréquent sous Windows avec Firefox), le jeu se tait et conseille d'ouvrir le jeu
+  avec Microsoft Edge (voix françaises intégrées) ou Chrome connecté à Internet (« Google français »).
 - **Réponses en grandes images** à toucher ; verdict ✓ / ✗ en couleur, la bonne réponse s'allume, gros bouton ▶ pour
   continuer ; bilan en étoiles.
 - **Gros pointeur** jaune cerclé de noir sur tout le jeu dès que le niveau Maternelle est choisi.

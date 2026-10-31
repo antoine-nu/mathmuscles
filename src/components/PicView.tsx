@@ -141,7 +141,8 @@ const VIEW: Record<string, string> = { set: '0 0 200 150', scene: '10 20 180 112
 export function PicView({ pic, className }: { pic: Pic; className?: string }) {
   if (pic.t === 'row') {
     // une case de 60 de large par image ; une collection (boîte 200 × 150) prend une case plus large
-    const n = pic.items.length + (pic.hole === pic.items.length ? 1 : 0)
+    // items ne contient pas la case vide : elle s'insère à la position hole
+    const n = pic.items.length + (pic.hole !== undefined ? 1 : 0)
     const hasSet = pic.items.some((p) => p.t === 'set')
     const H = hasSet ? 90 : 60
     const cells: ReactNode[] = []
@@ -149,7 +150,6 @@ export function PicView({ pic, className }: { pic: Pic; className?: string }) {
     for (let i = 0; i < n; i++) {
       if (i === pic.hole) {
         cells.push(<g key={`h${i}`}><rect x={x + 5} y={H / 2 - 25} width={50} height={50} rx={8} fill="#fff8e1" stroke={INK} strokeWidth={2.4} strokeDasharray="7 5" /><text x={x + 30} y={H / 2 + 12} className="pv-mark">?</text></g>)
-        if (pic.hole < pic.items.length) k++
         x += 60
         continue
       }

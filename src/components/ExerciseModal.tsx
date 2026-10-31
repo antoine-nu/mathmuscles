@@ -5,7 +5,7 @@ import { pick, type Exercise } from '../exercises/utils'
 import { FigureView } from './FigureView'
 import { MathText } from './MathText'
 import { audio } from '../audio/engine'
-import { speak, stopSpeaking } from '../audio/speech'
+import { onVoicesChange, speak, stopSpeaking, voiceState } from '../audio/speech'
 import { PicView, ThingGlyph } from './PicView'
 
 export { MathText }
@@ -68,6 +68,8 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
     return () => window.clearTimeout(t)
   }, [kidSay, index])
   useEffect(() => stopSpeaking, [])
+  const [voice, setVoice] = useState(voiceState)
+  useEffect(() => onVoicesChange(() => setVoice(voiceState())), [])
 
   // Fin du temps : on referme en comptant ce qui a été répondu.
   const latest = useRef<ScrollResult>({ correct, answered: results.length, results })
@@ -157,10 +159,19 @@ export function ExerciseModal({ eyebrow, heading, exercises, tierLabel, problems
           {phase !== 'done' && ex?.kid && (
             <div className="kid-q">
               <div className="kid-head">
-                <button className="kid-say" data-sfx="none" onClick={() => speak(ex.kid!.say)} aria-label="Écouter la consigne">
-                  <PicView pic={{ t: 'mark', ch: 'voix' }} />
-                </button>
+                {voice !== 'absente' && voice !== 'impossible' && (
+                  <button className="kid-say" data-sfx="none" onClick={() => speak(ex.kid!.say)} aria-label="Écouter la consigne">
+                    <PicView pic={{ t: 'mark', ch: 'voix' }} />
+                  </button>
+                )}
               </div>
+              {(voice === 'absente' || voice === 'impossible') && (
+                <p className="kid-novoice">
+                  Ce navigateur n’a pas de voix française : la consigne n’est pas lue à voix haute. Le plus simple sous
+                  Windows : ouvrir le jeu avec <b>Microsoft Edge</b> (voix françaises intégrées) ou avec <b>Chrome</b> connecté
+                  à Internet (voix « Google français »).
+                </p>
+              )}
               <p className="kid-text">{ex.kid.say}</p>
               {ex.kid.scene && <div className={`kid-scene kid-scene-${ex.kid.scene.t}`}><PicView pic={ex.kid.scene} /></div>}
               <div className={`kid-choices n${ex.kid.options.length}`}>

@@ -69,7 +69,7 @@ export type Pic =
   | { t: 'shape'; shape: Shape; color: ColorName; s?: number; rot?: number }
   /** Une face de dé (1 à 6). */
   | { t: 'dice'; n: number }
-  /** Une suite d'images ; hole : case vide marquée « ? ». */
+  /** Une suite d'images ; hole : position d'une case vide « ? » insérée entre les images (items ne la contient pas). */
   | { t: 'row'; items: Pic[]; hole?: number }
   /** Une barre (crayon) de longueur relative 0..1, qui commence en `from` (0..0.4, décalée pour obliger à comparer). */
   | { t: 'bar'; len: number; color: ColorName; from?: number }
