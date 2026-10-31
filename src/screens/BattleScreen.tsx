@@ -3,7 +3,7 @@ import { chapterOf } from '../data/curriculum'
 import { BattleCanvas } from '../battle/BattleCanvas'
 import type { Feed, LocalFeed } from '../battle/feed'
 import { hornQuestion } from '../battle/hornQuestions'
-import { HORN_DURATION, HORN_MAX, MAX_DURATION, type BattleResult, type Side } from '../battle/sim'
+import { HORN_DURATION, HORN_MAX, MAX_DURATION, hornsAllowed, type BattleResult, type Side } from '../battle/sim'
 import { UNIT_STATS } from '../battle/units'
 import { playerFromArmy, type ArmySpec, type PlayerState } from '../game/state'
 import { SOLO_RULES } from '../game/rules'
@@ -260,13 +260,17 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
 
       <footer className="battle-bar">
         <div className="horn">
-          <button className="horn-btn" disabled={!canHorn} onClick={() => { setAnswer(''); setQuestion({ ex: hornQuestion(myLevel) }) }}>
-            <span className="horn-icon">📯</span>
-            <span>
-              <b>Cor de guerre</b>
-              <small>{hud.hornOn[mySide] ? 'Tes troupes chargent !' : `Calcul mental juste : +25 % d’attaque pendant ${HORN_DURATION} s · ${hornsLeft} restant${hornsLeft > 1 ? 's' : ''}`}</small>
-            </span>
-          </button>
+          {!hornsAllowed(armies) ? (
+            <span className="horn-off">📯 Pas de cor de guerre en maternelle : les armées se battent seules.</span>
+          ) : (
+            <button className="horn-btn" disabled={!canHorn} onClick={() => { setAnswer(''); setQuestion({ ex: hornQuestion(myLevel) }) }}>
+              <span className="horn-icon">📯</span>
+              <span>
+                <b>Cor de guerre</b>
+                <small>{hud.hornOn[mySide] ? 'Tes troupes chargent !' : `Calcul mental juste : +25 % d’attaque pendant ${HORN_DURATION} s · ${hornsLeft} restant${hornsLeft > 1 ? 's' : ''}`}</small>
+              </span>
+            </button>
+          )}
           {question && (
             <form className="horn-q" onSubmit={(e) => { e.preventDefault(); submitHorn() }}>
               <span className="horn-text"><MathText text={question.ex.prompt} /></span>

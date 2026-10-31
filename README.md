@@ -59,6 +59,8 @@ Pour les enfants qui ne lisent pas encore : **tout passe par l'image et la voix*
 - **Réponses en grandes images** à toucher ; verdict ✓ / ✗ en couleur, la bonne réponse s'allume, gros bouton ▶ pour
   continuer ; bilan en étoiles.
 - **Gros pointeur** jaune cerclé de noir sur tout le jeu dès que le niveau Maternelle est choisi.
+- **Pas de cor de guerre** dans la bataille finale dès qu'un des deux camps est en maternelle (ni pour l'enfant, ni
+  pour son adversaire).
 - Code : `src/exercises/maternelle/` (images et exercices), `src/components/PicView.tsx` (dessins),
   `src/audio/speech.ts` (voix).
 
@@ -162,8 +164,9 @@ augmente (5 paliers). Le type de chaque série est tiré parmi les modèles les 
 d'une série et d'une partie à l'autre.
 
 **Améliorations** (3 par maison, effets réels en bataille). Chacune s'obtient en résolvant **un problème** de
-généralisation, plus difficile que l'entraînement : n°1 avec l'Âge féodal et le cran 1 terminé, n°2 avec l'Âge des
-châteaux et le cran 2 terminé, n°3 avec l'Âge impérial et le cran 3 terminé. Échec → nouvel essai après une courte attente.
+généralisation, plus difficile que l'entraînement. Elles s'ouvrent au fil des crans de la maison, sans condition
+d'âge : n°1 en atteignant le cran 2, n°2 au cran 3, n°3 au cran 4 (chacune après la précédente). Échec → nouvel essai
+après une courte attente.
 
 **Hôtel de ville et âges.** Clic sur l'hôtel de ville : pour chaque maison, un problème à 1, 2 ou 3 points (le problème à
 n points s'ouvre une fois le cran n de la maison terminé), chacun une fois par partie. Les points font passer de l'Âge

@@ -920,3 +920,11 @@ body.kid, body.kid * {
 .pg-kid .kid-scene { height: 150px; width: 100%; }
 .pg-kid .kid-choice { height: 110px; }
 .kid-novoice { margin: 0; max-width: 560px; padding: 8px 12px; font-size: 13px; color: #6b3020; background: #fbe9d6; border: 1px solid #d9a07a; border-radius: 8px; text-align: center; }
+
+/* Maison choisie sur la carte : anneau doré qui pulse, flèche qui rebondit */
+.sel-ring .sel-glow { animation: sel-pulse 1.4s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(255, 213, 74, 0.9)); }
+@keyframes sel-pulse { 0%, 100% { stroke-width: 6; opacity: 1; } 50% { stroke-width: 11; opacity: 0.65; } }
+.sel-arrow { animation: sel-bob 0.9s ease-in-out infinite; }
+@keyframes sel-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@media (prefers-reduced-motion: reduce) { .sel-ring .sel-glow, .sel-arrow { animation: none; } }
+.horn-off { font-size: 14px; color: #cdb98d; font-style: italic; }

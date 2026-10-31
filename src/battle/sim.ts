@@ -12,6 +12,8 @@ export const MAX_DURATION = 150
 const SPLASH_MAX = 3
 export const HORN_DURATION = 5
 export const HORN_MAX = 5
+/** Pas de cor quand un des deux camps est en maternelle (ni pour l'enfant, ni pour son adversaire). */
+export const hornsAllowed = (armies: readonly ArmySpec[]) => !armies.some((a) => a.levelId === 'maternelle')
 
 export type Side = 0 | 1
 
@@ -119,12 +121,14 @@ export class Battle {
   horn: [number, number] = [-1, -1]
   hornsUsed: [number, number] = [0, 0]
   result: BattleResult | null = null
+  readonly hornAllowed: boolean
   private rand: () => number
   private nextProj = 1
   private grid = new Map<number, BUnit[]>()
 
   constructor(armies: [ArmySpec, ArmySpec], seed: number) {
     this.rand = rng(seed)
+    this.hornAllowed = hornsAllowed(armies)
     let id = 1
     armies.forEach((army, sideIdx) => {
       const side = sideIdx as Side
@@ -175,7 +179,7 @@ export class Battle {
   }
 
   blowHorn(side: Side): boolean {
-    if (this.result || this.hornsUsed[side] >= HORN_MAX) return false
+    if (!this.hornAllowed || this.result || this.hornsUsed[side] >= HORN_MAX) return false
     this.hornsUsed[side]++
     this.horn[side] = this.t + HORN_DURATION
     this.events.push({ t: this.t, type: 'horn', side })

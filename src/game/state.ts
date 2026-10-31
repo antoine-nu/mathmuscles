@@ -1,7 +1,7 @@
 // État d'un joueur : maisons (jauges, améliorations), points d'âge, problèmes résolus, temps de recharge.
 import { useCallback, useEffect, useState } from 'react'
 import {
-  AGE_PROBLEM_CRAN, DEFAULT_LEVEL, LEVELS, UPGRADE_AGE, UPGRADE_CRAN, ageFromPoints, chaptersFor, levelById,
+  AGE_PROBLEM_CRAN, DEFAULT_LEVEL, LEVELS, UPGRADE_CRAN, ageFromPoints, chaptersFor, levelById,
   levelFromPoints, maxPoints, type Chapter, type Level,
 } from '../data/curriculum'
 import { figuresFor, garrison } from '../battle/units'
@@ -78,18 +78,13 @@ export type Availability =
   | { state: 'cooldown'; until: number }
   | { state: 'locked'; reason: string }
 
-const AGE_NAMES_SHORT = ['', 'Âge féodal', 'Âge des châteaux', 'Âge impérial']
 
 export function upgradeAvailability(p: PlayerState, chapter: Chapter, n: 1 | 2 | 3, rules: Rules, now: number): Availability {
   const h = houseOf(p, chapter.id)
   if (h.upgrades.includes(chapter.upgrades[n - 1].id)) return { state: 'owned' }
   if (n > 1 && !h.upgrades.includes(chapter.upgrades[n - 2].id)) return { state: 'locked', reason: `Obtiens d’abord « ${chapter.upgrades[n - 2].name} »` }
   const cran = levelFromPoints(h.points, rules.ppc)
-  const age = ageOf(p, rules)
-  const needs: string[] = []
-  if (cran < UPGRADE_CRAN[n]) needs.push(`cran ${UPGRADE_CRAN[n]} terminé`)
-  if (age < UPGRADE_AGE[n]) needs.push(AGE_NAMES_SHORT[UPGRADE_AGE[n]])
-  if (needs.length) return { state: 'locked', reason: `Requis : ${needs.join(' et ')}` }
+  if (cran < UPGRADE_CRAN[n]) return { state: 'locked', reason: `S’ouvre au cran ${UPGRADE_CRAN[n] + 1}` }
   const until = p.cooldowns[`u:${chapter.id}:${n}`] ?? 0
   if (until > now) return { state: 'cooldown', until }
   return { state: 'available' }

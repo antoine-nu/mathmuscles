@@ -291,8 +291,8 @@ export const AGE_BONUS = 0.08
 // Les crans sont numérotés de 1 à 5 ; levelFromPoints donne le nombre de crans terminés.
 /** Crans terminés requis pour un problème de l'hôtel de ville à n points : le cran n. */
 export const AGE_PROBLEM_CRAN = [0, 1, 2, 3]
-/** Améliorations n = 1, 2, 3 : âge et cran requis. */
-export const UPGRADE_AGE = [0, 1, 2, 3]
+/** Améliorations n = 1, 2, 3 : crans terminés requis (la 1re s'ouvre en atteignant le cran 2, la 2e au cran 3,
+ *  la 3e au cran 4), sans condition d'âge, pour que les élèves s'en servent tôt. */
 export const UPGRADE_CRAN = [0, 1, 2, 3]
 
 export function ageFromPoints(agePoints: number, thresholds: readonly number[]): number {

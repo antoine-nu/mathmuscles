@@ -46,8 +46,7 @@ export function TownHallModal({ player, now, teamColor, onPick, onClose }: Props
           <span>{next ? `${player.agePoints} / ${next} points pour l’${AGES[age + 1]}` : `${player.agePoints} points · âge maximal atteint !`}</span>
         </div>
         <p className="th-help">
-          Chaque âge renforce <b>toute ton armée</b> (+{Math.round(AGE_BONUS * 100)} % de points de vie et d’attaque) et ouvre les
-          améliorations : la 1<sup>re</sup> demande l’Âge féodal, la 2<sup>e</sup> l’Âge des châteaux, la 3<sup>e</sup> l’Âge impérial.
+          Chaque âge renforce <b>toute ton armée</b> (+{Math.round(AGE_BONUS * 100)} % de points de vie et d’attaque).
           Chaque problème ne se résout qu’une fois par partie ; un problème raté se rouvre après une courte attente.
         </p>
 

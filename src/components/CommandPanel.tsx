@@ -117,7 +117,7 @@ export function CommandPanel({ chapter, house, player, now, teamColor, demo, onT
                 title={`${u.name} — ${u.description} (${info})`}>
                 <span className="up-icon">{av.state === 'locked' ? '🔒' : av.state === 'cooldown' ? '⏳' : UPGRADE_ICONS[i]}</span>
                 <span className="up-name">{u.name}</span>
-                <span className="up-req">{av.state === 'owned' ? '✓ acquise' : av.state === 'cooldown' ? formatWait(av.until - now) : av.state === 'locked' ? av.reason.replace('Requis : ', '') : 'Problème'}</span>
+                <span className="up-req">{av.state === 'owned' ? '✓ acquise' : av.state === 'cooldown' ? formatWait(av.until - now) : av.state === 'locked' ? av.reason : 'Problème'}</span>
               </button>
             )
           })}

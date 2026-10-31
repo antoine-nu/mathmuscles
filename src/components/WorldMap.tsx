@@ -373,9 +373,16 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
       {camps.map((camp) => {
         if (selected !== camp.chapter.id && hover !== camp.chapter.id) return null
         const [sx, sy] = iso(camp.tile[0] + 0.55, camp.tile[1] + 0.95)
+        if (selected !== camp.chapter.id) {
+          return <ellipse key={`sel-${camp.chapter.id}`} cx={sx} cy={sy} rx={TILE_W * 1.35} ry={TILE_H * 1.35} fill="rgba(255,255,255,0.08)" stroke="#fff" strokeWidth={2} strokeDasharray="8 6" opacity={0.85} />
+        }
+        // maison choisie : large anneau doré qui pulse, bien visible sur tous les décors
         return (
-          <ellipse key={`sel-${camp.chapter.id}`} cx={sx} cy={sy} rx={TILE_W * 1.35} ry={TILE_H * 1.35}
-            fill="rgba(255,255,255,0.08)" stroke="#fff" strokeWidth={2} strokeDasharray={selected === camp.chapter.id ? '0' : '8 6'} opacity={0.85} />
+          <g key={`sel-${camp.chapter.id}`} className="sel-ring">
+            <ellipse cx={sx} cy={sy} rx={TILE_W * 1.45} ry={TILE_H * 1.45} fill="rgba(255, 214, 74, 0.22)" stroke="#1c130c" strokeWidth={9} opacity={0.55} />
+            <ellipse className="sel-glow" cx={sx} cy={sy} rx={TILE_W * 1.45} ry={TILE_H * 1.45} fill="none" stroke="#ffd54a" strokeWidth={6} />
+            <ellipse cx={sx} cy={sy} rx={TILE_W * 1.2} ry={TILE_H * 1.2} fill="none" stroke="#fff3b0" strokeWidth={2} strokeDasharray="10 8" />
+          </g>
         )
       })}
 
@@ -407,7 +414,8 @@ export function WorldMap({ chapters, getProgress, selected, onSelect, age, agePo
             <ellipse cx={hx} cy={hy - 20} rx={TILE_W * 1.6} ry={TILE_H * 2.2} fill="transparent" />
             <CampBadge x={lx + 44} y={ly - 8} level={level} points={progress.points} ppc={ppc} color={chapter.color} units={garrison(chapter.unit, progress.points).units} />
             <g transform={`translate(${lx} ${ly - 112})`} filter="url(#labelShadow)">
-              <rect x={-112} y={-36} width={224} height={58} rx={4} fill={isSel ? '#3a2410' : '#2a1a0c'} stroke={isSel ? '#f2d27a' : '#b8913a'} strokeWidth={isSel ? 2.4 : 1.4} opacity={0.94} />
+              {isSel && <path className="sel-arrow" d="M-16,-62 L16,-62 L0,-42 Z" fill="#ffd54a" stroke="#1c130c" strokeWidth={2.5} strokeLinejoin="round" />}
+              <rect x={-112} y={-36} width={224} height={58} rx={4} fill={isSel ? '#5a3a14' : '#2a1a0c'} stroke={isSel ? '#ffd54a' : '#b8913a'} strokeWidth={isSel ? 4.5 : 1.4} opacity={isSel ? 1 : 0.94} />
               <text x={0} y={-16} textAnchor="middle" className="lbl-title">{chapter.corpsName}</text>
               <text x={0} y={1} textAnchor="middle" className="lbl-sub">{chapter.title}</text>
               {Array.from({ length: MAX_LEVEL }, (_, i) => {
