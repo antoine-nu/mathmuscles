@@ -134,7 +134,7 @@ villages tels qu'ils étaient à la fin de l'entraînement.
 
 Pas de serveur à héberger : les deux navigateurs se parlent directement (WebRTC) et se trouvent grâce à
 [Trystero](https://github.com/dmotz/trystero), qui passe par des relais publics Nostr. L'hôte calcule la bataille et en
-envoie dix images par seconde à l'invité. La liste des relais est fixée dans `src/net/transport.ts` (12 relais : les
+envoie dix images par seconde à l'invité. La liste des relais est fixée dans `src/net/transport.ts` (11 relais : les
 deux joueurs les essaient tous, il suffit qu'un seul réponde ; un relais hors service laisse seulement un message
 « impossible d'établir une connexion » dans la console du navigateur, sans gêner la partie). Le salon affiche combien
 de relais répondent. Certains réseaux (établissements, pare-feu stricts) bloquent ces connexions : en cas d'échec,

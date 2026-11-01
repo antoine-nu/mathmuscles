@@ -40,8 +40,9 @@ export interface Transport {
  * publics et de relais de la liste de Trystero : les deux joueurs les essaient tous, il suffit qu'un seul réponde.
  */
 const RELAYS = [
+  // (relay.mostr.pub retiré : il répond « 301 déplacé » et ne sert plus)
   'nos.lol', 'relay.damus.io', 'relay.primal.net', 'nostr.mom', 'relay.nostr.net', 'offchain.pub',
-  'relay.mostr.pub', 'purplerelay.com', 'nostr-01.yakihonne.com', 'strfry.shock.network', 'relay.sigit.io', 'yabu.me/v2',
+  'purplerelay.com', 'nostr-01.yakihonne.com', 'strfry.shock.network', 'relay.sigit.io', 'yabu.me/v2',
 ].map((u) => `wss://${u}`)
 
 const ALPHABET = 'BCDFGHJKLMNPQRSTVWXZ23456789'
