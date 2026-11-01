@@ -928,3 +928,5 @@ body.kid, body.kid * {
 @keyframes sel-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 @media (prefers-reduced-motion: reduce) { .sel-ring .sel-glow, .sel-arrow { animation: none; } }
 .horn-off { font-size: 14px; color: #cdb98d; font-style: italic; }
+.status-line.small { font-size: 13px; color: #cdb98d; }
+.status-line.small.error { color: #f0a080; }

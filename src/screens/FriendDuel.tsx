@@ -352,6 +352,7 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
                 : role === 'host' ? 'En attente de ton camarade… donne-lui ce code.' : 'Connexion à la partie…'}
             </div>
             {notice && <div className="status-line">{notice}</div>}
+            {!(peerOnline && peer) && <RelayStatus transport={transport.current} />}
           </div>
           {role === 'host' ? (
             <>
@@ -372,5 +373,26 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         en cas d’échec, essayez depuis un autre réseau (partage de connexion du téléphone, par exemple).
       </p>
     </SetupFrame>
+  )
+}
+
+/** État de la mise en relation : combien de relais Internet répondent (aide à comprendre un échec). */
+function RelayStatus({ transport }: { transport: Transport | null }) {
+  const [state, setState] = useState<{ open: number; total: number } | null>(null)
+  const [since] = useState(() => Date.now())
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const t = window.setInterval(() => { setState(transport?.relays?.() ?? null); tick((x) => x + 1) }, 1000)
+    return () => window.clearInterval(t)
+  }, [transport])
+  if (!state) return null
+  const waited = Date.now() - since > 10_000
+  if (state.open > 0) return <div className="status-line small">Réseau : {state.open} relais sur {state.total} joignables.</div>
+  return (
+    <div className={`status-line small ${waited ? 'error' : ''}`}>
+      {waited
+        ? 'Aucun relais Internet joignable : vérifie la connexion Internet. Le réseau de l’établissement bloque peut-être ces connexions (wss) : essaie un autre réseau, par exemple le partage de connexion d’un téléphone.'
+        : 'Connexion au réseau…'}
+    </div>
   )
 }
