@@ -1,13 +1,14 @@
+// Tuyauterie du duel : les deux navigateurs échangent leurs messages par des relais publics Nostr (voir relay.ts),
+// sans connexion directe entre eux (souvent bloquée dans les établissements) et sans serveur à héberger. Les messages
+// sont numérotés, acquittés et renvoyés au besoin : un relais peut en perdre, un autre les livre. Une variante
+// locale (BroadcastChannel, deux onglets du même navigateur) sert aux tests : ajouter ?reseau=local à l'adresse.
+// ?relais=wss://mon-relais.fr,wss://autre.org remplace la liste des relais (ex. un relais installé dans l'école).
 import type { ThemeId } from '../game/themes'
-// Tuyauterie du duel : deux navigateurs reliés directement (WebRTC), mis en relation par Trystero via des
-// relais publics Nostr — aucun serveur à héberger. Une variante locale (BroadcastChannel, deux onglets du
-// même navigateur) sert aux tests : ajouter ?reseau=local à l'adresse.
-import { getRelaySockets, joinRoom } from 'trystero'
-import type { BattleResult } from '../battle/sim'
-import type { Snapshot } from '../battle/feed'
+import type { BattleResult, Side } from '../battle/sim'
 import type { ArmySpec } from '../game/state'
+import { openRelayRoom } from './relay'
 
-export const PROTOCOL_VERSION = 1
+export const PROTOCOL_VERSION = 2
 
 export type Msg =
   | { t: 'hello'; name: string; levelId: string; v: number; role: 'host' | 'guest' }
@@ -18,8 +19,12 @@ export type Msg =
   | { t: 'status'; age: number; pop: number }
   | { t: 'army'; army: ArmySpec; final?: boolean }
   | { t: 'battle'; armies: [ArmySpec, ArmySpec]; seed: number; startIn: number }
-  | { t: 'snap'; s: Snapshot }
+  /** Invité → hôte : je sonne le cor. */
   | { t: 'horn' }
+  /** Hôte → invité : cor du camp `side` à l'instant `at` de la bataille (les deux calculent la même bataille). */
+  | { t: 'hornAt'; side: Side; at: number }
+  /** Hôte → invité : aucun cor ne sera programmé avant `upTo` (l'invité peut calculer jusque-là). */
+  | { t: 'clock'; upTo: number }
   | { t: 'result'; res: BattleResult }
   | { t: 'quit' }
 
@@ -35,15 +40,18 @@ export interface Transport {
 }
 
 /**
- * Relais Nostr utilisés pour se trouver. Par défaut, Trystero n'en tire que 5 parmi sa liste, dont certains sont
- * parfois hors service (le duel ne trouve alors plus personne). On en donne une liste plus large, faite de gros relais
- * publics et de relais de la liste de Trystero : les deux joueurs les essaient tous, il suffit qu'un seul réponde.
+ * Relais Nostr publics. Les deux joueurs les essaient tous et publient sur chacun : il suffit qu'un seul réponde.
+ * (Retirés : chorus.pjv.me, relay.artio.inf.unibe.ch, relay.mostr.pub, hors service.)
  */
 const RELAYS = [
-  // (relay.mostr.pub retiré : il répond « 301 déplacé » et ne sert plus)
   'nos.lol', 'relay.damus.io', 'relay.primal.net', 'nostr.mom', 'relay.nostr.net', 'offchain.pub',
   'purplerelay.com', 'nostr-01.yakihonne.com', 'strfry.shock.network', 'relay.sigit.io', 'yabu.me/v2',
 ].map((u) => `wss://${u}`)
+
+function relayUrls(): string[] {
+  const custom = new URLSearchParams(location.search).get('relais')
+  return custom ? custom.split(',').map((u) => u.trim()).filter(Boolean) : RELAYS
+}
 
 const ALPHABET = 'BCDFGHJKLMNPQRSTVWXZ23456789'
 export function newCode(): string {
@@ -62,37 +70,103 @@ export async function openTransport(code: string): Promise<Transport> {
   return isLocalNetwork() ? openLocal(code) : openInternet(code)
 }
 
+/** Enveloppe d'un message : s = numéro (messages), a = acquittement (dernier numéro reçu dans l'ordre), p = présence. */
+interface Envelope {
+  s?: number
+  m?: Msg
+  a?: number
+  p?: 1
+  bye?: 1
+}
+
 async function openInternet(code: string): Promise<Transport> {
-  const room = joinRoom({ appId: 'mathmuscles-duel', relayConfig: { urls: RELAYS, warnOnRelayFailure: false } }, `salle-${code}-v${PROTOCOL_VERSION}`)
-  // les messages sont du JSON simple ; on les transmet tels quels
-  const action = room.makeAction<never>('m') as unknown as { send: (d: unknown, o?: { target?: string }) => Promise<void>; onMessage: ((d: unknown, ctx: { peerId: string }) => void) | null }
+  const room = await openRelayRoom(relayUrls(), `salle-${code}-v${PROTOCOL_VERSION}`)
   let partner: string | null = null
+  let lastPartner: string | null = null
+  let lastHeard = 0
+  // envoi : messages numérotés, gardés jusqu'à leur acquittement et renvoyés régulièrement
+  let seq = 0
+  const outbox = new Map<number, { env: Envelope; sentAt: number }>()
+  // réception : remise dans l'ordre, sans doublon
+  let expected = 1
+  const inbox = new Map<number, Msg>()
+  let gapSince = 0
+  let ackDue = false
+
   const t: Transport = {
     kind: 'internet',
     onMessage: null,
     onPeer: null,
     send: (msg) => {
-      if (partner) void action.send(msg, { target: partner })
+      const env: Envelope = { s: ++seq, m: msg }
+      outbox.set(env.s!, { env, sentAt: Date.now() })
+      room.publish(env)
     },
-    close: () => void room.leave(),
-    relays: () => {
-      const sockets = Object.values((getRelaySockets() ?? {}) as Record<string, WebSocket>)
-      return { open: sockets.filter((s) => s.readyState === WebSocket.OPEN).length, total: RELAYS.length }
+    close: () => {
+      room.publish({ bye: 1 } satisfies Envelope)
+      window.clearInterval(timer)
+      window.setTimeout(() => room.close(), 500)
     },
+    relays: () => room.status(),
   }
-  room.onPeerJoin = (id) => {
-    if (partner) return // un seul adversaire par salle
-    partner = id
-    t.onPeer?.(true)
+
+  const deliver = () => {
+    while (inbox.has(expected)) {
+      const m = inbox.get(expected)!
+      inbox.delete(expected)
+      expected++
+      t.onMessage?.(m)
+    }
+    gapSince = inbox.size ? gapSince || Date.now() : 0
   }
-  room.onPeerLeave = (id) => {
-    if (id !== partner) return
-    partner = null
-    t.onPeer?.(false)
+
+  room.onPayload = (from, payload) => {
+    const env = payload as Envelope
+    if (!partner) {
+      if (env.bye) return
+      // nouvel adversaire (ou le même revenu avec une page rechargée) : sa numérotation repart de 1
+      if (from !== lastPartner) { expected = 1; inbox.clear(); gapSince = 0 }
+      partner = lastPartner = from
+      lastHeard = Date.now()
+      t.onPeer?.(true)
+      // l'adversaire vient d'arriver : il doit recevoir tout ce qui n'a pas été acquitté
+      for (const o of outbox.values()) { o.sentAt = Date.now(); room.publish(o.env) }
+    }
+    if (from !== partner) return // un seul adversaire par salle
+    lastHeard = Date.now()
+    if (env.bye) {
+      partner = null
+      t.onPeer?.(false)
+      return
+    }
+    if (typeof env.a === 'number') for (const k of [...outbox.keys()]) if (k <= env.a) outbox.delete(k)
+    if (typeof env.s === 'number' && env.m) {
+      if (env.s >= expected) inbox.set(env.s, env.m)
+      ackDue = true
+      deliver()
+    }
   }
-  action.onMessage = (data, ctx) => {
-    if (ctx.peerId === partner) t.onMessage?.(data as Msg)
-  }
+
+  const timer = window.setInterval(() => {
+    const now = Date.now()
+    // présence + acquittement
+    if (ackDue || now % 3000 < 500) {
+      room.publish({ a: expected - 1, p: 1 } satisfies Envelope)
+      ackDue = false
+    }
+    // renvois des messages non acquittés
+    if (partner) for (const o of outbox.values()) if (now - o.sentAt > 1500) { o.sentAt = now; room.publish(o.env) }
+    // un trou qui ne se comble pas (message perdu partout) : on passe au suivant
+    if (gapSince && now - gapSince > 8000 && inbox.size) {
+      expected = Math.min(...inbox.keys())
+      deliver()
+    }
+    // plus de nouvelles depuis 20 s : l'adversaire est parti
+    if (partner && now - lastHeard > 20_000) {
+      partner = null
+      t.onPeer?.(false)
+    }
+  }, 500)
   return t
 }
 

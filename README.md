@@ -132,14 +132,18 @@ villages tels qu'ils étaient à la fin de l'entraînement.
 
 ### La tuyauterie du duel
 
-Pas de serveur à héberger : les deux navigateurs se parlent directement (WebRTC) et se trouvent grâce à
-[Trystero](https://github.com/dmotz/trystero), qui passe par des relais publics Nostr. L'hôte calcule la bataille et en
-envoie dix images par seconde à l'invité. La liste des relais est fixée dans `src/net/transport.ts` (11 relais : les
-deux joueurs les essaient tous, il suffit qu'un seul réponde ; un relais hors service laisse seulement un message
-« impossible d'établir une connexion » dans la console du navigateur, sans gêner la partie). Le salon affiche combien
-de relais répondent. Certains réseaux (établissements, pare-feu stricts) bloquent ces connexions : en cas d'échec,
-essayer depuis un autre réseau (partage de connexion d'un téléphone par exemple). Les deux joueurs doivent avoir la même
-version du jeu.
+Pas de serveur à héberger et **pas de connexion directe** entre les ordinateurs (WebRTC, souvent bloqué dans les
+établissements) : les deux jeux s'envoient leurs messages par des **relais publics Nostr** (WebSocket sur le port 443,
+comme un site web). Chaque message est signé, numéroté, acquitté et renvoyé au besoin (`src/net/relay.ts`,
+`src/net/transport.ts`) ; les deux joueurs publient sur les 11 relais de la liste, il suffit qu'un seul réponde. Le
+salon affiche combien de relais répondent. `?relais=wss://mon-relais.fr` remplace la liste (par exemple par un relais
+installé dans l'école).
+
+La bataille est **calculée sur les deux ordinateurs** (mêmes armées, même graine ; la simulation n'utilise que des
+calculs exacts dans tous les navigateurs). Seuls les cors circulent : l'hôte les programme 1,2 s plus tard et autorise
+chaque seconde l'invité à calculer jusqu'à cet horizon ; si des messages tardent, l'invité attend au lieu de calculer
+une autre bataille. Le résultat de l'hôte fait foi. Testé avec un faux relais qui perd 35 % des messages : même
+bataille, mêmes chiffres des deux côtés. Les deux joueurs doivent avoir la même version du jeu.
 
 **Sur deux ordinateurs, sans installation** : copier `dist-usb/AgeOfEquations.html` (produit par `npm run build:usb`)
 sur une clé USB, puis sur chaque ordinateur, l'ouvrir d'un double-clic (Chrome, Edge ou Firefox). Les deux ordinateurs
@@ -216,7 +220,7 @@ src/
   game/                   état du joueur, règles (libre / duel), projection isométrique
   battle/                 grille des unités, simulation, rendu canvas, flux réseau, questions du cor
   bot/                    adversaire ordinateur
-  net/                    transport du duel (Trystero ou onglets locaux) et protocole
+  net/                    transport du duel (relais Nostr ou onglets locaux) et protocole
   screens/                accueil, entraînement, duels, bataille
   components/             carte isométrique, sprites, bâtiments, parchemin, hôtel de ville, figures
 scripts/                  vérification des exercices, équilibrage, build clé USB

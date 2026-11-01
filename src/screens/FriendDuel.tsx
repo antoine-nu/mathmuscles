@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LEVELS, type Level } from '../data/curriculum'
-import { Battle, type Side } from '../battle/sim'
-import { LocalFeed, RemoteFeed, encodeSnapshot, frameOf, metaOf } from '../battle/feed'
+import { Battle, HORN_MAX, type Side } from '../battle/sim'
+import { LocalFeed, LockstepFeed } from '../battle/feed'
 import { RulesContext, duelRules } from '../game/rules'
 import { ageOf, armyOf, emptyPlayer, populationOf, type ArmySpec, type PlayerState } from '../game/state'
 import { PROTOCOL_VERSION, isLocalNetwork, newCode, normalizeCode, openTransport, type Msg, type Transport } from '../net/transport'
@@ -20,7 +20,7 @@ type Phase =
   | { name: 'lobby' }
   | { name: 'prep' }
   | { name: 'training'; startsAt: number; deadline: number }
-  | { name: 'battle'; feed: LocalFeed | RemoteFeed; armies: [ArmySpec, ArmySpec]; startAt: number }
+  | { name: 'battle'; feed: LocalFeed; armies: [ArmySpec, ArmySpec]; startAt: number }
 
 interface Peer {
   name: string
@@ -33,7 +33,13 @@ interface Props {
   onQuit: () => void
 }
 
-/** Duel en direct contre un camarade : salle de jeu par code, chrono partagé, bataille calculée par l'hôte. */
+/** Retard de l'invité sur l'hôte au départ de la bataille (ms). */
+const GUEST_LAG = 600
+/** Délai entre la demande d'un cor et son effet (secondes de bataille), identique des deux côtés. L'hôte s'engage
+ *  ainsi à ne programmer aucun cor avant « maintenant + HORN_DELAY » : l'invité peut calculer jusque-là. */
+const HORN_DELAY = 1.2
+
+/** Duel en direct contre un camarade : salle de jeu par code, chrono partagé, bataille calculée des deux côtés. */
 export function FriendDuel({ level, playerName, onQuit }: Props) {
   const [role, setRole] = useState<Role | null>(null)
   const [code, setCode] = useState('')
@@ -111,21 +117,27 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         oppArmy.current = m.army
         if (m.final) oppFinal.current = true
         break
-      case 'battle': {
-        // invité : on reconstruit le déploiement pour connaître les unités, l'hôte envoie le reste
-        // (le déploiement est déterministe : on l'affiche tout de suite, comme chez l'hôte)
-        const local = new Battle(m.armies, m.seed)
-        setPhase({ name: 'battle', feed: new RemoteFeed(metaOf(local), frameOf(local)), armies: m.armies, startAt: Date.now() + m.startIn })
+      case 'battle':
+        // invité : même bataille que l'hôte (mêmes armées, même graine), déroulée avec un léger retard
+        setPhase({ name: 'battle', feed: new LockstepFeed(new Battle(m.armies, m.seed)), armies: m.armies, startAt: Date.now() + m.startIn + GUEST_LAG })
+        break
+      case 'horn':
+        hornRef.current(1)
+        break
+      case 'hornAt': {
+        const ph = phaseRef.current
+        if (ph.name === 'battle') ph.feed.battle.scheduleHorn(m.side, m.at)
         break
       }
-      case 'snap': {
+      case 'clock': {
+        // les messages arrivent dans l'ordre : tous les cors programmés avant `upTo` sont déjà connus
         const ph = phaseRef.current
-        if (ph.name === 'battle' && ph.feed instanceof RemoteFeed) ph.feed.push(m.s)
+        if (ph.name === 'battle') ph.feed.limit = Math.max(ph.feed.limit, m.upTo)
         break
       }
-      case 'horn': {
+      case 'result': {
         const ph = phaseRef.current
-        if (ph.name === 'battle' && ph.feed instanceof LocalFeed) ph.feed.battle.blowHorn(1)
+        if (ph.name === 'battle' && ph.feed instanceof LockstepFeed) ph.feed.hostResult = m.res
         break
       }
       case 'quit':
@@ -175,16 +187,21 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
     if (phase.name !== 'training') return
     const deadline = phase.deadline
     let sentFinal = false
+    // seulement quand quelque chose change : les relais n'aiment pas les messages trop nombreux
+    let lastStatus = '', lastArmy = ''
     const t = window.setInterval(() => {
       const p = playerRef.current
       const r = rulesRef.current
-      send({ t: 'status', age: ageOf(p, r), pop: populationOf(p) })
+      const status = { age: ageOf(p, r), pop: populationOf(p) }
+      if (JSON.stringify(status) !== lastStatus) { lastStatus = JSON.stringify(status); send({ t: 'status', ...status }) }
       const now = Date.now()
+      const army = armyOf(p, r)
       if (now >= deadline && !sentFinal) {
         sentFinal = true
-        send({ t: 'army', army: armyOf(p, r), final: true })
-      } else if (!sentFinal && Math.floor(now / 1000) % 4 === 0) {
-        send({ t: 'army', army: armyOf(p, r) })
+        send({ t: 'army', army, final: true })
+      } else if (!sentFinal && Math.floor(now / 1000) % 4 === 0 && JSON.stringify(army) !== lastArmy) {
+        lastArmy = JSON.stringify(army)
+        send({ t: 'army', army })
       }
       // l'hôte lance la bataille après la pause « temps écoulé » (en attendant au plus 3 s l'armée finale)
       if (role === 'host' && now >= deadline + TIME_UP_PAUSE && (oppFinal.current || now >= deadline + TIME_UP_PAUSE + 3000)) {
@@ -219,22 +236,43 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
     setPhase({ name: 'battle', feed, armies, startAt: Date.now() + BATTLE_INTRO })
   }
 
-  // Hôte : diffusion des images de la bataille (10 par seconde).
+  /** Hôte : programme un cor (le sien ou celui de l'invité) un peu plus tard, et prévient l'invité. */
+  const hostHorn = (side: Side) => {
+    const ph = phaseRef.current
+    if (role !== 'host' || ph.name !== 'battle') return
+    const b = ph.feed.battle
+    if (!b.hornAllowed || b.result || b.hornsPlanned(side) >= HORN_MAX || b.horn[side] > b.t) return
+    const at = Math.round((b.t + HORN_DELAY) * 1000) / 1000
+    b.scheduleHorn(side, at)
+    send({ t: 'hornAt', side, at })
+  }
+  const hornRef = useRef(hostHorn)
+  hornRef.current = hostHorn
+
+  // Hôte : chaque seconde, l'invité est autorisé à calculer jusqu'à « maintenant + HORN_DELAY » ; à la fin, le
+  // résultat lui est envoyé (il fait foi).
   useEffect(() => {
-    if (phase.name !== 'battle' || role !== 'host' || !(phase.feed instanceof LocalFeed)) return
+    if (phase.name !== 'battle' || role !== 'host') return
     const feed = phase.feed
-    let cursor = 0
-    let finals = 0
+    let last = -1
     const t = window.setInterval(() => {
-      if (!feed.running) return
       const b = feed.battle
-      const ev = feed.eventsSince(cursor)
-      cursor = b.events.length
-      send({ t: 'snap', s: encodeSnapshot(frameOf(b), ev, b.result) })
-      if (b.result && ++finals >= 3) window.clearInterval(t)
-    }, 100)
+      if (b.result) {
+        send({ t: 'clock', upTo: 1e9 })
+        send({ t: 'result', res: b.result })
+        window.clearInterval(t)
+      } else if (b.t !== last || last < 0) {
+        last = b.t
+        send({ t: 'clock', upTo: Math.round((b.t + HORN_DELAY - 0.05) * 1000) / 1000 })
+      }
+    }, 1000)
     return () => window.clearInterval(t)
   }, [phase, role, send])
+
+  // Invité : si l'hôte disparaît pendant la bataille, on la termine seul.
+  useEffect(() => {
+    if (phase.name === 'battle' && role === 'guest' && !peerOnline) phase.feed.limit = Infinity
+  }, [phase, role, peerOnline])
 
   /** L'hôte ouvre la préparation : chacun consulte le codex puis se déclare prêt. */
   const hostPrep = () => {
@@ -296,11 +334,10 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
 
   if (phase.name === 'battle') {
     const names: [string, string] = role === 'guest' ? [peer?.name ?? 'Hôte', me] : [me, peer?.name ?? 'Invité']
-    const isLocal = phase.feed instanceof LocalFeed
     return (
       <BattleScreen
         feed={phase.feed}
-        local={isLocal ? (phase.feed as LocalFeed) : undefined}
+        local={phase.feed}
         armies={phase.armies}
         names={names}
         colors={[BLUE, RED]}
@@ -308,7 +345,9 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
         startAt={phase.startAt}
         notice={notice}
         onHorn={() => {
-          if (phase.feed instanceof LocalFeed) phase.feed.battle.blowHorn(mySide)
+          // l'invité demande, l'hôte programme le cor pour les deux ; seul (adversaire parti), on sonne tout de suite
+          if (!peerOnline) phase.feed.battle.blowHorn(mySide)
+          else if (role === 'host') hostHorn(0)
           else send({ t: 'horn' })
         }}
         onRematch={role === 'host' && peerOnline ? () => setPhase({ name: 'lobby' }) : undefined}
@@ -369,8 +408,8 @@ export function FriendDuel({ level, playerName, onQuit }: Props) {
       )}
       {error && <p className="setup-note error">{error}</p>}
       <p className="setup-note small">
-        Les deux jeux se parlent directement (connexion pair-à-pair). Certains réseaux d’établissement bloquent ce type de connexion :
-        en cas d’échec, essayez depuis un autre réseau (partage de connexion du téléphone, par exemple).
+        Les deux jeux échangent leurs messages par des relais publics sur Internet ; chacun calcule la bataille de son côté.
+        Si aucun relais ne répond, essayez depuis un autre réseau (partage de connexion du téléphone, par exemple).
       </p>
     </SetupFrame>
   )

@@ -114,6 +114,8 @@ export function BattleScreen({ feed, local, armies, names, colors, mySide, start
   const hornsLeft = HORN_MAX - hud.hornsUsed[mySide]
   const canHorn = started && !result && hornsLeft > 0 && !hud.hornOn[mySide] && now > hornCd && !question
 
+  // Outil de test en développement uniquement : réponse attendue de la question du cor.
+  if (import.meta.env.DEV) (window as unknown as { __mmHorn?: string }).__mmHorn = question?.ex.answer
   const submitHorn = () => {
     if (!question) return
     if (question.ex.check(answer)) {

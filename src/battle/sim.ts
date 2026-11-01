@@ -12,6 +12,23 @@ export const MAX_DURATION = 150
 const SPLASH_MAX = 3
 export const HORN_DURATION = 5
 export const HORN_MAX = 5
+
+// En duel, chaque ordinateur calcule la même bataille : les calculs doivent donner exactement le même résultat
+// dans tous les navigateurs. Math.hypot et Math.sin peuvent différer d'un navigateur à l'autre (dernière décimale) ;
+// on n'utilise que + − × ÷ et √ (exacts partout).
+const dist2d = (dx: number, dy: number) => Math.sqrt(dx * dx + dy * dy)
+/** Sinus déterministe (réduction à [−π, π] puis série de Taylor). */
+function detSin(x: number): number {
+  const TWO_PI = 6.283185307179586
+  x -= Math.floor(x / TWO_PI + 0.5) * TWO_PI
+  const x2 = x * x
+  let term = x, sum = x
+  for (let k = 1; k < 11; k++) {
+    term *= -x2 / ((2 * k) * (2 * k + 1))
+    sum += term
+  }
+  return sum
+}
 /** Pas de cor quand un des deux camps est en maternelle (ni pour l'enfant, ni pour son adversaire). */
 export const hornsAllowed = (armies: readonly ArmySpec[]) => !armies.some((a) => a.levelId === 'maternelle')
 
@@ -121,6 +138,8 @@ export class Battle {
   horn: [number, number] = [-1, -1]
   hornsUsed: [number, number] = [0, 0]
   result: BattleResult | null = null
+  /** Cors programmés à un instant précis de la bataille (duel : appliqués au même pas de calcul des deux côtés). */
+  private scheduled: { side: Side; at: number }[] = []
   readonly hornAllowed: boolean
   private rand: () => number
   private nextProj = 1
@@ -186,10 +205,24 @@ export class Battle {
     return true
   }
 
+  /** Programme un cor à l'instant `at` de la bataille (au plus tôt au pas suivant). */
+  scheduleHorn(side: Side, at: number) {
+    this.scheduled.push({ side, at })
+  }
+  /** Cors déjà programmés pour ce camp (pour ne pas dépasser le maximum). */
+  hornsPlanned(side: Side) {
+    return this.hornsUsed[side] + this.scheduled.filter((h) => h.side === side).length
+  }
+
   // ── Boucle ──
   step() {
     if (this.result) return
     this.t += DT
+    if (this.scheduled.length) {
+      const due = this.scheduled.filter((h) => h.at <= this.t + 1e-9)
+      this.scheduled = this.scheduled.filter((h) => h.at > this.t + 1e-9)
+      for (const h of due) this.blowHorn(h.side)
+    }
     this.buildGrid()
     for (const u of this.units) if (u.state !== 2) this.think(u)
     this.updateProjectiles()
@@ -243,7 +276,7 @@ export class Battle {
     for (const a of this.units) if (a.state !== 2 && a.side === u.side && a.target > 0) pressure.set(a.target, (pressure.get(a.target) ?? 0) + 1)
     let best = -1, bestScore = Infinity
     for (const e of foes) {
-      const d = Math.hypot(e.x - u.x, e.y - u.y)
+      const d = dist2d(e.x - u.x, e.y - u.y)
       let pref = 1 + this.bonusAgainst(u.s, e) / 8
       if (u.kind === 'monk') pref = e.kind === 'knight' || e.kind === 'siege' ? 2.2 : e.kind === 'monk' ? 0.01 : 1
       if (u.kind === 'siege') pref *= 1 + this.neighbors(e.x, e.y, 2.2).filter((n) => n.side !== u.side).length * 0.25
@@ -266,7 +299,7 @@ export class Battle {
       if (!target) { u.state = 0; return }
     }
     const dx = target.x - u.x, dy = target.y - u.y
-    const dist = Math.hypot(dx, dy) || 0.001
+    const dist = dist2d(dx, dy) || 0.001
     const reach = s.range + s.radius + target.s.radius
     u.facing = dx >= 0 ? 1 : -1
 
@@ -328,14 +361,14 @@ export class Battle {
     const buff = this.horn[u.side] > this.t ? 1.12 : 1
     const speed = u.s.speed * buff
     // errance perpendiculaire : les troupes ne marchent pas au cordeau
-    const wobble = Math.sin(this.t * 1.7 + u.phase) * 0.35
+    const wobble = detSin(this.t * 1.7 + u.phase) * 0.35
     let vx = (nx - ny * wobble) * speed * dir
     let vy = (ny + nx * wobble) * speed * dir
     // séparation : on évite de s'empiler
     for (const o of this.neighbors(u.x, u.y, 2)) {
       if (o === u) continue
       const ox = u.x - o.x, oy = u.y - o.y
-      const d = Math.hypot(ox, oy) || 0.01
+      const d = dist2d(ox, oy) || 0.01
       const min = (u.s.radius + o.s.radius) * 1.05
       if (d < min) {
         const push = ((min - d) / min) * (o.side === u.side ? 2.2 : 3)
@@ -390,7 +423,7 @@ export class Battle {
       if (p.kind === 'arrow') {
         const target = this.byId(p.target)
         // la flèche touche si la cible est encore à proximité du point visé
-        if (target && target.state !== 2 && target.side !== p.side && Math.hypot(target.x - p.x1, target.y - p.y1) < 1.6 && this.rand() < 0.92) {
+        if (target && target.state !== 2 && target.side !== p.side && dist2d(target.x - p.x1, target.y - p.y1) < 1.6 && this.rand() < 0.92) {
           this.hit(target, this.damageOf(p, p.damage, p.bonus, target, p.dmg), p.from)
         }
       } else {
@@ -400,7 +433,7 @@ export class Battle {
         const hits: { e: BUnit; d: number }[] = []
         for (const e of this.neighbors(p.x1, p.y1, p.splash + 1)) {
           if (e.side === p.side || e.state === 2) continue
-          const d = Math.hypot(e.x - p.x1, e.y - p.y1)
+          const d = dist2d(e.x - p.x1, e.y - p.y1)
           if (d <= p.splash + e.s.radius) hits.push({ e, d })
         }
         hits.sort((a, b) => a.d - b.d)
